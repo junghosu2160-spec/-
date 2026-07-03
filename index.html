@@ -262,6 +262,31 @@
   .class-item .ci-meta{font-size:12px;color:var(--color-text-muted);margin-top:2px;}
   .history-box{background:var(--color-surface-alt);border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;}
   .history-box h4{margin:0 0 8px 0;font-size:12.5px;color:var(--color-text-muted);}
+
+  /* ===== 학생별 출결 캘린더 ===== */
+  .cal-header{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px 0;}
+  .cal-month-label{font-size:14px;font-weight:800;}
+  .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .cal-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;}
+  .cal-cell.empty{visibility:hidden;}
+  .cal-num{
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12.5px;font-weight:700;color:var(--color-text-muted);
+    background:var(--color-surface-alt);
+  }
+  .cal-cell.status-출석 .cal-num{background:var(--color-success-soft);color:var(--color-success);}
+  .cal-cell.status-지각 .cal-num{background:var(--color-warning-soft);color:var(--color-warning);}
+  .cal-cell.status-결석 .cal-num{background:var(--color-danger-soft);color:var(--color-danger);}
+  .cal-cell.attended .cal-num{box-shadow:0 0 0 2px currentColor inset;}
+  .cal-cell.today .cal-num{outline:2px solid var(--color-primary);outline-offset:1px;}
+  .cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--color-text-muted);}
+  .cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
+  .cal-legend .dot.status-출석{background:var(--color-success);}
+  .cal-legend .dot.status-지각{background:var(--color-warning);}
+  .cal-legend .dot.status-결석{background:var(--color-danger);}
+  .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
   .avg-mini{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--color-border);}
   .avg-mini:last-child{border-bottom:none;}
 
@@ -379,11 +404,11 @@
       <!-- ================= 학생 관리 ================= -->
       <section class="view" id="view-students">
         <div class="card">
-          <div class="card-title" id="classFormTitle">반 관리 <span class="hint">반별 기본 등원 요일·시간을 설정하면 소속 학생에게 자동 적용돼요</span></div>
+          <div class="card-title" id="classFormTitle">등원 타임 관리 <span class="hint">타임별 기본 등원 요일·시간을 설정하면 소속 학생에게 자동 적용돼요</span></div>
           <div class="form-row">
             <div class="field" style="flex:1;">
-              <label>반 이름</label>
-              <input type="text" id="classNameInput" placeholder="예: 월수금 4시반">
+              <label>타임 이름</label>
+              <input type="text" id="classNameInput" placeholder="예: 4:30타임">
             </div>
             <div class="field" style="flex:0 0 auto;min-width:150px;">
               <label>기본 등원 시간</label>
@@ -395,7 +420,7 @@
             </div>
           </div>
           <div class="form-actions">
-            <button class="btn btn-primary" id="classSubmitBtn" onclick="submitClass()">반 추가</button>
+            <button class="btn btn-primary" id="classSubmitBtn" onclick="submitClass()">타임 추가</button>
             <button class="btn btn-ghost" id="classCancelBtn" style="display:none;" onclick="cancelClassEdit()">취소</button>
           </div>
           <div class="divider"></div>
@@ -424,7 +449,7 @@
           </div>
           <div class="form-row">
             <div class="field" style="flex:1.3;">
-              <label>소속 반 (선택)</label>
+              <label>등원 타임 (선택)</label>
               <select id="stuClass" onchange="renderStuScheduleHint()"></select>
             </div>
             <div class="field" style="flex:0 0 auto;min-width:170px;">
@@ -432,11 +457,11 @@
               <input type="time" id="stuCustomTime" onchange="renderStuScheduleHint()">
             </div>
             <div class="field" style="flex:2;">
-              <label>개인 등원 요일 (선택, 비워두면 반 요일 사용)</label>
+              <label>개인 등원 요일 (선택, 비워두면 타임의 요일 사용)</label>
               <div class="weekday-picker" id="stuDaysPicker"></div>
             </div>
           </div>
-          <div class="hint" id="stuScheduleHint" style="margin:-6px 0 14px 0;">반 또는 개인 설정을 입력하면 지각 판정 기준이 여기에 표시돼요.</div>
+          <div class="hint" id="stuScheduleHint" style="margin:-6px 0 14px 0;">타임 또는 개인 설정을 입력하면 지각 판정 기준이 여기에 표시돼요.</div>
           <div class="form-actions">
             <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()">학생 등록</button>
             <button class="btn btn-ghost" id="stuCancelBtn" style="display:none;" onclick="cancelStudentEdit()">취소</button>
@@ -451,7 +476,7 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>연락처</th><th>반</th><th>등원 기준</th><th style="text-align:right;">관리</th></tr>
+                <tr><th>이름</th><th>학년</th><th>학교</th><th>연락처</th><th>타임</th><th>등원 기준</th><th style="text-align:right;">관리</th></tr>
               </thead>
               <tbody id="studentTableBody"></tbody>
             </table>
@@ -470,7 +495,7 @@
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:14px;">
             <div class="field" style="flex:0 0 auto;min-width:200px;">
-              <label>전체 기본 등원 시간 (반·개인 설정이 없는 학생에게 적용)</label>
+              <label>전체 기본 등원 시간 (타임·개인 설정이 없는 학생에게 적용)</label>
               <input type="time" id="lateCutoffInput" onchange="updateLateCutoff()">
             </div>
             <div class="field" style="flex:0 0 auto;min-width:150px;">
@@ -497,11 +522,35 @@
             <div class="donut-wrap" id="attDonut"></div>
           </div>
           <div class="card">
-            <div class="card-title">학생별 출결 이력 조회</div>
-            <div class="field">
-              <label>학생 선택</label>
-              <select id="attHistoryStudent" onchange="renderAttendanceHistory()"></select>
+            <div class="toolbar" style="margin-bottom:0;">
+              <div class="card-title" style="margin:0;">학생별 출결 이력</div>
             </div>
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="field" style="flex:1.4;">
+                <label>학생 선택</label>
+                <select id="attHistoryStudent" onchange="onHistoryStudentChange()"></select>
+              </div>
+              <div class="form-actions" style="align-self:flex-end;">
+                <button class="btn btn-ghost btn-sm" onclick="exportStudentAttendance()">📥 이 학생 출결 다운로드</button>
+              </div>
+            </div>
+
+            <div class="cal-header">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(-1)">‹</button>
+              <div class="cal-month-label" id="calMonthLabel">-</div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(1)">›</button>
+            </div>
+            <div class="cal-weekdays">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-legend">
+              <span><i class="dot status-출석"></i>출석</span>
+              <span><i class="dot status-지각"></i>지각</span>
+              <span><i class="dot status-결석"></i>결석</span>
+              <span><i class="dot ring"></i>등원 기록 있음</span>
+            </div>
+
             <div class="history-box">
               <h4>최근 출결 기록 (최신순 10건)</h4>
               <div id="attHistoryList"></div>
@@ -686,7 +735,7 @@ function getEffectiveSchedule(student){
     ? student.customDays
     : (cls && cls.days && cls.days.length ? cls.days : WEEKDAYS);
   const startTime = student.customTime || (cls ? cls.startTime : null) || lateCutoffTime;
-  const source = student.customTime ? '개인 설정' : (cls ? `'${cls.name}' 반 설정` : '전체 기본값');
+  const source = student.customTime ? '개인 설정' : (cls ? `'${cls.name}' 타임 설정` : '전체 기본값');
   return { days, startTime, source, className: cls ? cls.name : null };
 }
 function formatDateKR(dateStr){
@@ -819,7 +868,7 @@ function renderDashboard(){
 }
 
 /* =========================================================
-   반(班) 관리
+   등원 타임 관리
 ========================================================= */
 let editingClassId = null;
 
@@ -842,16 +891,16 @@ function toggleStuDay(day){
 function submitClass(){
   const name = document.getElementById('classNameInput').value.trim();
   const startTime = document.getElementById('classStartTimeInput').value;
-  if(!name){ alert('반 이름을 입력해 주세요.'); return; }
+  if(!name){ alert('타임 이름을 입력해 주세요.'); return; }
   if(!startTime){ alert('기본 등원 시간을 입력해 주세요.'); return; }
   const days = selectedClassDays.length ? selectedClassDays : WEEKDAYS;
 
   if(editingClassId){
     db.ref('classes/' + editingClassId).update({ name, startTime, days });
-    showToast('반 정보가 수정되었습니다.');
+    showToast('타임 정보가 수정되었습니다.');
   }else{
     db.ref('classes').push({ name, startTime, days });
-    showToast('반이 추가되었습니다.');
+    showToast('타임이 추가되었습니다.');
   }
   cancelClassEdit();
 }
@@ -864,7 +913,7 @@ function editClass(id){
   document.getElementById('classStartTimeInput').value = cls.startTime;
   selectedClassDays = [...(cls.days || [])];
   renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-  document.getElementById('classFormTitle').firstChild.textContent = '반 수정 ';
+  document.getElementById('classFormTitle').firstChild.textContent = '타임 수정 ';
   document.getElementById('classSubmitBtn').textContent = '수정 완료';
   document.getElementById('classCancelBtn').style.display = 'inline-flex';
   window.scrollTo({top:0, behavior:'smooth'});
@@ -876,8 +925,8 @@ function cancelClassEdit(){
   document.getElementById('classStartTimeInput').value = '';
   selectedClassDays = [];
   renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-  document.getElementById('classFormTitle').firstChild.textContent = '반 관리 ';
-  document.getElementById('classSubmitBtn').textContent = '반 추가';
+  document.getElementById('classFormTitle').firstChild.textContent = '등원 타임 관리 ';
+  document.getElementById('classSubmitBtn').textContent = '타임 추가';
   document.getElementById('classCancelBtn').style.display = 'none';
 }
 
@@ -886,20 +935,20 @@ function deleteClass(id){
   if(!cls) return;
   const usedBy = students.filter(s => s.classId === id).length;
   const msg = usedBy > 0
-    ? `'${cls.name}' 반을 삭제하시겠습니까?\n이 반에 속한 학생 ${usedBy}명은 '반 없음' 상태가 됩니다.`
-    : `'${cls.name}' 반을 삭제하시겠습니까?`;
+    ? `'${cls.name}' 타임을 삭제하시겠습니까?\n이 타임에 속한 학생 ${usedBy}명은 '타임 없음' 상태가 됩니다.`
+    : `'${cls.name}' 타임을 삭제하시겠습니까?`;
   if(!confirm(msg)) return;
   db.ref('classes/' + id).remove();
   students.filter(s => s.classId === id).forEach(s => db.ref('students/' + s.id).update({ classId:'' }));
   if(editingClassId === id) cancelClassEdit();
-  showToast('반이 삭제되었습니다.');
+  showToast('타임이 삭제되었습니다.');
 }
 
 function renderClassList(){
   const box = document.getElementById('classList');
   if(!box) return;
   if(!classes.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 반이 없습니다. 위에서 반을 추가해 보세요.</div>`;
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 타임이 없습니다. 위에서 타임을 추가해 보세요.</div>`;
     return;
   }
   box.innerHTML = classes.map(c => {
@@ -922,7 +971,7 @@ function populateClassDropdown(){
   const sel = document.getElementById('stuClass');
   if(!sel) return;
   const prev = sel.value;
-  sel.innerHTML = `<option value="">반 없음 (전체 기본값 사용)</option>` +
+  sel.innerHTML = `<option value="">타임 없음 (전체 기본값 사용)</option>` +
     classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
   if(classes.some(c=>c.id===prev)) sel.value = prev;
 }
@@ -1029,7 +1078,7 @@ function renderStudents(){
       <td><span class="badge">${escapeHtml(s.grade)}</span></td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
-      <td class="cell-muted">${escapeHtml(sched.className || '반 없음')}</td>
+      <td class="cell-muted">${escapeHtml(sched.className || '타임 없음')}</td>
       <td class="cell-muted">${sched.days.length===7?'매일':sched.days.join('·')} · ${escapeHtml(sched.startTime)}</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}')">수정</button>
@@ -1110,6 +1159,7 @@ function renderAttendance(){
   ], '총원');
 
   renderAttendanceHistory();
+  renderAttCalendar();
 }
 
 function renderAttendanceHistory(){
@@ -1128,6 +1178,92 @@ function renderAttendanceHistory(){
       <span class="status-pill ${r.status}">${r.status}</span>
     </div>
   `).join('') : `<div class="cell-muted" style="font-size:13px;">출결 기록이 없습니다.</div>`;
+}
+
+/* =========================================================
+   학생별 출결 캘린더
+========================================================= */
+const nowD = new Date();
+let calYear = nowD.getFullYear();
+let calMonth = nowD.getMonth(); // 0-indexed
+
+function onHistoryStudentChange(){
+  renderAttendanceHistory();
+  renderAttCalendar();
+}
+
+function calShiftMonth(delta){
+  calMonth += delta;
+  if(calMonth < 0){ calMonth = 11; calYear--; }
+  if(calMonth > 11){ calMonth = 0; calYear++; }
+  renderAttCalendar();
+}
+
+function renderAttCalendar(){
+  const grid = document.getElementById('calGrid');
+  const label = document.getElementById('calMonthLabel');
+  if(!grid || !label) return;
+
+  label.textContent = `${calYear}년 ${calMonth + 1}월`;
+
+  const studentId = document.getElementById('attHistoryStudent').value;
+  const firstWeekday = new Date(calYear, calMonth, 1).getDay(); // 0=일
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = todayStr();
+
+  let cells = '';
+  for(let i = 0; i < firstWeekday; i++){
+    cells += `<div class="cal-cell empty"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const rec = studentId ? attendance.find(a => a.studentId === studentId && a.date === dateStr) : null;
+    const statusClass = rec && rec.status ? `status-${rec.status}` : '';
+    const attendedClass = rec && (rec.status === '출석' || rec.status === '지각') ? 'attended' : '';
+    const todayClass = dateStr === today ? 'today' : '';
+    cells += `<div class="cal-cell ${statusClass} ${attendedClass} ${todayClass}" title="${rec ? (rec.status + (rec.checkInTime? ' · '+rec.checkInTime : '')) : ''}"><span class="cal-num">${d}</span></div>`;
+  }
+
+  grid.innerHTML = cells;
+}
+
+function exportStudentAttendance(){
+  const studentId = document.getElementById('attHistoryStudent').value;
+  const stu = studentById(studentId);
+  if(!stu){ alert('학생을 먼저 선택해 주세요.'); return; }
+
+  const records = attendance.filter(a => a.studentId === studentId).sort((a,b)=> a.date.localeCompare(b.date));
+  if(!records.length){ alert(`${stu.name} 학생의 출결 기록이 없습니다.`); return; }
+
+  const sched = getEffectiveSchedule(stu);
+  const rows = [];
+  rows.push([`${stu.name} 학생 출결 기록`]);
+  rows.push([`학년: ${stu.grade}`, `타임: ${sched.className || '타임 없음'}`, `등원 기준: ${sched.days.join('·')} ${sched.startTime}`]);
+  rows.push([]);
+  rows.push(['날짜','요일','상태','등원 시간','하원 시간','비고']);
+  records.forEach(r => {
+    const d = new Date(r.date + 'T00:00:00');
+    const weekday = d.toLocaleDateString('ko-KR', { weekday:'short' });
+    rows.push([r.date, weekday, r.status || '-', r.checkInTime || '-', r.checkOutTime || '-', r.memo || '']);
+  });
+
+  const present = records.filter(r=>r.status==='출석').length;
+  const late = records.filter(r=>r.status==='지각').length;
+  const absent = records.filter(r=>r.status==='결석').length;
+  rows.push([]);
+  rows.push(['요약', `출석 ${present}`, `지각 ${late}`, `결석 ${absent}`, `합계 ${records.length}`]);
+
+  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${stu.name}_출결기록.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${stu.name} 학생의 출결 기록을 다운로드했습니다.`);
 }
 
 /* =========================================================
@@ -1278,7 +1414,7 @@ function exportMonthlyAttendance(){
   const monthRecords = attendance.filter(a => a.date && a.date.startsWith(month));
 
   const rows = [];
-  rows.push(['날짜','요일','이름','학년','학교','반','출결 상태','등원 시간','하원 시간','비고']);
+  rows.push(['날짜','요일','이름','학년','학교','타임','출결 상태','등원 시간','하원 시간','비고']);
 
   monthRecords
     .slice()
@@ -1292,7 +1428,7 @@ function exportMonthlyAttendance(){
         stu ? stu.name : '삭제된 학생',
         stu ? stu.grade : '-',
         stu ? stu.school : '-',
-        stu ? (getEffectiveSchedule(stu).className || '반 없음') : '-',
+        stu ? (getEffectiveSchedule(stu).className || '타임 없음') : '-',
         r.status || '-',
         r.checkInTime || '-',
         r.checkOutTime || '-',
@@ -1302,7 +1438,7 @@ function exportMonthlyAttendance(){
 
   rows.push([]);
   rows.push(['학생별 월간 요약']);
-  rows.push(['이름','학년','반','출석','지각','결석','기록 합계']);
+  rows.push(['이름','학년','타임','출석','지각','결석','기록 합계']);
   students
     .slice()
     .sort((a,b)=> a.name.localeCompare(b.name,'ko'))
@@ -1311,7 +1447,7 @@ function exportMonthlyAttendance(){
       const present = stuRecords.filter(r => r.status === '출석').length;
       const late = stuRecords.filter(r => r.status === '지각').length;
       const absent = stuRecords.filter(r => r.status === '결석').length;
-      rows.push([s.name, s.grade, getEffectiveSchedule(s).className || '반 없음', present, late, absent, stuRecords.length]);
+      rows.push([s.name, s.grade, getEffectiveSchedule(s).className || '타임 없음', present, late, absent, stuRecords.length]);
     });
 
   const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
@@ -1341,6 +1477,7 @@ function init(){
   renderStuScheduleHint();
   populateStudentDropdowns();
   populateClassDropdown();
+  renderAttCalendar();
   renderDashboard();
 }
 init();
