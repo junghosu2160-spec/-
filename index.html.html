@@ -310,7 +310,10 @@
   <div class="main">
     <div class="topbar">
       <h1 id="pageTitle">대시보드</h1>
-      <div class="date" id="todayDate"></div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span id="syncStatus" style="font-size:12px;font-weight:700;color:var(--color-text-muted);">🔄 연결 중...</span>
+        <div class="date" id="todayDate"></div>
+      </div>
     </div>
 
     <div class="content">
@@ -502,35 +505,78 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
 /* =========================================================
-   데이터 저장 / 불러오기 (localStorage)
+   Firebase 연동 (실시간 데이터베이스)
 ========================================================= */
-const STORE_KEYS = { students:'academy_students', attendance:'academy_attendance', scores:'academy_scores' };
+const firebaseConfig = {
+  apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
+  authDomain: "checkkkk-e5774.firebaseapp.com",
+  databaseURL: "https://checkkkk-e5774-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "checkkkk-e5774",
+  storageBucket: "checkkkk-e5774.firebasestorage.app",
+  messagingSenderId: "378303125830",
+  appId: "1:378303125830:web:d6ef8f50b79d83de1d2d47"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-function loadData(key){
-  try{
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-function saveData(key, value){
-  localStorage.setItem(key, JSON.stringify(value));
+let students   = [];
+let attendance = [];   // {id, studentId, date, status, memo}
+let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
+
+function snapshotToArray(snapVal){
+  if(!snapVal) return [];
+  return Object.entries(snapVal).map(([id, v]) => ({ id, ...v }));
 }
 
-let students   = loadData(STORE_KEYS.students);
-let attendance = loadData(STORE_KEYS.attendance);   // {id, studentId, date, status, memo}
-let scores     = loadData(STORE_KEYS.scores);       // {id, studentId, subject, examName, date, score, maxScore}
+// 학생/출결/성적 데이터를 실시간으로 감지해서 화면에 자동 반영
+db.ref('students').on('value', snap => {
+  students = snapshotToArray(snap.val());
+  refreshCurrentView();
+});
+db.ref('attendance').on('value', snap => {
+  attendance = snapshotToArray(snap.val());
+  refreshCurrentView();
+});
+db.ref('scores').on('value', snap => {
+  scores = snapshotToArray(snap.val());
+  refreshCurrentView();
+});
+
+// 연결 상태 표시
+db.ref('.info/connected').on('value', snap => {
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  if(snap.val() === true){
+    el.textContent = '🟢 실시간 동기화 중';
+    el.style.color = 'var(--color-success)';
+  }else{
+    el.textContent = '🔴 연결 대기 중...';
+    el.style.color = 'var(--color-danger)';
+  }
+});
+
+function refreshCurrentView(){
+  if(currentView === 'dashboard') renderDashboard();
+  if(currentView === 'students') renderStudents();
+  if(currentView === 'attendance') renderAttendance();
+  if(currentView === 'scores') renderScores();
+  if(currentView !== 'students' && currentView !== 'scores') populateStudentDropdowns();
+  else populateStudentDropdowns();
+}
 
 const GRADES = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수/기타'];
 
 let editingStudentId = null;
 let editingScoreId = null;
+let currentView = 'dashboard';
 
 /* =========================================================
    공통 유틸
 ========================================================= */
-function uid(prefix){ return prefix + '_' + Date.now() + '_' + Math.floor(Math.random()*10000); }
 function todayStr(){
   const d = new Date();
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
@@ -559,6 +605,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 const VIEW_TITLES = { dashboard:'대시보드', students:'학생 관리', attendance:'출결 관리', scores:'성적 관리' };
 
 function switchView(view){
+  currentView = view;
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById('view-' + view).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
@@ -681,17 +728,13 @@ function submitStudent(){
   if(!school){ alert('학교를 입력해 주세요.'); return; }
 
   if(editingStudentId){
-    const stu = studentById(editingStudentId);
-    stu.name = name; stu.grade = grade; stu.school = school; stu.phone = phone;
+    db.ref('students/' + editingStudentId).update({ name, grade, school, phone });
     showToast('학생 정보가 수정되었습니다.');
   }else{
-    students.push({ id:uid('stu'), name, grade, school, phone, createdAt: Date.now() });
+    db.ref('students').push({ name, grade, school, phone, createdAt: Date.now() });
     showToast('학생이 등록되었습니다.');
   }
-  saveData(STORE_KEYS.students, students);
   cancelStudentEdit();
-  renderStudents();
-  populateStudentDropdowns();
 }
 
 function editStudent(id){
@@ -723,15 +766,10 @@ function deleteStudent(id){
   const stu = studentById(id);
   if(!stu) return;
   if(!confirm(`'${stu.name}' 학생을 삭제하시겠습니까?\n관련된 출결/성적 기록도 함께 삭제됩니다.`)) return;
-  students = students.filter(s => s.id !== id);
-  attendance = attendance.filter(a => a.studentId !== id);
-  scores = scores.filter(s => s.studentId !== id);
-  saveData(STORE_KEYS.students, students);
-  saveData(STORE_KEYS.attendance, attendance);
-  saveData(STORE_KEYS.scores, scores);
+  db.ref('students/' + id).remove();
+  attendance.filter(a => a.studentId === id).forEach(a => db.ref('attendance/' + a.id).remove());
+  scores.filter(s => s.studentId === id).forEach(s => db.ref('scores/' + s.id).remove());
   if(editingStudentId === id) cancelStudentEdit();
-  renderStudents();
-  populateStudentDropdowns();
   showToast('학생이 삭제되었습니다.');
 }
 
@@ -769,23 +807,21 @@ function getAttendanceRecord(studentId, date){
 function setAttendanceStatus(studentId, date, status){
   let rec = getAttendanceRecord(studentId, date);
   if(rec){
-    rec.status = (rec.status === status) ? null : status; // 같은 버튼 다시 누르면 해제
-    if(!rec.status){
-      attendance = attendance.filter(a => a !== rec);
+    if(rec.status === status){
+      db.ref('attendance/' + rec.id).remove(); // 같은 버튼 다시 누르면 해제
+    }else{
+      db.ref('attendance/' + rec.id).update({ status });
     }
   }else{
-    attendance.push({ id:uid('att'), studentId, date, status, memo:'' });
+    db.ref('attendance').push({ studentId, date, status, memo:'' });
   }
-  saveData(STORE_KEYS.attendance, attendance);
-  renderAttendance();
   showToast('출결이 저장되었습니다.');
 }
 
 function setAttendanceMemo(studentId, date, memo){
   let rec = getAttendanceRecord(studentId, date);
   if(rec){
-    rec.memo = memo;
-    saveData(STORE_KEYS.attendance, attendance);
+    db.ref('attendance/' + rec.id).update({ memo });
   }
 }
 
@@ -884,16 +920,13 @@ function submitScore(){
   if(score < 0 || score > maxScore){ alert('점수는 0점 이상, 총점 이하로 입력해 주세요.'); return; }
 
   if(editingScoreId){
-    const sc = scores.find(s => s.id === editingScoreId);
-    Object.assign(sc, { studentId, subject, examName, date, score, maxScore });
+    db.ref('scores/' + editingScoreId).update({ studentId, subject, examName, date, score, maxScore });
     showToast('성적이 수정되었습니다.');
   }else{
-    scores.push({ id:uid('sc'), studentId, subject, examName, date, score, maxScore, createdAt:Date.now() });
+    db.ref('scores').push({ studentId, subject, examName, date, score, maxScore, createdAt:Date.now() });
     showToast('성적이 등록되었습니다.');
   }
-  saveData(STORE_KEYS.scores, scores);
   cancelScoreEdit();
-  renderScores();
 }
 
 function editScore(id){
@@ -926,10 +959,8 @@ function cancelScoreEdit(){
 
 function deleteScore(id){
   if(!confirm('이 성적 기록을 삭제하시겠습니까?')) return;
-  scores = scores.filter(s => s.id !== id);
-  saveData(STORE_KEYS.scores, scores);
+  db.ref('scores/' + id).remove();
   if(editingScoreId === id) cancelScoreEdit();
-  renderScores();
   showToast('성적이 삭제되었습니다.');
 }
 
