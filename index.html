@@ -287,6 +287,43 @@
   .cal-legend .dot.status-지각{background:var(--color-warning);}
   .cal-legend .dot.status-결석{background:var(--color-danger);}
   .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
+  /* ===== 요일별 개인 시간표 입력 ===== */
+  .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .schedule-cell{display:flex;flex-direction:column;gap:5px;align-items:center;}
+  .schedule-cell .sc-day{font-size:11.5px;font-weight:800;color:var(--color-text-muted);}
+  .schedule-cell input{
+    width:100%;padding:8px 2px;border:1px solid var(--color-border);border-radius:8px;
+    font-size:12px;text-align:center;background:var(--color-surface);color:var(--color-text);outline:none;
+  }
+  .schedule-cell input:focus{border-color:var(--color-primary-light);box-shadow:0 0 0 3px var(--color-primary-soft);}
+  .schedule-cell input:not(:placeholder-shown){border-color:var(--color-accent-dark);background:#FFFCF2;}
+  @media(max-width:640px){ .schedule-grid{grid-template-columns:repeat(4,1fr);} }
+
+  .sched-chip{
+    display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;
+    background:var(--color-neutral-soft);color:var(--color-text-muted);margin:1px 3px 1px 0;
+  }
+
+  /* ===== 출결 체크: 시간대별 그룹 ===== */
+  .att-group{margin-bottom:18px;}
+  .att-group:last-child{margin-bottom:0;}
+  .att-group-title{
+    display:flex;align-items:center;gap:8px;
+    font-size:13px;font-weight:800;color:var(--color-primary-light);
+    margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--color-surface-alt);
+  }
+  .att-group-title .cnt{font-size:11.5px;font-weight:700;color:var(--color-text-muted);}
+  .att-row{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);
+    margin-bottom:8px;background:var(--color-surface);
+  }
+  .att-row.overdue{border-color:var(--color-danger);background:var(--color-danger-soft);}
+  .att-row-main{flex:1 1 180px;min-width:160px;display:flex;align-items:center;gap:8px;}
+  .att-row-main strong{font-size:13.5px;}
+  .att-overdue-tag{font-size:11px;font-weight:800;color:var(--color-danger);background:#fff;padding:2px 8px;border-radius:999px;}
+  .att-time-info{display:flex;gap:10px;font-size:12px;color:var(--color-text-muted);flex:0 0 auto;}
+  .att-memo-input{flex:1 1 140px;min-width:120px;padding:7px 10px;font-size:12.5px;}
   .avg-mini{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--color-border);}
   .avg-mini:last-child{border-bottom:none;}
 
@@ -404,31 +441,7 @@
       <!-- ================= 학생 관리 ================= -->
       <section class="view" id="view-students">
         <div class="card">
-          <div class="card-title" id="classFormTitle">등원 타임 관리 <span class="hint">타임별 기본 등원 요일·시간을 설정하면 소속 학생에게 자동 적용돼요</span></div>
-          <div class="form-row">
-            <div class="field" style="flex:1;">
-              <label>타임 이름</label>
-              <input type="text" id="classNameInput" placeholder="예: 4:30타임">
-            </div>
-            <div class="field" style="flex:0 0 auto;min-width:150px;">
-              <label>기본 등원 시간</label>
-              <input type="time" id="classStartTimeInput">
-            </div>
-            <div class="field" style="flex:2;">
-              <label>등원 요일</label>
-              <div class="weekday-picker" id="classDaysPicker"></div>
-            </div>
-          </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" id="classSubmitBtn" onclick="submitClass()">타임 추가</button>
-            <button class="btn btn-ghost" id="classCancelBtn" style="display:none;" onclick="cancelClassEdit()">취소</button>
-          </div>
-          <div class="divider"></div>
-          <div id="classList"></div>
-        </div>
-
-        <div class="card section-gap">
-          <div class="card-title" id="studentFormTitle">학생 등록</div>
+          <div class="card-title" id="studentFormTitle">학생 등록 <span class="hint">요일마다 시간이 다르면 그대로 입력하고, 안 오는 요일은 비워두세요</span></div>
           <div class="form-row">
             <div class="field" style="flex:1.2;">
               <label>이름</label>
@@ -447,24 +460,26 @@
               <input type="text" id="stuPhone" placeholder="예: 010-1234-5678">
             </div>
           </div>
-          <div class="form-row">
-            <div class="field" style="flex:1.3;">
-              <label>등원 타임 (선택)</label>
-              <select id="stuClass" onchange="renderStuScheduleHint()"></select>
-            </div>
-            <div class="field" style="flex:0 0 auto;min-width:170px;">
-              <label>개인 등원 시간 (선택)</label>
-              <input type="time" id="stuCustomTime" onchange="renderStuScheduleHint()">
-            </div>
-            <div class="field" style="flex:2;">
-              <label>개인 등원 요일 (선택, 비워두면 타임의 요일 사용)</label>
-              <div class="weekday-picker" id="stuDaysPicker"></div>
-            </div>
+          <div class="field" style="margin-bottom:14px;">
+            <label>요일별 등원 시간</label>
+            <div class="schedule-grid" id="stuScheduleGrid"></div>
           </div>
-          <div class="hint" id="stuScheduleHint" style="margin:-6px 0 14px 0;">타임 또는 개인 설정을 입력하면 지각 판정 기준이 여기에 표시돼요.</div>
           <div class="form-actions">
             <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()">학생 등록</button>
             <button class="btn btn-ghost" id="stuCancelBtn" style="display:none;" onclick="cancelStudentEdit()">취소</button>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">여러 학생 한 번에 등록 <span class="hint">엑셀에서 복사해서 붙여넣기</span></div>
+          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 10px 0;line-height:1.6;">
+            엑셀에서 <strong>학년 · 이름 · 학교 · 월 · 화 · 수 · 목 · 금 · 토 · 일</strong> 순서로 셀을 드래그해서 복사한 뒤, 아래 칸에 그대로 붙여넣고 버튼을 누르세요.
+            안 오는 요일 칸은 비워두면 됩니다. (시간은 4:30처럼 입력하면 자동으로 오후 16:30으로 인식돼요. 오전이면 09:00처럼 직접 입력해 주세요)
+          </p>
+          <textarea id="bulkImportText" placeholder="중3	이윤아	새론중	4:30			4:30		
+중3	박정후	강동중		6:30		4:30		" style="width:100%;min-height:120px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13px;font-family:monospace;resize:vertical;"></textarea>
+          <div class="form-actions" style="margin-top:12px;">
+            <button class="btn btn-primary" onclick="importBulkStudents()">📋 붙여넣은 내용으로 일괄 등록</button>
           </div>
         </div>
 
@@ -476,7 +491,7 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>연락처</th><th>타임</th><th>등원 기준</th><th style="text-align:right;">관리</th></tr>
+                <tr><th>이름</th><th>학년</th><th>학교</th><th>연락처</th><th>시간표</th><th style="text-align:right;">관리</th></tr>
               </thead>
               <tbody id="studentTableBody"></tbody>
             </table>
@@ -488,32 +503,25 @@
       <section class="view" id="view-attendance">
         <div class="card">
           <div class="toolbar" style="margin-bottom:6px;">
-            <div class="card-title" style="margin:0;">출결 체크</div>
+            <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
             <div class="field" style="min-width:180px;flex:0 0 auto;">
               <input type="date" id="attDate" onchange="renderAttendance()">
             </div>
           </div>
-          <div class="toolbar" style="margin-top:0;margin-bottom:14px;">
-            <div class="field" style="flex:0 0 auto;min-width:200px;">
-              <label>전체 기본 등원 시간 (타임·개인 설정이 없는 학생에게 적용)</label>
-              <input type="time" id="lateCutoffInput" onchange="updateLateCutoff()">
-            </div>
-            <div class="field" style="flex:0 0 auto;min-width:150px;">
-              <label>다운로드할 월</label>
-              <input type="month" id="exportMonthInput">
-            </div>
-            <div class="form-actions" style="align-self:flex-end;">
-              <button class="btn btn-primary" onclick="exportMonthlyAttendance()">📊 월별 출결 엑셀 다운로드</button>
+          <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);">
+              <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
+              이 날짜에 등원 예정인 학생만 보기
+            </label>
+            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+              <div class="field" style="flex:0 0 auto;min-width:140px;">
+                <label>다운로드할 월</label>
+                <input type="month" id="exportMonthInput">
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="exportMonthlyAttendance()">📊 월별 엑셀 다운로드</button>
             </div>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>출결 상태</th><th>등원 시간</th><th>하원 시간</th><th>비고</th></tr>
-              </thead>
-              <tbody id="attendanceTableBody"></tbody>
-            </table>
-          </div>
+          <div id="attGroups"></div>
         </div>
 
         <div class="grid grid-2 section-gap">
@@ -645,18 +653,15 @@ const db = firebase.database();
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
-let classes    = [];   // {id, name, days:[...], startTime}
-let lateCutoffTime = '14:00';
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
-let selectedClassDays = [];   // 반 등록 폼에서 선택 중인 요일
-let selectedStuDays = [];     // 학생 등록 폼에서 선택 중인 개인 요일(선택)
+const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 
 function snapshotToArray(snapVal){
   if(!snapVal) return [];
   return Object.entries(snapVal).map(([id, v]) => ({ id, ...v }));
 }
 
-// 학생/출결/성적/반 데이터를 실시간으로 감지해서 화면에 자동 반영
+// 학생/출결/성적 데이터를 실시간으로 감지해서 화면에 자동 반영
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val());
   refreshCurrentView();
@@ -669,26 +674,6 @@ db.ref('scores').on('value', snap => {
   scores = snapshotToArray(snap.val());
   refreshCurrentView();
 });
-db.ref('classes').on('value', snap => {
-  classes = snapshotToArray(snap.val());
-  renderClassList();
-  populateClassDropdown();
-  refreshCurrentView();
-});
-
-db.ref('settings/lateCutoffTime').on('value', snap => {
-  lateCutoffTime = snap.val() || '14:00';
-  const input = document.getElementById('lateCutoffInput');
-  if(input) input.value = lateCutoffTime;
-  refreshCurrentView();
-});
-
-function updateLateCutoff(){
-  const val = document.getElementById('lateCutoffInput').value;
-  if(!val) return;
-  db.ref('settings/lateCutoffTime').set(val);
-  showToast('지각 기준 시간이 저장되었습니다. 태블릿에도 자동 반영됩니다.');
-}
 
 // 연결 상태 표시
 db.ref('.info/connected').on('value', snap => {
@@ -712,6 +697,9 @@ function refreshCurrentView(){
   else populateStudentDropdowns();
 }
 
+// 시간이 지나면서 '미출석' 표시가 자동으로 뜨도록 1분마다 출결 화면 갱신
+setInterval(() => { if(currentView === 'attendance') renderAttendance(); }, 60000);
+
 const GRADES = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수/기타'];
 
 let editingStudentId = null;
@@ -726,17 +714,30 @@ function todayStr(){
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
-function classById(id){ return classes.find(c => c.id === id); }
-
-// 학생의 실제 적용 등원 요일/시간 계산: 개인 설정 > 소속 반 설정 > 전체 기본값 순
-function getEffectiveSchedule(student){
-  const cls = student.classId ? classById(student.classId) : null;
-  const days = (student.customDays && student.customDays.length)
-    ? student.customDays
-    : (cls && cls.days && cls.days.length ? cls.days : WEEKDAYS);
-  const startTime = student.customTime || (cls ? cls.startTime : null) || lateCutoffTime;
-  const source = student.customTime ? '개인 설정' : (cls ? `'${cls.name}' 타임 설정` : '전체 기본값');
-  return { days, startTime, source, className: cls ? cls.name : null };
+// 특정 학생의 특정 요일 등원 시간 (없으면 null = 그 요일엔 안 오는 학생)
+function getDayTime(student, dayLabel){
+  return (student.schedule && student.schedule[dayLabel]) || null;
+}
+// 오늘(또는 특정 날짜)이 무슨 요일인지 한글로 반환
+function weekdayLabelOf(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return JS_DAY_TO_LABEL[d.getDay()];
+}
+// 학생 시간표를 "월·목 16:30, 화 18:30" 처럼 사람이 읽기 좋은 요약으로 변환
+function scheduleSummary(student){
+  const sched = student.schedule || {};
+  const entries = WEEKDAYS.filter(d => sched[d]);
+  if(!entries.length) return '시간표 미설정';
+  const timeToDays = {};
+  entries.forEach(d => {
+    const t = sched[d];
+    if(!timeToDays[t]) timeToDays[t] = [];
+    timeToDays[t].push(d);
+  });
+  return Object.entries(timeToDays)
+    .sort((a,b)=> a[0].localeCompare(b[0]))
+    .map(([time, days]) => `${days.join('·')} ${time}`)
+    .join(', ');
 }
 function formatDateKR(dateStr){
   if(!dateStr) return '';
@@ -868,128 +869,37 @@ function renderDashboard(){
 }
 
 /* =========================================================
-   등원 타임 관리
-========================================================= */
-let editingClassId = null;
-
-function renderWeekdayPicker(containerEl, selectedArr, onToggle){
-  containerEl.innerHTML = WEEKDAYS.map(d => `
-    <button type="button" class="weekday-chip ${selectedArr.includes(d) ? 'active' : ''}" onclick="(${onToggle})('${d}')">${d}</button>
-  `).join('');
-}
-
-function toggleClassDay(day){
-  selectedClassDays = selectedClassDays.includes(day) ? selectedClassDays.filter(d=>d!==day) : [...selectedClassDays, day];
-  renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-}
-function toggleStuDay(day){
-  selectedStuDays = selectedStuDays.includes(day) ? selectedStuDays.filter(d=>d!==day) : [...selectedStuDays, day];
-  renderWeekdayPicker(document.getElementById('stuDaysPicker'), selectedStuDays, 'toggleStuDay');
-  renderStuScheduleHint();
-}
-
-function submitClass(){
-  const name = document.getElementById('classNameInput').value.trim();
-  const startTime = document.getElementById('classStartTimeInput').value;
-  if(!name){ alert('타임 이름을 입력해 주세요.'); return; }
-  if(!startTime){ alert('기본 등원 시간을 입력해 주세요.'); return; }
-  const days = selectedClassDays.length ? selectedClassDays : WEEKDAYS;
-
-  if(editingClassId){
-    db.ref('classes/' + editingClassId).update({ name, startTime, days });
-    showToast('타임 정보가 수정되었습니다.');
-  }else{
-    db.ref('classes').push({ name, startTime, days });
-    showToast('타임이 추가되었습니다.');
-  }
-  cancelClassEdit();
-}
-
-function editClass(id){
-  const cls = classById(id);
-  if(!cls) return;
-  editingClassId = id;
-  document.getElementById('classNameInput').value = cls.name;
-  document.getElementById('classStartTimeInput').value = cls.startTime;
-  selectedClassDays = [...(cls.days || [])];
-  renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-  document.getElementById('classFormTitle').firstChild.textContent = '타임 수정 ';
-  document.getElementById('classSubmitBtn').textContent = '수정 완료';
-  document.getElementById('classCancelBtn').style.display = 'inline-flex';
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function cancelClassEdit(){
-  editingClassId = null;
-  document.getElementById('classNameInput').value = '';
-  document.getElementById('classStartTimeInput').value = '';
-  selectedClassDays = [];
-  renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-  document.getElementById('classFormTitle').firstChild.textContent = '등원 타임 관리 ';
-  document.getElementById('classSubmitBtn').textContent = '타임 추가';
-  document.getElementById('classCancelBtn').style.display = 'none';
-}
-
-function deleteClass(id){
-  const cls = classById(id);
-  if(!cls) return;
-  const usedBy = students.filter(s => s.classId === id).length;
-  const msg = usedBy > 0
-    ? `'${cls.name}' 타임을 삭제하시겠습니까?\n이 타임에 속한 학생 ${usedBy}명은 '타임 없음' 상태가 됩니다.`
-    : `'${cls.name}' 타임을 삭제하시겠습니까?`;
-  if(!confirm(msg)) return;
-  db.ref('classes/' + id).remove();
-  students.filter(s => s.classId === id).forEach(s => db.ref('students/' + s.id).update({ classId:'' }));
-  if(editingClassId === id) cancelClassEdit();
-  showToast('타임이 삭제되었습니다.');
-}
-
-function renderClassList(){
-  const box = document.getElementById('classList');
-  if(!box) return;
-  if(!classes.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 타임이 없습니다. 위에서 타임을 추가해 보세요.</div>`;
-    return;
-  }
-  box.innerHTML = classes.map(c => {
-    const count = students.filter(s => s.classId === c.id).length;
-    return `
-      <div class="class-item">
-        <div>
-          <div class="ci-name">${escapeHtml(c.name)}</div>
-          <div class="ci-meta">${(c.days||[]).join('·')} · 등원 ${escapeHtml(c.startTime)} · 학생 ${count}명</div>
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-ghost btn-sm" onclick="editClass('${c.id}')">수정</button>
-          <button class="btn btn-danger-outline btn-sm" onclick="deleteClass('${c.id}')">삭제</button>
-        </div>
-      </div>`;
-  }).join('');
-}
-
-function populateClassDropdown(){
-  const sel = document.getElementById('stuClass');
-  if(!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = `<option value="">타임 없음 (전체 기본값 사용)</option>` +
-    classes.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
-  if(classes.some(c=>c.id===prev)) sel.value = prev;
-}
-
-function renderStuScheduleHint(){
-  const classId = document.getElementById('stuClass').value;
-  const customTime = document.getElementById('stuCustomTime').value;
-  const fakeStudent = { classId, customTime, customDays: selectedStuDays };
-  const sched = getEffectiveSchedule(fakeStudent);
-  document.getElementById('stuScheduleHint').textContent =
-    `➜ 적용될 등원 기준: ${sched.days.join('·')} · ${sched.startTime} (${sched.source})`;
-}
-
-/* =========================================================
    학생 관리
 ========================================================= */
 function initGradeSelect(sel){
   sel.innerHTML = GRADES.map(g => `<option value="${g}">${g}</option>`).join('');
+}
+
+// 학생 등록 폼의 요일별(월~일) 시간 입력 칸 생성
+function renderScheduleGrid(){
+  const grid = document.getElementById('stuScheduleGrid');
+  if(!grid) return;
+  grid.innerHTML = WEEKDAYS.map(d => `
+    <div class="schedule-cell">
+      <span class="sc-day">${d}</span>
+      <input type="time" id="stuSched-${d}">
+    </div>
+  `).join('');
+}
+
+function readScheduleFromForm(){
+  const schedule = {};
+  WEEKDAYS.forEach(d => {
+    const val = document.getElementById('stuSched-' + d).value;
+    if(val) schedule[d] = val;
+  });
+  return schedule;
+}
+
+function fillScheduleForm(schedule){
+  WEEKDAYS.forEach(d => {
+    document.getElementById('stuSched-' + d).value = (schedule && schedule[d]) || '';
+  });
 }
 
 function submitStudent(){
@@ -1001,15 +911,13 @@ function submitStudent(){
   if(!name){ alert('이름을 입력해 주세요.'); return; }
   if(!school){ alert('학교를 입력해 주세요.'); return; }
 
-  const classId = document.getElementById('stuClass').value;
-  const customTime = document.getElementById('stuCustomTime').value;
-  const customDays = [...selectedStuDays];
+  const schedule = readScheduleFromForm();
 
   if(editingStudentId){
-    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, classId, customTime, customDays });
+    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, schedule });
     showToast('학생 정보가 수정되었습니다.');
   }else{
-    db.ref('students').push({ name, grade, school, phone, classId, customTime, customDays, createdAt: Date.now() });
+    db.ref('students').push({ name, grade, school, phone, schedule, createdAt: Date.now() });
     showToast('학생이 등록되었습니다.');
   }
   cancelStudentEdit();
@@ -1023,12 +931,8 @@ function editStudent(id){
   document.getElementById('stuGrade').value = stu.grade;
   document.getElementById('stuSchool').value = stu.school;
   document.getElementById('stuPhone').value = stu.phone || '';
-  document.getElementById('stuClass').value = stu.classId || '';
-  document.getElementById('stuCustomTime').value = stu.customTime || '';
-  selectedStuDays = [...(stu.customDays || [])];
-  renderWeekdayPicker(document.getElementById('stuDaysPicker'), selectedStuDays, 'toggleStuDay');
-  renderStuScheduleHint();
-  document.getElementById('studentFormTitle').textContent = '학생 정보 수정';
+  fillScheduleForm(stu.schedule);
+  document.getElementById('studentFormTitle').firstChild.textContent = '학생 정보 수정 ';
   document.getElementById('stuSubmitBtn').textContent = '수정 완료';
   document.getElementById('stuCancelBtn').style.display = 'inline-flex';
   window.scrollTo({top:0, behavior:'smooth'});
@@ -1040,12 +944,8 @@ function cancelStudentEdit(){
   document.getElementById('stuSchool').value = '';
   document.getElementById('stuPhone').value = '';
   document.getElementById('stuGrade').selectedIndex = 0;
-  document.getElementById('stuClass').value = '';
-  document.getElementById('stuCustomTime').value = '';
-  selectedStuDays = [];
-  renderWeekdayPicker(document.getElementById('stuDaysPicker'), selectedStuDays, 'toggleStuDay');
-  renderStuScheduleHint();
-  document.getElementById('studentFormTitle').textContent = '학생 등록';
+  fillScheduleForm({});
+  document.getElementById('studentFormTitle').firstChild.textContent = '학생 등록 ';
   document.getElementById('stuSubmitBtn').textContent = '학생 등록';
   document.getElementById('stuCancelBtn').style.display = 'none';
 }
@@ -1061,6 +961,42 @@ function deleteStudent(id){
   showToast('학생이 삭제되었습니다.');
 }
 
+function importBulkStudents(){
+  const raw = document.getElementById('bulkImportText').value;
+  const lines = raw.split(/\r?\n/).filter(l => l.trim());
+  if(!lines.length){ alert('붙여넣을 데이터를 입력해 주세요.'); return; }
+
+  function normalizeTime(str){
+    const m = String(str||'').trim().match(/^(\d{1,2}):(\d{2})$/);
+    if(!m) return '';
+    let h = parseInt(m[1],10);
+    if(h < 9) h += 12; // 학원 특성상 한 자리 시(예: 4:30)는 오후로 간주
+    if(h > 23) h = 23;
+    return String(h).padStart(2,'0') + ':' + m[2];
+  }
+
+  let successCount = 0, skipCount = 0;
+  lines.forEach(line => {
+    const cols = line.includes('\t') ? line.split('\t') : line.split(',');
+    const grade = (cols[0]||'').trim();
+    const name = (cols[1]||'').trim();
+    const school = (cols[2]||'').trim();
+    if(!name){ skipCount++; return; }
+
+    const schedule = {};
+    WEEKDAYS.forEach((day, idx) => {
+      const t = normalizeTime(cols[3+idx]);
+      if(t) schedule[day] = t;
+    });
+
+    db.ref('students').push({ name, grade: grade || '기타', school, phone:'', schedule, createdAt: Date.now() });
+    successCount++;
+  });
+
+  document.getElementById('bulkImportText').value = '';
+  showToast(`${successCount}명 일괄 등록 완료${skipCount ? ` (이름 없는 ${skipCount}줄 제외)` : ''}`);
+}
+
 function renderStudents(){
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
   const list = students.filter(s =>
@@ -1070,23 +1006,19 @@ function renderStudents(){
   document.getElementById('studentCountHint').textContent = `(총 ${students.length}명)`;
 
   const tbody = document.getElementById('studentTableBody');
-  tbody.innerHTML = list.length ? list.map(s => {
-    const sched = getEffectiveSchedule(s);
-    return `
+  tbody.innerHTML = list.length ? list.map(s => `
     <tr>
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td><span class="badge">${escapeHtml(s.grade)}</span></td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
-      <td class="cell-muted">${escapeHtml(sched.className || '타임 없음')}</td>
-      <td class="cell-muted">${sched.days.length===7?'매일':sched.days.join('·')} · ${escapeHtml(sched.startTime)}</td>
+      <td class="cell-muted" style="font-size:12px;">${escapeHtml(scheduleSummary(s))}</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}')">수정</button>
         <button class="btn btn-danger-outline btn-sm" onclick="deleteStudent('${s.id}')">삭제</button>
       </td>
     </tr>
-  `;
-  }).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  `).join('') : `<tr class="empty-row"><td colspan="6">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
 }
 
 /* =========================================================
@@ -1121,42 +1053,81 @@ function renderAttendance(){
   const dateInput = document.getElementById('attDate');
   if(!dateInput.value) dateInput.value = todayStr();
   const date = dateInput.value;
+  const weekday = weekdayLabelOf(date);
+  const todayOnly = document.getElementById('attTodayOnlyToggle').checked;
+  const isToday = date === todayStr();
+  const nowTime = isToday ? (String(new Date().getHours()).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0')) : null;
 
-  const tbody = document.getElementById('attendanceTableBody');
-  tbody.innerHTML = students.length ? students.map(s => {
-    const rec = getAttendanceRecord(s.id, date);
-    const status = rec ? rec.status : null;
-    return `
-      <tr>
-        <td><strong>${escapeHtml(s.name)}</strong></td>
-        <td><span class="badge">${escapeHtml(s.grade)}</span></td>
-        <td class="cell-muted">${escapeHtml(s.school)}</td>
-        <td>
-          <div class="status-group">
-            <button class="status-btn ${status==='출석'?'active':''}" data-status="출석" onclick="setAttendanceStatus('${s.id}','${date}','출석')">출석</button>
-            <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
-            <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
-          </div>
-        </td>
-        <td class="cell-muted" style="font-variant-numeric:tabular-nums;">${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</td>
-        <td class="cell-muted" style="font-variant-numeric:tabular-nums;">${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</td>
-        <td><input type="text" class="search-input" style="min-width:140px;padding:6px 10px;font-size:12.5px;" placeholder="비고 (선택)" value="${escapeHtml(rec ? rec.memo || '' : '')}" onchange="setAttendanceMemo('${s.id}','${date}', this.value)"></td>
-      </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 먼저 '학생 관리'에서 학생을 등록해 주세요.</td></tr>`;
+  const container = document.getElementById('attGroups');
 
+  if(!students.length){
+    container.innerHTML = `<div class="empty-msg cell-muted" style="text-align:center;padding:30px;">등록된 학생이 없습니다. 먼저 '학생 관리'에서 학생을 등록해 주세요.</div>`;
+  }else{
+    // 표시할 학생 선별: 오늘 예정 학생 + 이미 기록이 있는 학생(보강/임시 등원)은 토글과 무관하게 항상 표시
+    const visible = students.filter(s => {
+      const scheduled = getDayTime(s, weekday);
+      const hasRecord = !!getAttendanceRecord(s.id, date);
+      return !todayOnly || scheduled || hasRecord;
+    });
+
+    // 시간대별로 그룹핑 (시간이 없는 학생은 '예정 없음' 그룹)
+    const groups = {};
+    visible.forEach(s => {
+      const t = getDayTime(s, weekday) || '99:99';
+      if(!groups[t]) groups[t] = [];
+      groups[t].push(s);
+    });
+    const sortedTimes = Object.keys(groups).sort();
+
+    container.innerHTML = sortedTimes.map(t => {
+      const groupStudents = groups[t].sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+      const groupLabel = t === '99:99' ? '예정 없음 (임시·보강)' : `${t} 타임`;
+      const rows = groupStudents.map(s => {
+        const rec = getAttendanceRecord(s.id, date);
+        const status = rec ? rec.status : null;
+        const overdue = isToday && t !== '99:99' && !rec && nowTime > t;
+        return `
+          <div class="att-row ${overdue ? 'overdue' : ''}">
+            <div class="att-row-main">
+              <strong>${escapeHtml(s.name)}</strong>
+              <span class="badge">${escapeHtml(s.grade)}</span>
+              ${overdue ? `<span class="att-overdue-tag">⏳ 미출석</span>` : ''}
+            </div>
+            <div class="status-group">
+              <button class="status-btn ${status==='출석'?'active':''}" data-status="출석" onclick="setAttendanceStatus('${s.id}','${date}','출석')">출석</button>
+              <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
+              <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
+            </div>
+            <div class="att-time-info">
+              <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
+              <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
+            </div>
+            <input type="text" class="search-input att-memo-input" placeholder="비고" value="${escapeHtml(rec ? rec.memo || '' : '')}" onchange="setAttendanceMemo('${s.id}','${date}', this.value)">
+          </div>`;
+      }).join('');
+      return `
+        <div class="att-group">
+          <div class="att-group-title">${groupLabel} <span class="cnt">${groupStudents.length}명</span></div>
+          ${rows}
+        </div>`;
+    }).join('') || `<div class="empty-msg cell-muted" style="text-align:center;padding:30px;">이 날짜(${weekday}요일)에 등원 예정인 학생이 없습니다.</div>`;
+  }
+
+  // 통계: 오늘 등원 예정 인원을 기준으로 계산
+  const expected = students.filter(s => getDayTime(s, weekday) || getAttendanceRecord(s.id, date));
   const dayRecords = attendance.filter(a => a.date === date);
   const present = dayRecords.filter(a => a.status === '출석').length;
   const late = dayRecords.filter(a => a.status === '지각').length;
   const absent = dayRecords.filter(a => a.status === '결석').length;
-  const unchecked = students.length - dayRecords.length;
+  const unchecked = Math.max(expected.length - dayRecords.length, 0);
 
   document.getElementById('attDonutDate').textContent = '(' + formatDateKR(date) + ')';
   renderDonut(document.getElementById('attDonut'), [
     {label:'출석', value:present, color:'var(--color-success)'},
     {label:'지각', value:late,    color:'var(--color-warning)'},
     {label:'결석', value:absent,  color:'var(--color-danger)'},
-    {label:'미체크', value:Math.max(unchecked,0), color:'var(--color-neutral)'},
-  ], '총원');
+    {label:'미체크', value:unchecked, color:'var(--color-neutral)'},
+  ], '예정 인원');
 
   renderAttendanceHistory();
   renderAttCalendar();
@@ -1235,10 +1206,9 @@ function exportStudentAttendance(){
   const records = attendance.filter(a => a.studentId === studentId).sort((a,b)=> a.date.localeCompare(b.date));
   if(!records.length){ alert(`${stu.name} 학생의 출결 기록이 없습니다.`); return; }
 
-  const sched = getEffectiveSchedule(stu);
   const rows = [];
   rows.push([`${stu.name} 학생 출결 기록`]);
-  rows.push([`학년: ${stu.grade}`, `타임: ${sched.className || '타임 없음'}`, `등원 기준: ${sched.days.join('·')} ${sched.startTime}`]);
+  rows.push([`학년: ${stu.grade}`, `시간표: ${scheduleSummary(stu)}`]);
   rows.push([]);
   rows.push(['날짜','요일','상태','등원 시간','하원 시간','비고']);
   records.forEach(r => {
@@ -1414,7 +1384,7 @@ function exportMonthlyAttendance(){
   const monthRecords = attendance.filter(a => a.date && a.date.startsWith(month));
 
   const rows = [];
-  rows.push(['날짜','요일','이름','학년','학교','타임','출결 상태','등원 시간','하원 시간','비고']);
+  rows.push(['날짜','요일','이름','학년','학교','시간표','출결 상태','등원 시간','하원 시간','비고']);
 
   monthRecords
     .slice()
@@ -1428,7 +1398,7 @@ function exportMonthlyAttendance(){
         stu ? stu.name : '삭제된 학생',
         stu ? stu.grade : '-',
         stu ? stu.school : '-',
-        stu ? (getEffectiveSchedule(stu).className || '타임 없음') : '-',
+        stu ? scheduleSummary(stu) : '-',
         r.status || '-',
         r.checkInTime || '-',
         r.checkOutTime || '-',
@@ -1438,7 +1408,7 @@ function exportMonthlyAttendance(){
 
   rows.push([]);
   rows.push(['학생별 월간 요약']);
-  rows.push(['이름','학년','타임','출석','지각','결석','기록 합계']);
+  rows.push(['이름','학년','시간표','출석','지각','결석','기록 합계']);
   students
     .slice()
     .sort((a,b)=> a.name.localeCompare(b.name,'ko'))
@@ -1447,7 +1417,7 @@ function exportMonthlyAttendance(){
       const present = stuRecords.filter(r => r.status === '출석').length;
       const late = stuRecords.filter(r => r.status === '지각').length;
       const absent = stuRecords.filter(r => r.status === '결석').length;
-      rows.push([s.name, s.grade, getEffectiveSchedule(s).className || '타임 없음', present, late, absent, stuRecords.length]);
+      rows.push([s.name, s.grade, scheduleSummary(s), present, late, absent, stuRecords.length]);
     });
 
   const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
@@ -1471,12 +1441,8 @@ function init(){
   document.getElementById('attDate').value = todayStr();
   document.getElementById('scoreDate').value = todayStr();
   document.getElementById('exportMonthInput').value = todayStr().slice(0,7);
-  document.getElementById('lateCutoffInput').value = lateCutoffTime;
-  renderWeekdayPicker(document.getElementById('classDaysPicker'), selectedClassDays, 'toggleClassDay');
-  renderWeekdayPicker(document.getElementById('stuDaysPicker'), selectedStuDays, 'toggleStuDay');
-  renderStuScheduleHint();
+  renderScheduleGrid();
   populateStudentDropdowns();
-  populateClassDropdown();
   renderAttCalendar();
   renderDashboard();
 }
