@@ -222,6 +222,7 @@ const db = firebase.database();
 
 let students = [];
 let attendance = [];
+let classes = [];
 let selectedStudentId = null;
 
 function snapshotToArray(snapVal){
@@ -237,11 +238,22 @@ db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
   renderGrid();
 });
+db.ref('classes').on('value', snap => {
+  classes = snapshotToArray(snap.val());
+});
 
 let lateCutoffTime = '14:00';
 db.ref('settings/lateCutoffTime').on('value', snap => {
   lateCutoffTime = snap.val() || '14:00';
 });
+
+function classById(id){ return classes.find(c => c.id === id); }
+
+// 학생의 실제 적용 등원 시간: 개인 설정 > 소속 반 설정 > 전체 기본값 순 (관리자 프로그램과 동일한 규칙)
+function getEffectiveStartTime(student){
+  const cls = student.classId ? classById(student.classId) : null;
+  return student.customTime || (cls ? cls.startTime : null) || lateCutoffTime;
+}
 
 function todayStr(){
   const d = new Date();
@@ -341,7 +353,8 @@ function doCheckIn(){
   if(!stu) return;
   const date = todayStr();
   const time = nowTimeStr();
-  const status = time <= lateCutoffTime ? '출석' : '지각';
+  const cutoff = getEffectiveStartTime(stu);
+  const status = time <= cutoff ? '출석' : '지각';
   const rec = getTodayRecord(stu.id);
 
   if(rec){
