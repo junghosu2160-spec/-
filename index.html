@@ -411,10 +411,23 @@
               <input type="date" id="attDate" onchange="renderAttendance()">
             </div>
           </div>
+          <div class="toolbar" style="margin-top:0;margin-bottom:14px;">
+            <div class="field" style="flex:0 0 auto;min-width:200px;">
+              <label>지각 기준 시간 (태블릿 자동 판정)</label>
+              <input type="time" id="lateCutoffInput" onchange="updateLateCutoff()">
+            </div>
+            <div class="field" style="flex:0 0 auto;min-width:150px;">
+              <label>다운로드할 월</label>
+              <input type="month" id="exportMonthInput">
+            </div>
+            <div class="form-actions" style="align-self:flex-end;">
+              <button class="btn btn-primary" onclick="exportMonthlyAttendance()">📊 월별 출결 엑셀 다운로드</button>
+            </div>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>출결 상태</th><th>비고</th></tr>
+                <tr><th>이름</th><th>학년</th><th>학교</th><th>출결 상태</th><th>등원 시간</th><th>하원 시간</th><th>비고</th></tr>
               </thead>
               <tbody id="attendanceTableBody"></tbody>
             </table>
@@ -524,8 +537,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let students   = [];
-let attendance = [];   // {id, studentId, date, status, memo}
+let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
+let lateCutoffTime = '14:00';
 
 function snapshotToArray(snapVal){
   if(!snapVal) return [];
@@ -545,6 +559,20 @@ db.ref('scores').on('value', snap => {
   scores = snapshotToArray(snap.val());
   refreshCurrentView();
 });
+
+db.ref('settings/lateCutoffTime').on('value', snap => {
+  lateCutoffTime = snap.val() || '14:00';
+  const input = document.getElementById('lateCutoffInput');
+  if(input) input.value = lateCutoffTime;
+  refreshCurrentView();
+});
+
+function updateLateCutoff(){
+  const val = document.getElementById('lateCutoffInput').value;
+  if(!val) return;
+  db.ref('settings/lateCutoffTime').set(val);
+  showToast('지각 기준 시간이 저장되었습니다. 태블릿에도 자동 반영됩니다.');
+}
 
 // 연결 상태 표시
 db.ref('.info/connected').on('value', snap => {
@@ -846,9 +874,11 @@ function renderAttendance(){
             <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
           </div>
         </td>
+        <td class="cell-muted" style="font-variant-numeric:tabular-nums;">${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</td>
+        <td class="cell-muted" style="font-variant-numeric:tabular-nums;">${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</td>
         <td><input type="text" class="search-input" style="min-width:140px;padding:6px 10px;font-size:12.5px;" placeholder="비고 (선택)" value="${escapeHtml(rec ? rec.memo || '' : '')}" onchange="setAttendanceMemo('${s.id}','${date}', this.value)"></td>
       </tr>`;
-  }).join('') : `<tr class="empty-row"><td colspan="5">등록된 학생이 없습니다. 먼저 '학생 관리'에서 학생을 등록해 주세요.</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 먼저 '학생 관리'에서 학생을 등록해 주세요.</td></tr>`;
 
   const dayRecords = attendance.filter(a => a.date === date);
   const present = dayRecords.filter(a => a.status === '출석').length;
@@ -1016,12 +1046,80 @@ function renderAvgByStudent(){
 }
 
 /* =========================================================
+   월별 출결 엑셀(CSV) 다운로드
+========================================================= */
+function csvEscape(val){
+  const str = String(val ?? '');
+  if(/[",\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+  return str;
+}
+
+function exportMonthlyAttendance(){
+  const monthInput = document.getElementById('exportMonthInput');
+  const month = monthInput.value; // YYYY-MM
+  if(!month){ alert('다운로드할 월을 선택해 주세요.'); return; }
+  if(!students.length){ alert('등록된 학생이 없습니다.'); return; }
+
+  const monthRecords = attendance.filter(a => a.date && a.date.startsWith(month));
+
+  const rows = [];
+  rows.push(['날짜','요일','이름','학년','학교','출결 상태','등원 시간','하원 시간','비고']);
+
+  monthRecords
+    .slice()
+    .sort((a,b)=> a.date.localeCompare(b.date) || (studentById(a.studentId)?.name||'').localeCompare(studentById(b.studentId)?.name||'', 'ko'))
+    .forEach(r => {
+      const stu = studentById(r.studentId);
+      const d = new Date(r.date + 'T00:00:00');
+      const weekday = d.toLocaleDateString('ko-KR', { weekday:'short' });
+      rows.push([
+        r.date, weekday,
+        stu ? stu.name : '삭제된 학생',
+        stu ? stu.grade : '-',
+        stu ? stu.school : '-',
+        r.status || '-',
+        r.checkInTime || '-',
+        r.checkOutTime || '-',
+        r.memo || ''
+      ]);
+    });
+
+  rows.push([]);
+  rows.push(['학생별 월간 요약']);
+  rows.push(['이름','학년','출석','지각','결석','기록 합계']);
+  students
+    .slice()
+    .sort((a,b)=> a.name.localeCompare(b.name,'ko'))
+    .forEach(s => {
+      const stuRecords = monthRecords.filter(r => r.studentId === s.id);
+      const present = stuRecords.filter(r => r.status === '출석').length;
+      const late = stuRecords.filter(r => r.status === '지각').length;
+      const absent = stuRecords.filter(r => r.status === '결석').length;
+      rows.push([s.name, s.grade, present, late, absent, stuRecords.length]);
+    });
+
+  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `출결기록_${month}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`${month} 출결 기록 파일을 다운로드했습니다.`);
+}
+
+/* =========================================================
    초기화
 ========================================================= */
 function init(){
   initGradeSelect(document.getElementById('stuGrade'));
   document.getElementById('attDate').value = todayStr();
   document.getElementById('scoreDate').value = todayStr();
+  document.getElementById('exportMonthInput').value = todayStr().slice(0,7);
+  document.getElementById('lateCutoffInput').value = lateCutoffTime;
   populateStudentDropdowns();
   renderDashboard();
 }
