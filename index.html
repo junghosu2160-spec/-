@@ -309,6 +309,30 @@
   .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
+
+  /* ===== 조교 선생님 출근 표시 ===== */
+  .teacher-chip{
+    display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;
+    font-size:11.5px;font-weight:700;border:1px solid var(--color-border);background:#fff;color:var(--color-text-muted);
+    cursor:pointer;transition:opacity .12s ease;
+  }
+  .teacher-chip.hidden-teacher{opacity:0.35;}
+  .teacher-chip .t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .bc-teacher-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:auto;padding-top:2px;}
+  .bc-teacher-dots .t-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .teacher-day-row{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
+    background:var(--color-surface-alt);margin-bottom:6px;font-size:12.5px;
+  }
+  .teacher-day-row .t-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .teacher-day-row .t-status{margin-left:auto;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;}
+  .teacher-day-row .t-status.on{background:var(--color-success-soft);color:var(--color-success);}
+  .teacher-day-row .t-status.off{background:var(--color-neutral-soft);color:var(--color-neutral);}
+  .teacher-item{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
+    margin-bottom:8px;background:var(--color-surface-alt);
+  }
   .cal-num{position:relative;}
   .cal-cell.has-event-시험 .cal-num::after,
   .cal-cell.has-event-상담 .cal-num::after{
@@ -481,6 +505,7 @@
           <div class="card">
             <div class="card-title">오늘의 출결 현황 <span class="hint" id="dashDonutDate"></span></div>
             <div class="donut-wrap" id="dashDonut"></div>
+            <div id="todayTeachersLine" style="margin-top:12px;"></div>
             <div class="divider"></div>
             <div class="card-title" style="margin-bottom:8px;">최근 성적 등록</div>
             <div id="recentScores"></div>
@@ -657,7 +682,7 @@
       <!-- ================= 캘린더 ================= -->
       <section class="view" id="view-calendar">
         <div class="card">
-          <div class="toolbar" style="margin-bottom:14px;">
+          <div class="toolbar" style="margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:10px;">
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
               <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
@@ -668,23 +693,54 @@
               <span><i class="dot event-dot-상담"></i>상담</span>
             </div>
           </div>
+          <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
+            <div class="cell-muted" style="font-size:12px;">조교 선생님 (눌러서 표시/숨기기)</div>
+            <div id="teacherLegend" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
           <div class="cal-weekdays">
             <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
           </div>
           <div class="bigcal-grid" id="bigCalGrid"></div>
         </div>
 
-        <div class="card section-gap">
-          <h4 id="bigEventDayLabel" style="margin:0 0 10px 0;font-size:14px;font-weight:800;">날짜를 선택해 주세요</h4>
-          <div id="bigEventList"></div>
-          <div class="form-row" style="margin:12px 0 0 0;">
-            <select id="bigEventType" style="flex:0 0 100px;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
-              <option value="상담">상담</option>
-              <option value="시험">시험</option>
-            </select>
-            <input type="text" id="bigEventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
-            <button class="btn btn-primary" onclick="addEvent(true)">일정 추가</button>
+        <div class="grid grid-2 section-gap">
+          <div class="card">
+            <h4 id="bigEventDayLabel" style="margin:0 0 10px 0;font-size:14px;font-weight:800;">날짜를 선택해 주세요</h4>
+            <div id="bigEventList"></div>
+            <div class="form-row" style="margin:12px 0 0 0;">
+              <select id="bigEventType" style="flex:0 0 100px;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
+                <option value="상담">상담</option>
+                <option value="시험">시험</option>
+              </select>
+              <input type="text" id="bigEventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
+              <button class="btn btn-primary" onclick="addEvent(true)">일정 추가</button>
+            </div>
           </div>
+
+          <div class="card">
+            <div class="card-title">이 날짜 조교 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
+            <div id="teacherDayStatus"></div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title" id="teacherFormTitle">조교 선생님 등록</div>
+          <div class="form-row">
+            <div class="field" style="flex:1.2;">
+              <label>이름</label>
+              <input type="text" id="teacherName" placeholder="예: 김민지 선생님">
+            </div>
+            <div class="field" style="flex:2;">
+              <label>기본 출근 요일</label>
+              <div class="weekday-picker" id="teacherDaysPicker"></div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
+            <button class="btn btn-ghost" id="teacherCancelBtn" style="display:none;" onclick="cancelTeacherEdit()">취소</button>
+          </div>
+          <div class="divider"></div>
+          <div id="teacherList"></div>
         </div>
       </section>
 
@@ -775,8 +831,12 @@ let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
 let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
+let teachers   = [];   // {id, name, color, days:[...]}
+let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
+const TEACHER_COLORS = ['#3B82F6','#8B5CF6','#10B981','#F97316','#EC4899','#06B6D4','#84CC16','#F43F5E'];
+let hiddenTeacherIds = JSON.parse(localStorage.getItem('hiddenTeacherIds') || '[]');
 
 function snapshotToArray(snapVal){
   if(!snapVal) return [];
@@ -798,6 +858,16 @@ db.ref('scores').on('value', snap => {
 });
 db.ref('events').on('value', snap => {
   events = snapshotToArray(snap.val());
+  if(currentView === 'dashboard') renderDashCalendar();
+  if(currentView === 'calendar') renderBigCalendar();
+});
+db.ref('teachers').on('value', snap => {
+  teachers = snapshotToArray(snap.val());
+  if(currentView === 'dashboard') renderDashCalendar();
+  if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
+});
+db.ref('teacherExceptions').on('value', snap => {
+  teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar') renderBigCalendar();
 });
@@ -936,7 +1006,7 @@ function switchView(view){
 
   if(view === 'dashboard') renderDashboard();
   if(view === 'attendance') renderAttendance();
-  if(view === 'calendar') renderBigCalendar();
+  if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); }
   if(view === 'students') renderStudents();
   if(view === 'scores') renderScores();
 }
@@ -1021,6 +1091,16 @@ function renderDashboard(){
     {label:'미체크', value:Math.max(unchecked,0), color:'var(--color-neutral)'},
   ], '총원');
 
+  const todayWorking = teachers.filter(t => isTeacherWorking(t, today));
+  const teacherLineEl = document.getElementById('todayTeachersLine');
+  teacherLineEl.innerHTML = `
+    <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">오늘 출근 조교</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${todayWorking.length
+        ? todayWorking.map(t => `<span class="teacher-chip" style="cursor:default;"><span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}</span>`).join('')
+        : `<span class="cell-muted" style="font-size:12.5px;">오늘 출근 예정인 조교가 없습니다.</span>`}
+    </div>`;
+
   const recentScoresEl = document.getElementById('recentScores');
   const recentSc = [...scores].sort((a,b)=> b.date.localeCompare(a.date) || b.createdAt-a.createdAt).slice(0,5);
   recentScoresEl.innerHTML = recentSc.length ? recentSc.map(s => {
@@ -1101,11 +1181,16 @@ function renderBigCalendar(){
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
-    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}</div>`;
+    const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
+    const teacherDots = workingTeachers.length
+      ? `<div class="bc-teacher-dots" title="${escapeHtml(workingTeachers.map(t=>t.name).join(', '))}">${workingTeachers.map(t => `<span class="t-dot" style="background:${t.color};"></span>`).join('')}</div>`
+      : '';
+    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}${teacherDots}</div>`;
   }
 
   grid.innerHTML = cells;
   renderBigEventListForSelectedDate();
+  renderTeacherDayStatus();
 }
 
 function selectEventDate(dateStr){
@@ -1166,6 +1251,167 @@ function deleteEvent(id){
   if(!confirm('이 일정을 삭제하시겠습니까?')) return;
   db.ref('events/' + id).remove();
   showToast('일정이 삭제되었습니다.');
+}
+
+/* =========================================================
+   조교 선생님 근무 캘린더
+========================================================= */
+let editingTeacherId = null;
+let selectedTeacherDays = [];
+
+function teacherById(id){ return teachers.find(t => t.id === id); }
+
+// 특정 날짜에 해당 조교가 실제로 근무하는지 (개인 예외가 있으면 예외를 우선 적용)
+function isTeacherWorking(teacher, dateStr){
+  const exception = teacherExceptions.find(e => e.teacherId === teacher.id && e.date === dateStr);
+  if(exception) return exception.status === 'on';
+  const weekday = weekdayLabelOf(dateStr);
+  return (teacher.days || []).includes(weekday);
+}
+
+function renderTeacherDaysPicker(){
+  const el = document.getElementById('teacherDaysPicker');
+  if(!el) return;
+  el.innerHTML = WEEKDAYS.map(d => `
+    <button type="button" class="weekday-chip ${selectedTeacherDays.includes(d) ? 'active' : ''}" onclick="toggleTeacherDay('${d}')">${d}</button>
+  `).join('');
+}
+function toggleTeacherDay(day){
+  selectedTeacherDays = selectedTeacherDays.includes(day) ? selectedTeacherDays.filter(d=>d!==day) : [...selectedTeacherDays, day];
+  renderTeacherDaysPicker();
+}
+
+function submitTeacher(){
+  const name = document.getElementById('teacherName').value.trim();
+  if(!name){ alert('이름을 입력해 주세요.'); return; }
+  const days = [...selectedTeacherDays];
+
+  if(editingTeacherId){
+    db.ref('teachers/' + editingTeacherId).update({ name, days });
+    showToast('조교 정보가 수정되었습니다.');
+  }else{
+    const color = TEACHER_COLORS[teachers.length % TEACHER_COLORS.length];
+    db.ref('teachers').push({ name, color, days, createdAt: Date.now() });
+    showToast('조교 선생님이 등록되었습니다.');
+  }
+  cancelTeacherEdit();
+}
+
+function editTeacher(id){
+  const t = teacherById(id);
+  if(!t) return;
+  editingTeacherId = id;
+  document.getElementById('teacherName').value = t.name;
+  selectedTeacherDays = [...(t.days || [])];
+  renderTeacherDaysPicker();
+  document.getElementById('teacherFormTitle').textContent = '조교 정보 수정';
+  document.getElementById('teacherSubmitBtn').textContent = '수정 완료';
+  document.getElementById('teacherCancelBtn').style.display = 'inline-flex';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelTeacherEdit(){
+  editingTeacherId = null;
+  document.getElementById('teacherName').value = '';
+  selectedTeacherDays = [];
+  renderTeacherDaysPicker();
+  document.getElementById('teacherFormTitle').textContent = '조교 선생님 등록';
+  document.getElementById('teacherSubmitBtn').textContent = '조교 등록';
+  document.getElementById('teacherCancelBtn').style.display = 'none';
+}
+
+function deleteTeacher(id){
+  const t = teacherById(id);
+  if(!t) return;
+  if(!confirm(`'${t.name}' 선생님을 삭제하시겠습니까?`)) return;
+  db.ref('teachers/' + id).remove();
+  teacherExceptions.filter(e => e.teacherId === id).forEach(e => db.ref('teacherExceptions/' + e.id).remove());
+  if(editingTeacherId === id) cancelTeacherEdit();
+  showToast('조교 선생님이 삭제되었습니다.');
+}
+
+function renderTeacherList(){
+  const box = document.getElementById('teacherList');
+  if(!box) return;
+  if(!teachers.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 조교 선생님이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = teachers.map(t => `
+    <div class="teacher-item">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;"></span>
+        <div>
+          <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
+          <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? (t.days.join('·')) : '기본 출근 요일 없음'}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="editTeacher('${t.id}')">수정</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="deleteTeacher('${t.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTeacherLegend(){
+  const box = document.getElementById('teacherLegend');
+  if(!box) return;
+  if(!teachers.length){
+    box.innerHTML = `<span class="cell-muted" style="font-size:12px;">등록된 조교가 없습니다. 아래에서 등록해 보세요.</span>`;
+    return;
+  }
+  box.innerHTML = teachers.map(t => `
+    <button type="button" class="teacher-chip ${hiddenTeacherIds.includes(t.id) ? 'hidden-teacher' : ''}" onclick="toggleTeacherVisibility('${t.id}')">
+      <span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}
+    </button>
+  `).join('');
+}
+
+function toggleTeacherVisibility(id){
+  hiddenTeacherIds = hiddenTeacherIds.includes(id) ? hiddenTeacherIds.filter(x=>x!==id) : [...hiddenTeacherIds, id];
+  localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  renderTeacherLegend();
+  renderBigCalendar();
+}
+
+function renderTeacherDayStatus(){
+  const box = document.getElementById('teacherDayStatus');
+  if(!box) return;
+  if(!teachers.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 조교 선생님이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = teachers.map(t => {
+    const working = isTeacherWorking(t, selectedEventDate);
+    return `
+      <div class="teacher-day-row">
+        <span class="t-dot" style="background:${t.color};"></span>
+        <span>${escapeHtml(t.name)}</span>
+        <span class="t-status ${working ? 'on' : 'off'}" style="cursor:pointer;" onclick="toggleTeacherExceptionForDate('${t.id}')">${working ? '출근' : '휴무'}</span>
+      </div>`;
+  }).join('');
+}
+
+// 선택한 날짜 하루만 특정 조교의 출근 여부를 뒤집는다 (기본 요일 설정은 그대로 두고 그 날짜만 예외 처리)
+function toggleTeacherExceptionForDate(teacherId){
+  const t = teacherById(teacherId);
+  if(!t) return;
+  const currentlyWorking = isTeacherWorking(t, selectedEventDate);
+  const newStatus = currentlyWorking ? 'off' : 'on';
+  const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === selectedEventDate);
+  const defaultWorking = (t.days || []).includes(weekdayLabelOf(selectedEventDate));
+
+  if(existing){
+    if(newStatus === (defaultWorking ? 'on' : 'off')){
+      db.ref('teacherExceptions/' + existing.id).remove(); // 기본값과 같아지면 예외 삭제
+    }else{
+      db.ref('teacherExceptions/' + existing.id).update({ status: newStatus });
+    }
+  }else{
+    db.ref('teacherExceptions').push({ teacherId, date: selectedEventDate, status: newStatus });
+  }
+  showToast(`${t.name} 선생님의 ${formatDateKR(selectedEventDate)} 근무가 조정되었습니다.`);
 }
 
 /* =========================================================
@@ -1772,9 +2018,12 @@ function init(){
   document.getElementById('scoreDate').value = todayStr();
   document.getElementById('exportMonthInput').value = todayStr().slice(0,7);
   renderScheduleGrid();
+  renderTeacherDaysPicker();
   populateStudentDropdowns();
   renderAttCalendar();
   renderBigCalendar();
+  renderTeacherLegend();
+  renderTeacherList();
   renderDashboard();
 }
 init();
