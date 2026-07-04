@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>델타수학 전문학원 · 출석 체크</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <style>
   :root{
     --color-bg:#161616;
@@ -51,9 +52,11 @@
   .header-title{font-size:clamp(18px,2.2vw,26px);font-weight:800;line-height:1.25;}
   .header-sub{font-size:clamp(11px,1.1vw,14px);color:var(--color-accent);font-weight:600;margin-top:2px;}
   .header-center{
-    flex:1;text-align:center;color:var(--color-accent);font-weight:800;
-    font-size:clamp(15px,2vw,22px);padding:0 16px;
+    flex:1;display:flex;align-items:center;justify-content:center;gap:10px;
+    color:#FDE9A0;font-family:'Nanum Pen Script',cursive;
+    font-size:clamp(20px,3vw,34px);padding:0 16px;
   }
+  .header-center img{height:clamp(24px,3vw,32px);width:auto;flex-shrink:0;}
   .list-heading{
     font-size:clamp(15px,1.8vw,20px);font-weight:800;color:var(--color-text);
     margin-bottom:clamp(10px,1.6vh,16px);
@@ -103,6 +106,14 @@
     font-size:clamp(11px,1.1vw,13px);font-weight:700;
     padding:3px 10px;border-radius:999px;
   }
+  .group-title{
+    font-size:clamp(14px,1.6vw,18px);font-weight:800;color:var(--color-accent);
+    margin:clamp(14px,2vh,20px) 0 clamp(8px,1.2vh,12px) 0;padding-bottom:6px;
+    border-bottom:2px solid var(--color-surface-alt);
+  }
+  .group-title:first-child{margin-top:0;}
+  .group-title.elementary{color:#93C5FD;}
+  .group-title.makeup{color:var(--color-text-muted);border-bottom-style:dashed;}
   .subgroup-title{
     font-size:clamp(11px,1.2vw,13px);font-weight:700;color:var(--color-text-muted);
     margin:10px 0 8px 0;
@@ -174,7 +185,7 @@
         <div class="header-title">델타수학 전문학원</div>
       </div>
     </div>
-    <div class="header-center">출석 · 퇴근 시 이름을 눌러주세요</div>
+    <div class="header-center"><span>출퇴근시 이름을 꼭 눌러주세요</span><img src="data:image/png;base64,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" alt=""></div>
     <div class="header-clock">
       <div class="header-time" id="clockTime">--:--</div>
       <div class="header-date" id="clockDate"></div>
@@ -396,18 +407,42 @@ function renderGrid(){
     return;
   }
 
-  // 시간 라벨은 화면에 표시하지 않고, 대기중 / 등원완료 두 그룹으로만 나눠 보여줌
-  const scheduleOf = s => getDayTime(s, weekday) || '99:99';
-  const waiting = visible.filter(s => !getTodayRecord(s.id))
-    .sort((a,b)=> scheduleOf(a).localeCompare(scheduleOf(b)) || a.name.localeCompare(b.name,'ko'));
-  const arrived = visible.filter(s => getTodayRecord(s.id))
-    .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+  const GRADE_ORDER = ['중1','중2','중3','고1','고2','고3'];
+  const gradeSortValue = g => { const i = GRADE_ORDER.indexOf(g); return i === -1 ? 99 : i; };
+  const byGradeThenName = (a,b) => gradeSortValue(a.grade) - gradeSortValue(b.grade) || a.name.localeCompare(b.name,'ko');
 
-  let html = '';
-  if(waiting.length) html += `<div class="name-grid">${waiting.map(tileHtml).join('')}</div>`;
-  if(arrived.length){
-    html += `<div class="subgroup-title">↓ 등원 완료</div><div class="name-grid">${arrived.map(tileHtml).join('')}</div>`;
+  function renderBucket(title, titleClass, list){
+    if(!list.length) return '';
+    const waiting = list.filter(s => !getTodayRecord(s.id)).sort(byGradeThenName);
+    const arrived = list.filter(s => getTodayRecord(s.id)).sort(byGradeThenName);
+    let html = `<div class="group-title ${titleClass}">${title}</div>`;
+    if(waiting.length) html += `<div class="name-grid">${waiting.map(tileHtml).join('')}</div>`;
+    if(arrived.length) html += `<div class="subgroup-title">↓ 등원 완료</div><div class="name-grid">${arrived.map(tileHtml).join('')}</div>`;
+    return html;
   }
+
+  // 초등부는 시간대 구분 없이 맨 위에 한 번에 표시 (인원이 적어서)
+  const elementary = visible.filter(s => (s.grade || '').startsWith('초'));
+  const others = visible.filter(s => !(s.grade || '').startsWith('초'));
+
+  // 나머지는 등원 시간대별로 그룹핑 (시간이 없으면 '보강' 그룹)
+  const groups = {};
+  others.forEach(s => {
+    const t = getDayTime(s, weekday) || '99:99';
+    if(!groups[t]) groups[t] = [];
+    groups[t].push(s);
+  });
+  const sortedTimes = Object.keys(groups).sort();
+
+  let html = renderBucket('초등부', 'elementary', elementary);
+  sortedTimes.forEach(t => {
+    if(t === '99:99'){
+      html += renderBucket('보강', 'makeup', groups[t]);
+    }else{
+      html += renderBucket(`${t} 타임`, '', groups[t]);
+    }
+  });
+
   grid.innerHTML = html;
 }
 
