@@ -76,40 +76,47 @@
     gap:clamp(10px,1.6vw,18px);
   }
   .name-tile{
-    background:var(--color-surface);
-    border:2px solid var(--color-border);
+    border:2px solid transparent;
     border-radius:18px;
     padding:clamp(16px,2.2vh,24px) 10px;
     text-align:center;
     display:flex;flex-direction:column;align-items:center;gap:8px;
     transition:transform .1s ease, border-color .1s ease, background .1s ease;
   }
-  .name-tile:active{transform:scale(0.96);background:var(--color-surface-alt);}
-  .name-tile.checked{border-color:var(--color-success);}
-  .name-tile.cat-초{border-color:#3B82F6;background:rgba(59,130,246,0.12);}
-  .name-tile.cat-중{border-color:#10B981;background:rgba(16,185,129,0.12);}
-  .name-tile.cat-고{border-color:#F59E0B;background:rgba(245,158,11,0.12);}
-  .name-tile.cat-기타{border-color:#A78BFA;background:rgba(167,139,250,0.12);}
-  .name-tile.checked.cat-초,.name-tile.checked.cat-중,.name-tile.checked.cat-고,.name-tile.checked.cat-기타{border-color:var(--color-success);}
+  .name-tile:active{transform:scale(0.96);}
+
+  /* 대기중: 학년군 파스텔 (중등/고등 2가지) */
+  .name-tile.cat-중{background:#DFF5E6;}
+  .name-tile.cat-중 .n{color:#1B4332;}
+  .name-tile.cat-중 .g{background:rgba(27,67,50,0.14);color:#1B4332;}
+  .name-tile.cat-고{background:#FFE8D6;}
+  .name-tile.cat-고 .n{color:#7C4A1E;}
+  .name-tile.cat-고 .g{background:rgba(124,74,30,0.14);color:#7C4A1E;}
+
+  /* 등원 완료: 초록으로 전환 (학년군 상관없이 통일) */
+  .name-tile.checked{background:#B9EFC9;border-color:#3CC583;}
+  .name-tile.checked .n{color:#0F5132;}
+  .name-tile.checked .g{background:rgba(15,81,50,0.16);color:#0F5132;}
+
   .name-tile .n{font-size:clamp(17px,1.9vw,22px);font-weight:800;}
   .name-tile .g{
     font-size:clamp(11px,1.1vw,13px);font-weight:700;
     padding:3px 10px;border-radius:999px;
   }
-  .name-tile.cat-초 .g{background:rgba(59,130,246,0.22);color:#93C5FD;}
-  .name-tile.cat-중 .g{background:rgba(16,185,129,0.22);color:#6EE7B7;}
-  .name-tile.cat-고 .g{background:rgba(245,158,11,0.22);color:#FCD34D;}
-  .name-tile.cat-기타 .g{background:rgba(167,139,250,0.22);color:#C4B5FD;}
   .group-title{
     font-size:clamp(14px,1.6vw,18px);font-weight:800;color:var(--color-accent);
     margin:clamp(14px,2vh,20px) 0 clamp(8px,1.2vh,12px) 0;padding-bottom:6px;
     border-bottom:2px solid var(--color-surface-alt);
   }
   .group-title:first-child{margin-top:0;}
+  .subgroup-title{
+    font-size:clamp(11px,1.2vw,13px);font-weight:700;color:var(--color-text-muted);
+    margin:10px 0 8px 0;
+  }
   .name-tile .status-tag{
     font-size:clamp(11px,1.1vw,13px);font-weight:800;padding:3px 10px;border-radius:999px;
   }
-  .name-tile .status-tag.출석{background:rgba(60,197,131,0.15);color:var(--color-success);}
+  .name-tile .status-tag.출석{background:rgba(15,81,50,0.16);color:#0F5132;}
   .name-tile .status-tag.지각{background:rgba(255,182,72,0.15);color:var(--color-warning);}
 
   .empty-msg{
@@ -277,11 +284,19 @@ function getTodayRecord(studentId){
   return attendance.find(a => a.studentId === studentId && a.date === date);
 }
 function gradeCategory(grade){
-  if(!grade) return '기타';
-  if(grade.startsWith('초')) return '초';
-  if(grade.startsWith('중')) return '중';
-  if(grade.startsWith('고')) return '고';
-  return '기타';
+  if(!grade) return '중';
+  if(grade.startsWith('고') || grade.startsWith('N')) return '고';
+  return '중'; // 초/중/기타는 모두 중등 색으로 표시
+}
+
+// 등원 예정 시각까지 남은 시간이 30분 이내인지 (지난 시각도 true)
+function isWithinCheckInWindow(scheduledTime){
+  if(!scheduledTime) return true;
+  const [h, m] = scheduledTime.split(':').map(Number);
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  const diffMin = (target - new Date()) / 60000;
+  return diffMin <= 30;
 }
 
 /* ===== 시계 ===== */
@@ -293,7 +308,7 @@ function tickClock(){
   document.getElementById('clockDate').textContent = d.toLocaleDateString('ko-KR', { month:'long', day:'numeric', weekday:'long' });
 }
 tickClock();
-setInterval(tickClock, 1000 * 10);
+setInterval(() => { tickClock(); if(!document.getElementById('searchInput').value.trim()) renderGrid(); }, 1000 * 30);
 
 /* ===== 화면 전환 ===== */
 function showScreen(id){
@@ -310,12 +325,11 @@ function showList(){
 /* ===== 명단 렌더 ===== */
 function tileHtml(s){
   const rec = getTodayRecord(s.id);
-  let tag = '';
-  if(rec && rec.checkOutTime) tag = `<span class="status-tag 출석">하원 완료</span>`;
-  else if(rec && rec.checkInTime) tag = `<span class="status-tag 출석">등원 완료</span>`;
+  const checkedIn = !!(rec && rec.checkInTime && !rec.checkOutTime);
+  const tag = checkedIn ? `<span class="status-tag 출석">등원 완료</span>` : '';
   const cat = gradeCategory(s.grade);
   return `
-    <button class="name-tile cat-${cat} ${rec ? 'checked' : ''}" onclick="selectStudent('${s.id}')">
+    <button class="name-tile cat-${cat} ${checkedIn ? 'checked' : ''}" onclick="selectStudent('${s.id}')">
       <span class="n">${escapeHtml(s.name)}</span>
       <span class="g">${escapeHtml(s.grade)}</span>
       ${tag}
@@ -331,23 +345,34 @@ function renderGrid(){
     return;
   }
 
-  // 검색어가 있으면: 오늘 일정과 상관없이 전체 학생 중에서 이름으로 찾기 (보강 학생용)
+  // 검색어가 있으면: 오늘 일정/시간과 상관없이 전체 학생 중에서 이름으로 찾기 (보강 학생용)
+  // 단, 하원 완료한 학생은 검색에서도 숨김 (개인정보 보호)
   if(keyword){
-    const list = students.filter(s => s.name.toLowerCase().includes(keyword))
-      .sort((a,b)=> a.name.localeCompare(b.name, 'ko'));
+    const list = students.filter(s => {
+      if(!s.name.toLowerCase().includes(keyword)) return false;
+      const rec = getTodayRecord(s.id);
+      return !(rec && rec.checkOutTime);
+    }).sort((a,b)=> a.name.localeCompare(b.name, 'ko'));
     grid.innerHTML = list.length
       ? `<div class="name-grid">${list.map(tileHtml).join('')}</div>`
       : `<div class="empty-msg">검색 결과가 없습니다.</div>`;
     return;
   }
 
-  // 검색어가 없으면: 오늘 등원 예정인 학생만, 등원 시간 순으로 그룹핑
+  // 검색어가 없으면: 오늘 등원 예정 + 등원 30분 전부터 표시, 하원 완료한 학생은 숨김
   const today = todayStr();
   const weekday = weekdayLabelOf(today);
-  const visible = students.filter(s => getDayTime(s, weekday) || getTodayRecord(s.id));
+  const visible = students.filter(s => {
+    const rec = getTodayRecord(s.id);
+    if(rec && rec.checkOutTime) return false; // 하원 완료 → 숨김
+    const scheduledTime = getDayTime(s, weekday);
+    if(!scheduledTime && !rec) return false; // 오늘 일정도 없고 기록도 없으면 표시 안 함
+    if(rec) return true; // 이미 등원했으면 시간과 무관하게 계속 표시
+    return isWithinCheckInWindow(scheduledTime); // 등원 30분 전부터 표시
+  });
 
   if(!visible.length){
-    grid.innerHTML = `<div class="empty-msg">오늘(${weekday}요일) 등원 예정인 학생이 없습니다.<br>보강으로 오신 친구는 위 검색창에서 이름을 찾아주세요.</div>`;
+    grid.innerHTML = `<div class="empty-msg">지금 등원 가능한 학생이 없습니다.<br>보강으로 오신 친구는 위 검색창에서 이름을 찾아주세요.</div>`;
     return;
   }
 
@@ -360,11 +385,17 @@ function renderGrid(){
   const sortedTimes = Object.keys(groups).sort();
 
   grid.innerHTML = sortedTimes.map(t => {
-    const groupStudents = groups[t].sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+    const groupStudents = groups[t];
+    const waiting = groupStudents.filter(s => !getTodayRecord(s.id)).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+    const arrived = groupStudents.filter(s => getTodayRecord(s.id)).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
     const label = t === '99:99' ? '보강 · 시간 미정' : `${t} 타임`;
-    return `
-      <div class="group-title">${label}</div>
-      <div class="name-grid">${groupStudents.map(tileHtml).join('')}</div>`;
+
+    let html = `<div class="group-title">${label}</div>`;
+    if(waiting.length) html += `<div class="name-grid">${waiting.map(tileHtml).join('')}</div>`;
+    if(arrived.length){
+      html += `<div class="subgroup-title">↓ 등원 완료</div><div class="name-grid">${arrived.map(tileHtml).join('')}</div>`;
+    }
+    return html;
   }).join('');
 }
 
