@@ -576,9 +576,13 @@
               <label>학교</label>
               <input type="text" id="stuSchool" placeholder="예: 대구중앙초등학교">
             </div>
-            <div class="field" style="flex:1.4;">
-              <label>연락처 (선택)</label>
+            <div class="field" style="flex:1.2;">
+              <label>학생 연락처 (선택)</label>
               <input type="text" id="stuPhone" placeholder="예: 010-1234-5678">
+            </div>
+            <div class="field" style="flex:1.2;">
+              <label>학부모님 연락처 (선택)</label>
+              <input type="text" id="stuParentPhone" placeholder="예: 010-9876-5432">
             </div>
           </div>
           <div class="field" style="margin-bottom:14px;">
@@ -615,7 +619,7 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>연락처</th><th>시간표</th><th style="text-align:right;">관리</th></tr>
+                <tr><th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:right;">관리</th></tr>
               </thead>
               <tbody id="studentTableBody"></tbody>
             </table>
@@ -769,6 +773,11 @@
       <section class="view" id="view-sms">
         <div class="card">
           <div class="card-title">받는 사람 필터 <span class="hint">조건을 선택하면 아래 명단이 자동으로 좁혀져요</span></div>
+
+          <div class="field" style="margin-bottom:14px;">
+            <label>이름으로 검색</label>
+            <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
+          </div>
 
           <div class="field" style="margin-bottom:14px;">
             <label>학년 (선택 안 하면 전체)</label>
@@ -1016,14 +1025,16 @@ function bulkDeleteAllStudents(){
 }
 
 /* =========================================================
-   문자 발송 (학부모 연락처로 문자 앱 열기)
+   문자 발송 (학생/학부모 연락처로 문자 앱 열기)
 ========================================================= */
 const SMS_STATUS_OPTIONS = ['출석','지각','결석','미체크'];
+const SMS_GRADE_OPTIONS = ['초등','중1','중2','중3','고1','고2','고3','N수/기타'];
 let smsFilterGrades = [];
 let smsFilterDays = [];
 let smsFilterStatus = [];
-let smsFilteredList = [];
-let smsSelectedIds = new Set();
+let smsFilteredList = [];   // 필터에 걸린 학생 목록
+let smsEntries = [];        // 학생별 학생/학부모 연락처를 펼친 목록
+let smsSelectedKeys = new Set(); // 선택된 연락처 항목의 key
 
 function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
   containerEl.innerHTML = values.map(v => `
@@ -1032,7 +1043,7 @@ function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
 }
 
 function renderSmsFilterPickers(){
-  renderTogglePicker(document.getElementById('smsGradePicker'), GRADES, smsFilterGrades, 'toggleSmsGrade');
+  renderTogglePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
 }
@@ -1053,14 +1064,37 @@ function resetSmsFilter(){
   smsFilterGrades = [];
   smsFilterDays = [];
   smsFilterStatus = [];
+  document.getElementById('smsSearchInput').value = '';
   renderSmsFilterPickers();
   applySmsFilter();
 }
 
+// 학생 한 명당 학생 연락처 / 학부모 연락처를 각각 별도 항목으로 펼침
+function buildSmsEntries(list){
+  const entries = [];
+  list.forEach(s => {
+    if(s.phone && s.phone.trim()){
+      entries.push({ key: `${s.id}_stu`, studentId: s.id, name: s.name, grade: s.grade, type:'학생', number: s.phone.trim() });
+    }
+    if(s.parentPhone && s.parentPhone.trim()){
+      entries.push({ key: `${s.id}_parent`, studentId: s.id, name: s.name, grade: s.grade, type:'학부모', number: s.parentPhone.trim() });
+    }
+  });
+  return entries;
+}
+
+function smsGradeMatches(studentGrade, filterValue){
+  if(filterValue === '초등') return (studentGrade || '').startsWith('초');
+  return studentGrade === filterValue;
+}
+
 function applySmsFilter(){
   const today = todayStr();
+  const keyword = document.getElementById('smsSearchInput').value.trim().toLowerCase();
+
   smsFilteredList = students.filter(s => {
-    if(smsFilterGrades.length && !smsFilterGrades.includes(s.grade)) return false;
+    if(keyword && !s.name.toLowerCase().includes(keyword)) return false;
+    if(smsFilterGrades.length && !smsFilterGrades.some(g => smsGradeMatches(s.grade, g))) return false;
     if(smsFilterDays.length){
       const hasDay = smsFilterDays.some(d => getDayTime(s, d));
       if(!hasDay) return false;
@@ -1073,44 +1107,49 @@ function applySmsFilter(){
     return true;
   }).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
 
-  smsSelectedIds = new Set(smsFilteredList.filter(s => s.phone && s.phone.trim()).map(s => s.id));
+  smsEntries = buildSmsEntries(smsFilteredList);
+  smsSelectedKeys = new Set(smsEntries.map(e => e.key));
   renderSmsStudentList();
 }
 
-function toggleSmsStudent(id){
-  if(smsSelectedIds.has(id)) smsSelectedIds.delete(id); else smsSelectedIds.add(id);
+function toggleSmsEntry(key){
+  if(smsSelectedKeys.has(key)) smsSelectedKeys.delete(key); else smsSelectedKeys.add(key);
   renderSmsStudentList();
 }
 
 function toggleAllSmsSelection(select){
-  smsSelectedIds = select ? new Set(smsFilteredList.filter(s => s.phone && s.phone.trim()).map(s => s.id)) : new Set();
+  smsSelectedKeys = select ? new Set(smsEntries.map(e => e.key)) : new Set();
   renderSmsStudentList();
 }
 
 function renderSmsStudentList(){
   const box = document.getElementById('smsStudentList');
   const hint = document.getElementById('smsListHint');
-  const noPhoneCount = smsFilteredList.filter(s => !(s.phone && s.phone.trim())).length;
-  hint.textContent = `(총 ${smsFilteredList.length}명 · 선택됨 ${smsSelectedIds.size}명${noPhoneCount ? ` · 연락처 없음 ${noPhoneCount}명 제외` : ''})`;
+  const noContactCount = smsFilteredList.filter(s => !(s.phone && s.phone.trim()) && !(s.parentPhone && s.parentPhone.trim())).length;
+  hint.textContent = `(학생 ${smsFilteredList.length}명 · 연락처 ${smsEntries.length}건 · 선택됨 ${smsSelectedKeys.size}건${noContactCount ? ` · 연락처 없음 ${noContactCount}명 제외` : ''})`;
 
   if(!smsFilteredList.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생이 없습니다.</div>`;
     return;
   }
+  if(!smsEntries.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생은 있지만, 등록된 연락처가 없습니다.</div>`;
+    return;
+  }
 
-  box.innerHTML = smsFilteredList.map(s => {
-    const hasPhone = !!(s.phone && s.phone.trim());
-    const checked = smsSelectedIds.has(s.id);
+  box.innerHTML = smsEntries.map(e => {
+    const checked = smsSelectedKeys.has(e.key);
     return `
-      <div class="att-row" style="${hasPhone ? '' : 'opacity:0.5;'}">
+      <div class="att-row">
         <div class="att-row-main" style="flex:0 0 24px;">
-          <input type="checkbox" ${checked ? 'checked' : ''} ${hasPhone ? '' : 'disabled'} onchange="toggleSmsStudent('${s.id}')" style="width:18px;height:18px;">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSmsEntry('${e.key}')" style="width:18px;height:18px;">
         </div>
         <div class="att-row-main">
-          <strong>${escapeHtml(s.name)}</strong>
-          ${gradeBadge(s.grade)}
+          <strong>${escapeHtml(e.name)}</strong>
+          ${gradeBadge(e.grade)}
+          <span class="badge">${e.type}</span>
         </div>
-        <div class="cell-muted" style="font-size:12.5px;">${hasPhone ? escapeHtml(s.phone) : '연락처 없음'}</div>
+        <div class="cell-muted" style="font-size:12.5px;">${escapeHtml(e.number)}</div>
       </div>`;
   }).join('');
 }
@@ -1126,18 +1165,18 @@ function fillSmsTemplate(type){
 }
 
 function openSmsApp(){
-  const chosen = smsFilteredList.filter(s => smsSelectedIds.has(s.id) && s.phone && s.phone.trim());
+  const chosen = smsEntries.filter(e => smsSelectedKeys.has(e.key));
   if(!chosen.length){ alert('받는 사람을 선택해 주세요.'); return; }
-  const numbers = chosen.map(s => s.phone.replace(/[^0-9]/g, '')).filter(Boolean);
+  const numbers = chosen.map(e => e.number.replace(/[^0-9]/g, '')).filter(Boolean);
   const body = document.getElementById('smsBody').value;
   const link = `sms:${numbers.join(',')}${body ? '?body=' + encodeURIComponent(body) : ''}`;
   window.location.href = link;
 }
 
 function copySmsNumbers(){
-  const chosen = smsFilteredList.filter(s => smsSelectedIds.has(s.id) && s.phone && s.phone.trim());
+  const chosen = smsEntries.filter(e => smsSelectedKeys.has(e.key));
   if(!chosen.length){ alert('선택된 연락처가 없습니다.'); return; }
-  const numbers = chosen.map(s => s.phone).join(', ');
+  const numbers = chosen.map(e => e.number).join(', ');
   navigator.clipboard.writeText(numbers)
     .then(()=> showToast(`연락처 ${chosen.length}개를 복사했습니다.`))
     .catch(()=> alert('복사에 실패했습니다. 직접 선택해서 복사해 주세요.'));
@@ -1677,6 +1716,7 @@ function submitStudent(){
   const grade = document.getElementById('stuGrade').value;
   const school = document.getElementById('stuSchool').value.trim();
   const phone = document.getElementById('stuPhone').value.trim();
+  const parentPhone = document.getElementById('stuParentPhone').value.trim();
 
   if(!name){ alert('이름을 입력해 주세요.'); return; }
   if(!school){ alert('학교를 입력해 주세요.'); return; }
@@ -1684,10 +1724,10 @@ function submitStudent(){
   const schedule = readScheduleFromForm();
 
   if(editingStudentId){
-    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, schedule });
+    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, parentPhone, schedule });
     showToast('학생 정보가 수정되었습니다.');
   }else{
-    db.ref('students').push({ name, grade, school, phone, schedule, createdAt: Date.now() });
+    db.ref('students').push({ name, grade, school, phone, parentPhone, schedule, createdAt: Date.now() });
     showToast('학생이 등록되었습니다.');
   }
   cancelStudentEdit();
@@ -1701,6 +1741,7 @@ function editStudent(id){
   document.getElementById('stuGrade').value = stu.grade;
   document.getElementById('stuSchool').value = stu.school;
   document.getElementById('stuPhone').value = stu.phone || '';
+  document.getElementById('stuParentPhone').value = stu.parentPhone || '';
   fillScheduleForm(stu.schedule);
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 정보 수정 ';
   document.getElementById('stuSubmitBtn').textContent = '수정 완료';
@@ -1713,6 +1754,7 @@ function cancelStudentEdit(){
   document.getElementById('stuName').value = '';
   document.getElementById('stuSchool').value = '';
   document.getElementById('stuPhone').value = '';
+  document.getElementById('stuParentPhone').value = '';
   document.getElementById('stuGrade').selectedIndex = 0;
   fillScheduleForm({});
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 등록 ';
@@ -1782,13 +1824,14 @@ function renderStudents(){
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
+      <td class="cell-muted">${escapeHtml(s.parentPhone || '-')}</td>
       <td class="cell-muted" style="font-size:12px;">${escapeHtml(scheduleSummary(s))}</td>
       <td style="text-align:right;white-space:nowrap;">
         <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}')">수정</button>
         <button class="btn btn-danger-outline btn-sm" onclick="deleteStudent('${s.id}')">삭제</button>
       </td>
     </tr>
-  `).join('') : `<tr class="empty-row"><td colspan="6">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  `).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
 }
 
 /* =========================================================
