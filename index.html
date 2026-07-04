@@ -465,6 +465,9 @@
       <button class="nav-item" data-view="students" onclick="switchView('students')">
         <span class="nav-icon">👥</span><span>학생 관리</span>
       </button>
+      <button class="nav-item" data-view="sms" onclick="switchView('sms')">
+        <span class="nav-icon">📨</span><span>문자 발송</span>
+      </button>
       <button class="nav-item" data-view="scores" onclick="switchView('scores')">
         <span class="nav-icon">📝</span><span>성적 관리</span>
       </button>
@@ -762,6 +765,62 @@
         </div>
       </section>
 
+      <!-- ================= 문자 발송 ================= -->
+      <section class="view" id="view-sms">
+        <div class="card">
+          <div class="card-title">받는 사람 필터 <span class="hint">조건을 선택하면 아래 명단이 자동으로 좁혀져요</span></div>
+
+          <div class="field" style="margin-bottom:14px;">
+            <label>학년 (선택 안 하면 전체)</label>
+            <div class="weekday-picker" id="smsGradePicker"></div>
+          </div>
+
+          <div class="field" style="margin-bottom:14px;">
+            <label>등원 요일 (선택 안 하면 전체)</label>
+            <div class="weekday-picker" id="smsDayPicker"></div>
+          </div>
+
+          <div class="field" style="margin-bottom:14px;">
+            <label>오늘 출결 상태 (선택 안 하면 전체)</label>
+            <div class="weekday-picker" id="smsStatusPicker"></div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
+            <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="toolbar">
+            <div class="card-title" style="margin:0;">받는 사람 명단 <span class="hint" id="smsListHint"></span></div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="toggleAllSmsSelection(true)">전체 선택</button>
+              <button class="btn btn-ghost btn-sm" onclick="toggleAllSmsSelection(false)">전체 해제</button>
+            </div>
+          </div>
+          <div id="smsStudentList"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">메시지 내용</div>
+          <div class="form-actions" style="margin-bottom:10px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="fillSmsTemplate('absent')">결석 안내 템플릿</button>
+            <button class="btn btn-ghost btn-sm" onclick="fillSmsTemplate('notice')">휴원·공지 템플릿</button>
+            <button class="btn btn-ghost btn-sm" onclick="fillSmsTemplate('exam')">시험 안내 템플릿</button>
+          </div>
+          <textarea id="smsBody" placeholder="문자 내용을 입력하세요" style="width:100%;min-height:120px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:14px;resize:vertical;"></textarea>
+          <div class="form-actions" style="margin-top:14px;">
+            <button class="btn btn-primary" onclick="openSmsApp()">📱 문자 앱으로 보내기</button>
+            <button class="btn btn-ghost" onclick="copySmsNumbers()">📋 번호만 복사</button>
+          </div>
+          <p class="cell-muted" style="font-size:11.5px;margin-top:10px;line-height:1.6;">
+            "문자 앱으로 보내기"를 누르면 이 기기(휴대폰/태블릿)의 문자 앱이 선택된 학부모 번호와 함께 열려요. 내용을 확인하고 직접 눌러서 보내시면 됩니다.
+            기기에 따라 여러 명에게 한 번에 열리지 않을 수 있어요 — 그럴 땐 "번호만 복사"로 번호를 복사해서 카카오톡 단체방이나 문자 앱에 직접 붙여넣어 주세요.
+          </p>
+        </div>
+      </section>
+
       <!-- ================= 성적 관리 ================= -->
       <section class="view" id="view-scores">
         <div class="card">
@@ -956,6 +1015,134 @@ function bulkDeleteAllStudents(){
   showToast('전체 학생 데이터가 삭제되었습니다.');
 }
 
+/* =========================================================
+   문자 발송 (학부모 연락처로 문자 앱 열기)
+========================================================= */
+const SMS_STATUS_OPTIONS = ['출석','지각','결석','미체크'];
+let smsFilterGrades = [];
+let smsFilterDays = [];
+let smsFilterStatus = [];
+let smsFilteredList = [];
+let smsSelectedIds = new Set();
+
+function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
+  containerEl.innerHTML = values.map(v => `
+    <button type="button" class="weekday-chip ${selectedArr.includes(v) ? 'active' : ''}" onclick="${onToggleFnName}('${v}')">${v}</button>
+  `).join('');
+}
+
+function renderSmsFilterPickers(){
+  renderTogglePicker(document.getElementById('smsGradePicker'), GRADES, smsFilterGrades, 'toggleSmsGrade');
+  renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
+  renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
+}
+function toggleSmsGrade(g){
+  smsFilterGrades = smsFilterGrades.includes(g) ? smsFilterGrades.filter(x=>x!==g) : [...smsFilterGrades, g];
+  renderSmsFilterPickers();
+}
+function toggleSmsDay(d){
+  smsFilterDays = smsFilterDays.includes(d) ? smsFilterDays.filter(x=>x!==d) : [...smsFilterDays, d];
+  renderSmsFilterPickers();
+}
+function toggleSmsStatus(s){
+  smsFilterStatus = smsFilterStatus.includes(s) ? smsFilterStatus.filter(x=>x!==s) : [...smsFilterStatus, s];
+  renderSmsFilterPickers();
+}
+
+function resetSmsFilter(){
+  smsFilterGrades = [];
+  smsFilterDays = [];
+  smsFilterStatus = [];
+  renderSmsFilterPickers();
+  applySmsFilter();
+}
+
+function applySmsFilter(){
+  const today = todayStr();
+  smsFilteredList = students.filter(s => {
+    if(smsFilterGrades.length && !smsFilterGrades.includes(s.grade)) return false;
+    if(smsFilterDays.length){
+      const hasDay = smsFilterDays.some(d => getDayTime(s, d));
+      if(!hasDay) return false;
+    }
+    if(smsFilterStatus.length){
+      const rec = getAttendanceRecord(s.id, today);
+      const status = rec ? rec.status : '미체크';
+      if(!smsFilterStatus.includes(status)) return false;
+    }
+    return true;
+  }).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+
+  smsSelectedIds = new Set(smsFilteredList.filter(s => s.phone && s.phone.trim()).map(s => s.id));
+  renderSmsStudentList();
+}
+
+function toggleSmsStudent(id){
+  if(smsSelectedIds.has(id)) smsSelectedIds.delete(id); else smsSelectedIds.add(id);
+  renderSmsStudentList();
+}
+
+function toggleAllSmsSelection(select){
+  smsSelectedIds = select ? new Set(smsFilteredList.filter(s => s.phone && s.phone.trim()).map(s => s.id)) : new Set();
+  renderSmsStudentList();
+}
+
+function renderSmsStudentList(){
+  const box = document.getElementById('smsStudentList');
+  const hint = document.getElementById('smsListHint');
+  const noPhoneCount = smsFilteredList.filter(s => !(s.phone && s.phone.trim())).length;
+  hint.textContent = `(총 ${smsFilteredList.length}명 · 선택됨 ${smsSelectedIds.size}명${noPhoneCount ? ` · 연락처 없음 ${noPhoneCount}명 제외` : ''})`;
+
+  if(!smsFilteredList.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생이 없습니다.</div>`;
+    return;
+  }
+
+  box.innerHTML = smsFilteredList.map(s => {
+    const hasPhone = !!(s.phone && s.phone.trim());
+    const checked = smsSelectedIds.has(s.id);
+    return `
+      <div class="att-row" style="${hasPhone ? '' : 'opacity:0.5;'}">
+        <div class="att-row-main" style="flex:0 0 24px;">
+          <input type="checkbox" ${checked ? 'checked' : ''} ${hasPhone ? '' : 'disabled'} onchange="toggleSmsStudent('${s.id}')" style="width:18px;height:18px;">
+        </div>
+        <div class="att-row-main">
+          <strong>${escapeHtml(s.name)}</strong>
+          ${gradeBadge(s.grade)}
+        </div>
+        <div class="cell-muted" style="font-size:12.5px;">${hasPhone ? escapeHtml(s.phone) : '연락처 없음'}</div>
+      </div>`;
+  }).join('');
+}
+
+function fillSmsTemplate(type){
+  const academyName = '델타수학 전문학원';
+  const templates = {
+    absent: `[${academyName}] 안녕하세요, 오늘 자녀가 학원에 결석하여 안내드립니다. 확인 부탁드립니다.`,
+    notice: `[${academyName}] 안내드립니다. (내용을 입력해 주세요)\n일시: \n장소: `,
+    exam: `[${academyName}] 다가오는 시험 일정을 안내드립니다.\n일시: \n범위: \n준비물: `,
+  };
+  document.getElementById('smsBody').value = templates[type] || '';
+}
+
+function openSmsApp(){
+  const chosen = smsFilteredList.filter(s => smsSelectedIds.has(s.id) && s.phone && s.phone.trim());
+  if(!chosen.length){ alert('받는 사람을 선택해 주세요.'); return; }
+  const numbers = chosen.map(s => s.phone.replace(/[^0-9]/g, '')).filter(Boolean);
+  const body = document.getElementById('smsBody').value;
+  const link = `sms:${numbers.join(',')}${body ? '?body=' + encodeURIComponent(body) : ''}`;
+  window.location.href = link;
+}
+
+function copySmsNumbers(){
+  const chosen = smsFilteredList.filter(s => smsSelectedIds.has(s.id) && s.phone && s.phone.trim());
+  if(!chosen.length){ alert('선택된 연락처가 없습니다.'); return; }
+  const numbers = chosen.map(s => s.phone).join(', ');
+  navigator.clipboard.writeText(numbers)
+    .then(()=> showToast(`연락처 ${chosen.length}개를 복사했습니다.`))
+    .catch(()=> alert('복사에 실패했습니다. 직접 선택해서 복사해 주세요.'));
+}
+
 let editingStudentId = null;
 let editingScoreId = null;
 let currentView = 'dashboard';
@@ -1013,7 +1200,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', scores:'성적 관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리' };
 
 function switchView(view){
   currentView = view;
@@ -1026,6 +1213,7 @@ function switchView(view){
   if(view === 'attendance') renderAttendance();
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); }
   if(view === 'students') renderStudents();
+  if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores') renderScores();
 }
 
@@ -1078,19 +1266,22 @@ function renderDonut(containerEl, segments, totalLabel){
 ========================================================= */
 function renderDashboard(){
   const today = todayStr();
+  const weekday = weekdayLabelOf(today);
   document.getElementById('todayDate').textContent = formatDateKR(today);
   document.getElementById('dashDonutDate').textContent = '(' + formatDateKR(today) + ')';
 
   document.getElementById('statTotalStudents').textContent = students.length;
 
-  const todayRecords = attendance.filter(a => a.date === today);
+  // 오늘 등원 예정인 학생만 대상으로 집계 (일정에 없는 학생은 제외, 이미 기록이 있으면 포함)
+  const expectedToday = students.filter(s => getDayTime(s, weekday) || getAttendanceRecord(s.id, today));
+  const todayRecords = attendance.filter(a => a.date === today && expectedToday.some(s => s.id === a.studentId));
   const present = todayRecords.filter(a => a.status === '출석').length;
   const late = todayRecords.filter(a => a.status === '지각').length;
   const absent = todayRecords.filter(a => a.status === '결석').length;
-  const unchecked = students.length - todayRecords.length;
+  const unchecked = expectedToday.length - todayRecords.length;
 
   document.getElementById('statTodayPresent').textContent = present;
-  document.getElementById('statTodayPresentSub').textContent = `전체 ${students.length}명 중`;
+  document.getElementById('statTodayPresentSub').textContent = `오늘 등원 예정 ${expectedToday.length}명 중`;
   document.getElementById('statTodayAbsent').textContent = absent + late;
   document.getElementById('statTodayAbsentSub').textContent = `결석 ${absent} · 지각 ${late}`;
 
@@ -1107,7 +1298,7 @@ function renderDashboard(){
     {label:'지각', value:late,    color:'var(--color-warning)'},
     {label:'결석', value:absent,  color:'var(--color-danger)'},
     {label:'미체크', value:Math.max(unchecked,0), color:'var(--color-neutral)'},
-  ], '총원');
+  ], '등원 예정');
 
   const todayWorking = teachers.filter(t => isTeacherWorking(t, today));
   const teacherLineEl = document.getElementById('todayTeachersLine');
