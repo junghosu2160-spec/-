@@ -287,6 +287,51 @@
   .cal-legend .dot.status-지각{background:var(--color-warning);}
   .cal-legend .dot.status-결석{background:var(--color-danger);}
   .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
+  .cal-legend .dot.event-dot-시험{background:var(--color-danger);}
+  .cal-legend .dot.event-dot-상담{background:var(--color-accent-dark);}
+
+  /* ===== 캘린더 탭: 큰 달력 ===== */
+  .bigcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px;}
+  .bigcal-cell{
+    min-height:96px;background:var(--color-surface);border:1px solid var(--color-border);
+    border-radius:10px;padding:8px;cursor:pointer;display:flex;flex-direction:column;gap:4px;
+    transition:border-color .12s ease;
+  }
+  .bigcal-cell.empty{visibility:hidden;cursor:default;}
+  .bigcal-cell:hover{border-color:var(--color-primary-light);}
+  .bigcal-cell.selected{border-color:var(--color-primary);border-width:2px;}
+  .bigcal-cell.today .bc-num{color:var(--color-primary);}
+  .bc-num{font-size:13px;font-weight:800;color:var(--color-text);}
+  .bc-chip{
+    font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
+  .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
+  @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
+  .cal-num{position:relative;}
+  .cal-cell.has-event-시험 .cal-num::after,
+  .cal-cell.has-event-상담 .cal-num::after{
+    content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
+    width:5px;height:5px;border-radius:50%;
+  }
+  .cal-cell.has-event-시험 .cal-num::after{background:var(--color-danger);}
+  .cal-cell.has-event-상담 .cal-num::after{background:var(--color-accent-dark);}
+  .cal-cell.selected .cal-num{outline:2px solid var(--color-primary-light);outline-offset:1px;}
+  .cal-cell{cursor:default;}
+  .cal-cell:not(.empty){cursor:pointer;}
+
+  .event-day-panel{margin-top:14px;padding-top:12px;border-top:1px solid var(--color-border);}
+  .event-item{
+    display:flex;justify-content:space-between;align-items:center;gap:8px;
+    padding:8px 10px;border-radius:8px;background:var(--color-surface-alt);
+    margin-bottom:6px;font-size:12.5px;border-left:3px solid var(--color-neutral);
+  }
+  .event-item.시험{border-left-color:var(--color-danger);}
+  .event-item.상담{border-left-color:var(--color-accent-dark);}
+  .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
+  .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
+  .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   /* ===== 요일별 개인 시간표 입력 ===== */
   .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
   .schedule-cell{display:flex;flex-direction:column;gap:5px;align-items:center;}
@@ -377,11 +422,14 @@
       <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
         <span class="nav-icon">🏠</span><span>대시보드</span>
       </button>
-      <button class="nav-item" data-view="students" onclick="switchView('students')">
-        <span class="nav-icon">👥</span><span>학생 관리</span>
-      </button>
       <button class="nav-item" data-view="attendance" onclick="switchView('attendance')">
         <span class="nav-icon">📋</span><span>출결 관리</span>
+      </button>
+      <button class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+        <span class="nav-icon">🗓️</span><span>캘린더</span>
+      </button>
+      <button class="nav-item" data-view="students" onclick="switchView('students')">
+        <span class="nav-icon">👥</span><span>학생 관리</span>
       </button>
       <button class="nav-item" data-view="scores" onclick="switchView('scores')">
         <span class="nav-icon">📝</span><span>성적 관리</span>
@@ -433,13 +481,40 @@
           <div class="card">
             <div class="card-title">오늘의 출결 현황 <span class="hint" id="dashDonutDate"></span></div>
             <div class="donut-wrap" id="dashDonut"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">최근 등록 학생</div>
-            <div id="recentStudents"></div>
             <div class="divider"></div>
             <div class="card-title" style="margin-bottom:8px;">최근 성적 등록</div>
             <div id="recentScores"></div>
+          </div>
+          <div class="card">
+            <div class="toolbar" style="margin-bottom:0;">
+              <div class="card-title" style="margin:0;">일정 캘린더 <span class="hint">시험·상담 일정</span></div>
+            </div>
+            <div class="cal-header">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
+              <div class="cal-month-label" id="dashCalMonthLabel">-</div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
+            </div>
+            <div class="cal-weekdays">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div class="cal-grid" id="dashCalGrid"></div>
+            <div class="cal-legend">
+              <span><i class="dot event-dot-시험"></i>시험</span>
+              <span><i class="dot event-dot-상담"></i>상담</span>
+            </div>
+
+            <div class="event-day-panel">
+              <h4 id="eventDayLabel" style="margin:0 0 8px 0;font-size:12.5px;font-weight:700;">날짜를 선택해 주세요</h4>
+              <div id="eventList"></div>
+              <div class="form-row" style="margin:10px 0 0 0;">
+                <select id="eventType" style="flex:0 0 90px;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
+                  <option value="상담">상담</option>
+                  <option value="시험">시험</option>
+                </select>
+                <input type="text" id="eventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:8px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
+                <button class="btn btn-primary btn-sm" onclick="addEvent(false)">추가</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -513,8 +588,11 @@
         <div class="card">
           <div class="toolbar" style="margin-bottom:6px;">
             <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
-            <div class="field" style="min-width:180px;flex:0 0 auto;">
-              <input type="date" id="attDate" onchange="renderAttendance()">
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:160px;">
+              <div class="field" style="min-width:180px;flex:0 0 auto;">
+                <input type="date" id="attDate" onchange="renderAttendance()">
+              </div>
             </div>
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
@@ -572,6 +650,40 @@
               <h4>최근 출결 기록 (최신순 10건)</h4>
               <div id="attHistoryList"></div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 캘린더 ================= -->
+      <section class="view" id="view-calendar">
+        <div class="card">
+          <div class="toolbar" style="margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
+              <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
+            </div>
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);">
+              <span><i class="dot event-dot-시험"></i>시험</span>
+              <span><i class="dot event-dot-상담"></i>상담</span>
+            </div>
+          </div>
+          <div class="cal-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div class="bigcal-grid" id="bigCalGrid"></div>
+        </div>
+
+        <div class="card section-gap">
+          <h4 id="bigEventDayLabel" style="margin:0 0 10px 0;font-size:14px;font-weight:800;">날짜를 선택해 주세요</h4>
+          <div id="bigEventList"></div>
+          <div class="form-row" style="margin:12px 0 0 0;">
+            <select id="bigEventType" style="flex:0 0 100px;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
+              <option value="상담">상담</option>
+              <option value="시험">시험</option>
+            </select>
+            <input type="text" id="bigEventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
+            <button class="btn btn-primary" onclick="addEvent(true)">일정 추가</button>
           </div>
         </div>
       </section>
@@ -662,6 +774,7 @@ const db = firebase.database();
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
+let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 
@@ -683,6 +796,11 @@ db.ref('scores').on('value', snap => {
   scores = snapshotToArray(snap.val());
   refreshCurrentView();
 });
+db.ref('events').on('value', snap => {
+  events = snapshotToArray(snap.val());
+  if(currentView === 'dashboard') renderDashCalendar();
+  if(currentView === 'calendar') renderBigCalendar();
+});
 
 // 연결 상태 표시
 db.ref('.info/connected').on('value', snap => {
@@ -701,9 +819,9 @@ function refreshCurrentView(){
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'students') renderStudents();
   if(currentView === 'attendance') renderAttendance();
+  if(currentView === 'calendar') renderBigCalendar();
   if(currentView === 'scores') renderScores();
-  if(currentView !== 'students' && currentView !== 'scores') populateStudentDropdowns();
-  else populateStudentDropdowns();
+  populateStudentDropdowns();
 }
 
 // 시간이 지나면서 '미출석' 표시가 자동으로 뜨도록 1분마다 출결 화면 갱신
@@ -807,7 +925,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', students:'학생 관리', attendance:'출결 관리', scores:'성적 관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', scores:'성적 관리' };
 
 function switchView(view){
   currentView = view;
@@ -817,8 +935,9 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'students') renderStudents();
   if(view === 'attendance') renderAttendance();
+  if(view === 'calendar') renderBigCalendar();
+  if(view === 'students') renderStudents();
   if(view === 'scores') renderScores();
 }
 
@@ -902,18 +1021,151 @@ function renderDashboard(){
     {label:'미체크', value:Math.max(unchecked,0), color:'var(--color-neutral)'},
   ], '총원');
 
-  const recentStudentsEl = document.getElementById('recentStudents');
-  const recentStu = [...students].sort((a,b)=> b.createdAt - a.createdAt).slice(0,5);
-  recentStudentsEl.innerHTML = recentStu.length ? recentStu.map(s => `
-    <div class="avg-mini"><span>${escapeHtml(s.name)} <span class="cell-muted">· ${escapeHtml(s.grade)}</span></span><span class="cell-muted">${escapeHtml(s.school)}</span></div>
-  `).join('') : `<div class="cell-muted" style="font-size:13px;">등록된 학생이 없습니다.</div>`;
-
   const recentScoresEl = document.getElementById('recentScores');
   const recentSc = [...scores].sort((a,b)=> b.date.localeCompare(a.date) || b.createdAt-a.createdAt).slice(0,5);
   recentScoresEl.innerHTML = recentSc.length ? recentSc.map(s => {
     const stu = studentById(s.studentId);
     return `<div class="avg-mini"><span>${escapeHtml(stu? stu.name : '삭제된 학생')} <span class="cell-muted">· ${escapeHtml(s.subject)}</span></span><span class="cell-muted">${s.score}/${s.maxScore}점</span></div>`;
   }).join('') : `<div class="cell-muted" style="font-size:13px;">등록된 성적이 없습니다.</div>`;
+
+  renderDashCalendar();
+}
+
+/* =========================================================
+   대시보드 일정 캘린더 (시험/상담)
+========================================================= */
+const dashNowD = new Date();
+let dashCalYear = dashNowD.getFullYear();
+let dashCalMonth = dashNowD.getMonth();
+let selectedEventDate = todayStr();
+
+function dashCalShiftMonth(delta){
+  dashCalMonth += delta;
+  if(dashCalMonth < 0){ dashCalMonth = 11; dashCalYear--; }
+  if(dashCalMonth > 11){ dashCalMonth = 0; dashCalYear++; }
+  renderDashCalendar();
+  renderBigCalendar();
+}
+
+function renderDashCalendar(){
+  const grid = document.getElementById('dashCalGrid');
+  const label = document.getElementById('dashCalMonthLabel');
+  if(!grid || !label) return;
+
+  label.textContent = `${dashCalYear}년 ${dashCalMonth + 1}월`;
+
+  const firstWeekday = new Date(dashCalYear, dashCalMonth, 1).getDay();
+  const daysInMonth = new Date(dashCalYear, dashCalMonth + 1, 0).getDate();
+  const today = todayStr();
+
+  let cells = '';
+  for(let i = 0; i < firstWeekday; i++){
+    cells += `<div class="cal-cell empty"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${dashCalYear}-${String(dashCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayEvents = events.filter(e => e.date === dateStr);
+    const hasExam = dayEvents.some(e => e.type === '시험');
+    const hasCounsel = dayEvents.some(e => e.type === '상담');
+    let cls = '';
+    if(hasExam) cls += ' has-event-시험';
+    else if(hasCounsel) cls += ' has-event-상담';
+    if(dateStr === today) cls += ' today';
+    if(dateStr === selectedEventDate) cls += ' selected';
+    cells += `<div class="cal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="cal-num">${d}</span></div>`;
+  }
+
+  grid.innerHTML = cells;
+  renderEventListForSelectedDate();
+}
+
+function renderBigCalendar(){
+  const grid = document.getElementById('bigCalGrid');
+  const label = document.getElementById('bigCalMonthLabel');
+  if(!grid || !label) return;
+
+  label.textContent = `${dashCalYear}년 ${dashCalMonth + 1}월`;
+
+  const firstWeekday = new Date(dashCalYear, dashCalMonth, 1).getDay();
+  const daysInMonth = new Date(dashCalYear, dashCalMonth + 1, 0).getDate();
+  const today = todayStr();
+
+  let cells = '';
+  for(let i = 0; i < firstWeekday; i++){
+    cells += `<div class="bigcal-cell empty"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${dashCalYear}-${String(dashCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayEvents = events.filter(e => e.date === dateStr);
+    let cls = '';
+    if(dateStr === today) cls += ' today';
+    if(dateStr === selectedEventDate) cls += ' selected';
+    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
+    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}</div>`;
+  }
+
+  grid.innerHTML = cells;
+  renderBigEventListForSelectedDate();
+}
+
+function selectEventDate(dateStr){
+  selectedEventDate = dateStr;
+  renderDashCalendar();
+  renderBigCalendar();
+}
+
+function renderEventListForSelectedDate(){
+  const listEl = document.getElementById('eventList');
+  const labelEl = document.getElementById('eventDayLabel');
+  if(!listEl || !labelEl) return;
+
+  labelEl.textContent = formatDateKR(selectedEventDate);
+
+  const dayEvents = events.filter(e => e.date === selectedEventDate)
+    .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
+
+  listEl.innerHTML = dayEvents.length ? dayEvents.map(e => `
+    <div class="event-item ${e.type}">
+      <span class="event-type-tag ${e.type}">${e.type}</span>
+      <span style="flex:1;">${escapeHtml(e.title)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
+    </div>
+  `).join('') : `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
+}
+
+function renderBigEventListForSelectedDate(){
+  const listEl = document.getElementById('bigEventList');
+  const labelEl = document.getElementById('bigEventDayLabel');
+  if(!listEl || !labelEl) return;
+
+  labelEl.textContent = formatDateKR(selectedEventDate);
+
+  const dayEvents = events.filter(e => e.date === selectedEventDate)
+    .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
+
+  listEl.innerHTML = dayEvents.length ? dayEvents.map(e => `
+    <div class="event-item ${e.type}">
+      <span class="event-type-tag ${e.type}">${e.type}</span>
+      <span style="flex:1;">${escapeHtml(e.title)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
+    </div>
+  `).join('') : `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
+}
+
+function addEvent(fromBig){
+  const type = document.getElementById(fromBig ? 'bigEventType' : 'eventType').value;
+  const titleInput = document.getElementById(fromBig ? 'bigEventTitle' : 'eventTitle');
+  const title = titleInput.value.trim();
+  if(!title){ alert('일정 제목을 입력해 주세요.'); return; }
+  db.ref('events').push({ date: selectedEventDate, type, title, createdAt: Date.now() });
+  titleInput.value = '';
+  showToast('일정이 추가되었습니다.');
+}
+
+function deleteEvent(id){
+  if(!confirm('이 일정을 삭제하시겠습니까?')) return;
+  db.ref('events/' + id).remove();
+  showToast('일정이 삭제되었습니다.');
 }
 
 /* =========================================================
@@ -1097,6 +1349,12 @@ function setAttendanceMemo(studentId, date, memo){
   }
 }
 
+function compareByGradeThenName(a, b){
+  const gi = GRADES.indexOf(a.grade) - GRADES.indexOf(b.grade);
+  if(gi !== 0) return gi;
+  return a.name.localeCompare(b.name, 'ko');
+}
+
 function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
   if(!list.length){
     return `<div class="empty-msg cell-muted" style="text-align:center;padding:20px;font-size:12.5px;">${emptyMsg}</div>`;
@@ -1110,7 +1368,7 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
   const sortedTimes = Object.keys(groups).sort();
 
   return sortedTimes.map(t => {
-    const groupStudents = groups[t].sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+    const groupStudents = groups[t].sort(compareByGradeThenName);
     const groupLabel = t === '99:99' ? '예정 없음 (임시·보강)' : `${t} 타임`;
     const rows = groupStudents.map(s => {
       const rec = getAttendanceRecord(s.id, date);
@@ -1149,6 +1407,7 @@ function renderAttendance(){
   const date = dateInput.value;
   const weekday = weekdayLabelOf(date);
   const todayOnly = document.getElementById('attTodayOnlyToggle').checked;
+  const keyword = document.getElementById('attSearch').value.trim().toLowerCase();
   const isToday = date === todayStr();
   const nowTime = isToday ? (String(new Date().getHours()).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0')) : null;
 
@@ -1157,8 +1416,9 @@ function renderAttendance(){
   if(!students.length){
     container.innerHTML = `<div class="empty-msg cell-muted" style="text-align:center;padding:30px;">등록된 학생이 없습니다. 먼저 '학생 관리'에서 학생을 등록해 주세요.</div>`;
   }else{
-    // 표시할 학생 선별: 오늘 예정 학생 + 이미 기록이 있는 학생(보강/임시 등원)은 토글과 무관하게 항상 표시
+    // 표시할 학생 선별: 오늘 예정 학생 + 이미 기록이 있는 학생(보강/임시 등원)은 토글과 무관하게 항상 표시 + 이름 검색
     const visible = students.filter(s => {
+      if(keyword && !s.name.toLowerCase().includes(keyword)) return false;
       const scheduled = getDayTime(s, weekday);
       const hasRecord = !!getAttendanceRecord(s.id, date);
       return !todayOnly || scheduled || hasRecord;
@@ -1514,6 +1774,7 @@ function init(){
   renderScheduleGrid();
   populateStudentDropdowns();
   renderAttCalendar();
+  renderBigCalendar();
   renderDashboard();
 }
 init();
