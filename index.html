@@ -310,6 +310,10 @@
   .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   .bc-chip.기타{background:#E7EBEF;color:#475569;}
+  .bc-chip-teacher{
+    font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
 
   /* ===== 조교 선생님 출근 표시 ===== */
@@ -704,7 +708,10 @@
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
             <div class="cell-muted" style="font-size:12px;">조교 선생님 (눌러서 표시/숨기기)</div>
-            <div id="teacherLegend" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <button type="button" class="btn btn-ghost btn-sm" id="teacherToggleAllBtn" onclick="toggleAllTeacherVisibility()">전체 숨기기</button>
+              <div id="teacherLegend" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            </div>
           </div>
           <div class="cal-weekdays">
             <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -1195,7 +1202,7 @@ function renderBigCalendar(){
     if(dateStr === selectedEventDate) cls += ' selected';
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
-    const teacherChips = workingTeachers.map(t => `<span class="bc-chip" style="background:${t.color}26;color:${t.color};font-weight:800;" title="${escapeHtml(t.name)}">👤 ${escapeHtml(t.name)}</span>`).join('');
+    const teacherChips = workingTeachers.map(t => `<span class="bc-chip-teacher" style="background:${t.color}26;color:${t.color};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`).join('');
     cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}${teacherChips}</div>`;
   }
 
@@ -1367,10 +1374,17 @@ function renderTeacherList(){
 
 function renderTeacherLegend(){
   const box = document.getElementById('teacherLegend');
+  const allBtn = document.getElementById('teacherToggleAllBtn');
   if(!box) return;
   if(!teachers.length){
     box.innerHTML = `<span class="cell-muted" style="font-size:12px;">등록된 조교가 없습니다. 아래에서 등록해 보세요.</span>`;
+    if(allBtn) allBtn.style.display = 'none';
     return;
+  }
+  if(allBtn){
+    allBtn.style.display = 'inline-flex';
+    const allHidden = teachers.every(t => hiddenTeacherIds.includes(t.id));
+    allBtn.textContent = allHidden ? '전체 보이기' : '전체 숨기기';
   }
   box.innerHTML = teachers.map(t => `
     <button type="button" class="teacher-chip ${hiddenTeacherIds.includes(t.id) ? 'hidden-teacher' : ''}" onclick="toggleTeacherVisibility('${t.id}')">
@@ -1381,6 +1395,14 @@ function renderTeacherLegend(){
 
 function toggleTeacherVisibility(id){
   hiddenTeacherIds = hiddenTeacherIds.includes(id) ? hiddenTeacherIds.filter(x=>x!==id) : [...hiddenTeacherIds, id];
+  localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  renderTeacherLegend();
+  renderBigCalendar();
+}
+
+function toggleAllTeacherVisibility(){
+  const allHidden = teachers.every(t => hiddenTeacherIds.includes(t.id));
+  hiddenTeacherIds = allHidden ? [] : teachers.map(t => t.id);
   localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
   renderTeacherLegend();
   renderBigCalendar();
