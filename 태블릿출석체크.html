@@ -50,6 +50,14 @@
   .header-mark svg{width:100%;height:100%;display:block;}
   .header-title{font-size:clamp(18px,2.2vw,26px);font-weight:800;line-height:1.25;}
   .header-sub{font-size:clamp(11px,1.1vw,14px);color:var(--color-accent);font-weight:600;margin-top:2px;}
+  .header-center{
+    flex:1;text-align:center;color:var(--color-accent);font-weight:800;
+    font-size:clamp(15px,2vw,22px);padding:0 16px;
+  }
+  .list-heading{
+    font-size:clamp(15px,1.8vw,20px);font-weight:800;color:var(--color-text);
+    margin-bottom:clamp(10px,1.6vh,16px);
+  }
   .header-clock{text-align:right;}
   .header-time{font-size:clamp(22px,3vw,34px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:0.5px;}
   .header-date{font-size:clamp(11px,1.2vw,15px);color:var(--color-text-muted);margin-top:2px;}
@@ -85,30 +93,16 @@
   }
   .name-tile:active{transform:scale(0.96);}
 
-  /* 대기중: 학년군 파스텔 (중등/고등 2가지) */
-  .name-tile.cat-중{background:#DFF5E6;}
-  .name-tile.cat-중 .n{color:#1B4332;}
-  .name-tile.cat-중 .g{background:rgba(27,67,50,0.14);color:#1B4332;}
-  .name-tile.cat-고{background:#FFE8D6;}
-  .name-tile.cat-고 .n{color:#7C4A1E;}
-  .name-tile.cat-고 .g{background:rgba(124,74,30,0.14);color:#7C4A1E;}
-
-  /* 등원 완료: 초록으로 전환 (학년군 상관없이 통일) */
-  .name-tile.checked{background:#B9EFC9;border-color:#3CC583;}
-  .name-tile.checked .n{color:#0F5132;}
-  .name-tile.checked .g{background:rgba(15,81,50,0.16);color:#0F5132;}
+  /* 등원 완료: 초록으로 전환 (학년 상관없이 통일) */
+  .name-tile.checked{background:#B9EFC9 !important;border-color:#3CC583;}
+  .name-tile.checked .n{color:#0F5132 !important;}
+  .name-tile.checked .g{background:rgba(15,81,50,0.16) !important;color:#0F5132 !important;}
 
   .name-tile .n{font-size:clamp(17px,1.9vw,22px);font-weight:800;}
   .name-tile .g{
     font-size:clamp(11px,1.1vw,13px);font-weight:700;
     padding:3px 10px;border-radius:999px;
   }
-  .group-title{
-    font-size:clamp(14px,1.6vw,18px);font-weight:800;color:var(--color-accent);
-    margin:clamp(14px,2vh,20px) 0 clamp(8px,1.2vh,12px) 0;padding-bottom:6px;
-    border-bottom:2px solid var(--color-surface-alt);
-  }
-  .group-title:first-child{margin-top:0;}
   .subgroup-title{
     font-size:clamp(11px,1.2vw,13px);font-weight:700;color:var(--color-text-muted);
     margin:10px 0 8px 0;
@@ -178,9 +172,9 @@
       </div>
       <div>
         <div class="header-title">델타수학 전문학원</div>
-        <div class="header-sub">출석 체크 · 이름을 눌러주세요</div>
       </div>
     </div>
+    <div class="header-center">출석 · 퇴근 시 이름을 눌러주세요</div>
     <div class="header-clock">
       <div class="header-time" id="clockTime">--:--</div>
       <div class="header-date" id="clockDate"></div>
@@ -192,6 +186,7 @@
   </div>
 
   <div class="grid-scroll">
+    <div class="list-heading">출석체크</div>
     <div id="nameGrid"></div>
   </div>
 </div>
@@ -283,10 +278,27 @@ function getTodayRecord(studentId){
   const date = todayStr();
   return attendance.find(a => a.studentId === studentId && a.date === date);
 }
-function gradeCategory(grade){
-  if(!grade) return '중';
-  if(grade.startsWith('고') || grade.startsWith('N')) return '고';
-  return '중'; // 초/중/기타는 모두 중등 색으로 표시
+// 학년별 개별 파스텔 색상 (초등은 인원이 적어 한 가지 색으로 통일)
+const GRADE_COLORS = {
+  '중1': { bg:'#D6F5EC', text:'#1B6B5A' },
+  '중2': { bg:'#EDE4FF', text:'#4C2A85' },
+  '중3': { bg:'#FFD9E8', text:'#7A2E4D' },
+  '고1': { bg:'#FFE8D6', text:'#7C4A1E' },
+  '고2': { bg:'#FFF6C9', text:'#7A6300' },
+  '고3': { bg:'#D6F3F3', text:'#1F6B6B' },
+};
+const ELEMENTARY_COLOR = { bg:'#DCEEFF', text:'#1E3A5F' };
+const ETC_COLOR = { bg:'#E7E0F5', text:'#5B4B7A' };
+
+function gradeColor(grade){
+  if(!grade) return ETC_COLOR;
+  if(grade.startsWith('초')) return ELEMENTARY_COLOR;
+  return GRADE_COLORS[grade] || ETC_COLOR;
+}
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16), g = parseInt(h.substring(2,4),16), b = parseInt(h.substring(4,6),16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // 등원 예정 시각까지 남은 시간이 30분 이내인지 (지난 시각도 true)
@@ -327,11 +339,14 @@ function tileHtml(s){
   const rec = getTodayRecord(s.id);
   const checkedIn = !!(rec && rec.checkInTime && !rec.checkOutTime);
   const tag = checkedIn ? `<span class="status-tag 출석">등원 완료</span>` : '';
-  const cat = gradeCategory(s.grade);
+  const c = gradeColor(s.grade);
+  const style = checkedIn ? '' : `style="background:${c.bg};"`;
+  const nameStyle = checkedIn ? '' : `style="color:${c.text};"`;
+  const badgeStyle = checkedIn ? '' : `style="background:${hexToRgba(c.text,0.14)};color:${c.text};"`;
   return `
-    <button class="name-tile cat-${cat} ${checkedIn ? 'checked' : ''}" onclick="selectStudent('${s.id}')">
-      <span class="n">${escapeHtml(s.name)}</span>
-      <span class="g">${escapeHtml(s.grade)}</span>
+    <button class="name-tile ${checkedIn ? 'checked' : ''}" ${style} onclick="selectStudent('${s.id}')">
+      <span class="n" ${nameStyle}>${escapeHtml(s.name)}</span>
+      <span class="g" ${badgeStyle}>${escapeHtml(s.grade)}</span>
       ${tag}
     </button>`;
 }
@@ -339,8 +354,10 @@ function tileHtml(s){
 function renderGrid(){
   const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
   const grid = document.getElementById('nameGrid');
+  const heading = document.querySelector('.list-heading');
 
   if(!students.length){
+    if(heading) heading.style.display = 'none';
     grid.innerHTML = `<div class="empty-msg">등록된 학생이 없습니다.<br>관리자 프로그램에서 먼저 학생을 등록해 주세요.</div>`;
     return;
   }
@@ -348,6 +365,7 @@ function renderGrid(){
   // 검색어가 있으면: 오늘 일정/시간과 상관없이 전체 학생 중에서 이름으로 찾기 (보강 학생용)
   // 단, 하원 완료한 학생은 검색에서도 숨김 (개인정보 보호)
   if(keyword){
+    if(heading) heading.style.display = 'none';
     const list = students.filter(s => {
       if(!s.name.toLowerCase().includes(keyword)) return false;
       const rec = getTodayRecord(s.id);
@@ -359,7 +377,9 @@ function renderGrid(){
     return;
   }
 
-  // 검색어가 없으면: 오늘 등원 예정 + 등원 30분 전부터 표시, 하원 완료한 학생은 숨김
+  if(heading) heading.style.display = 'block';
+
+  // 검색어가 없으면: 오늘 등원 예정 + 본인 등원 30분 전부터 표시, 하원 완료한 학생은 숨김
   const today = todayStr();
   const weekday = weekdayLabelOf(today);
   const visible = students.filter(s => {
@@ -368,7 +388,7 @@ function renderGrid(){
     const scheduledTime = getDayTime(s, weekday);
     if(!scheduledTime && !rec) return false; // 오늘 일정도 없고 기록도 없으면 표시 안 함
     if(rec) return true; // 이미 등원했으면 시간과 무관하게 계속 표시
-    return isWithinCheckInWindow(scheduledTime); // 등원 30분 전부터 표시
+    return isWithinCheckInWindow(scheduledTime); // 본인 등원 30분 전부터 표시
   });
 
   if(!visible.length){
@@ -376,27 +396,19 @@ function renderGrid(){
     return;
   }
 
-  const groups = {};
-  visible.forEach(s => {
-    const t = getDayTime(s, weekday) || '99:99';
-    if(!groups[t]) groups[t] = [];
-    groups[t].push(s);
-  });
-  const sortedTimes = Object.keys(groups).sort();
+  // 시간 라벨은 화면에 표시하지 않고, 대기중 / 등원완료 두 그룹으로만 나눠 보여줌
+  const scheduleOf = s => getDayTime(s, weekday) || '99:99';
+  const waiting = visible.filter(s => !getTodayRecord(s.id))
+    .sort((a,b)=> scheduleOf(a).localeCompare(scheduleOf(b)) || a.name.localeCompare(b.name,'ko'));
+  const arrived = visible.filter(s => getTodayRecord(s.id))
+    .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
 
-  grid.innerHTML = sortedTimes.map(t => {
-    const groupStudents = groups[t];
-    const waiting = groupStudents.filter(s => !getTodayRecord(s.id)).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
-    const arrived = groupStudents.filter(s => getTodayRecord(s.id)).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
-    const label = t === '99:99' ? '보강 · 시간 미정' : `${t} 타임`;
-
-    let html = `<div class="group-title">${label}</div>`;
-    if(waiting.length) html += `<div class="name-grid">${waiting.map(tileHtml).join('')}</div>`;
-    if(arrived.length){
-      html += `<div class="subgroup-title">↓ 등원 완료</div><div class="name-grid">${arrived.map(tileHtml).join('')}</div>`;
-    }
-    return html;
-  }).join('');
+  let html = '';
+  if(waiting.length) html += `<div class="name-grid">${waiting.map(tileHtml).join('')}</div>`;
+  if(arrived.length){
+    html += `<div class="subgroup-title">↓ 등원 완료</div><div class="name-grid">${arrived.map(tileHtml).join('')}</div>`;
+  }
+  grid.innerHTML = html;
 }
 
 /* ===== 학생 선택 ===== */
