@@ -86,11 +86,26 @@
   }
   .name-tile:active{transform:scale(0.96);background:var(--color-surface-alt);}
   .name-tile.checked{border-color:var(--color-success);}
+  .name-tile.cat-초{border-color:#3B82F6;background:rgba(59,130,246,0.12);}
+  .name-tile.cat-중{border-color:#10B981;background:rgba(16,185,129,0.12);}
+  .name-tile.cat-고{border-color:#F59E0B;background:rgba(245,158,11,0.12);}
+  .name-tile.cat-기타{border-color:#A78BFA;background:rgba(167,139,250,0.12);}
+  .name-tile.checked.cat-초,.name-tile.checked.cat-중,.name-tile.checked.cat-고,.name-tile.checked.cat-기타{border-color:var(--color-success);}
   .name-tile .n{font-size:clamp(17px,1.9vw,22px);font-weight:800;}
   .name-tile .g{
-    font-size:clamp(11px,1.1vw,13px);font-weight:700;color:var(--color-text-muted);
-    background:var(--color-surface-alt);padding:3px 10px;border-radius:999px;
+    font-size:clamp(11px,1.1vw,13px);font-weight:700;
+    padding:3px 10px;border-radius:999px;
   }
+  .name-tile.cat-초 .g{background:rgba(59,130,246,0.22);color:#93C5FD;}
+  .name-tile.cat-중 .g{background:rgba(16,185,129,0.22);color:#6EE7B7;}
+  .name-tile.cat-고 .g{background:rgba(245,158,11,0.22);color:#FCD34D;}
+  .name-tile.cat-기타 .g{background:rgba(167,139,250,0.22);color:#C4B5FD;}
+  .group-title{
+    font-size:clamp(14px,1.6vw,18px);font-weight:800;color:var(--color-accent);
+    margin:clamp(14px,2vh,20px) 0 clamp(8px,1.2vh,12px) 0;padding-bottom:6px;
+    border-bottom:2px solid var(--color-surface-alt);
+  }
+  .group-title:first-child{margin-top:0;}
   .name-tile .status-tag{
     font-size:clamp(11px,1.1vw,13px);font-weight:800;padding:3px 10px;border-radius:999px;
   }
@@ -170,7 +185,7 @@
   </div>
 
   <div class="grid-scroll">
-    <div class="name-grid" id="nameGrid"></div>
+    <div id="nameGrid"></div>
   </div>
 </div>
 
@@ -261,6 +276,13 @@ function getTodayRecord(studentId){
   const date = todayStr();
   return attendance.find(a => a.studentId === studentId && a.date === date);
 }
+function gradeCategory(grade){
+  if(!grade) return '기타';
+  if(grade.startsWith('초')) return '초';
+  if(grade.startsWith('중')) return '중';
+  if(grade.startsWith('고')) return '고';
+  return '기타';
+}
 
 /* ===== 시계 ===== */
 function tickClock(){
@@ -286,31 +308,63 @@ function showList(){
 }
 
 /* ===== 명단 렌더 ===== */
+function tileHtml(s){
+  const rec = getTodayRecord(s.id);
+  let tag = '';
+  if(rec && rec.checkOutTime) tag = `<span class="status-tag 출석">하원 완료</span>`;
+  else if(rec && rec.checkInTime) tag = `<span class="status-tag 출석">등원 완료</span>`;
+  const cat = gradeCategory(s.grade);
+  return `
+    <button class="name-tile cat-${cat} ${rec ? 'checked' : ''}" onclick="selectStudent('${s.id}')">
+      <span class="n">${escapeHtml(s.name)}</span>
+      <span class="g">${escapeHtml(s.grade)}</span>
+      ${tag}
+    </button>`;
+}
+
 function renderGrid(){
   const keyword = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
-  const list = students.filter(s => !keyword || s.name.toLowerCase().includes(keyword));
   const grid = document.getElementById('nameGrid');
 
   if(!students.length){
-    grid.innerHTML = `<div class="empty-msg" style="grid-column:1/-1;">등록된 학생이 없습니다.<br>관리자 프로그램에서 먼저 학생을 등록해 주세요.</div>`;
-    return;
-  }
-  if(!list.length){
-    grid.innerHTML = `<div class="empty-msg" style="grid-column:1/-1;">검색 결과가 없습니다.</div>`;
+    grid.innerHTML = `<div class="empty-msg">등록된 학생이 없습니다.<br>관리자 프로그램에서 먼저 학생을 등록해 주세요.</div>`;
     return;
   }
 
-  grid.innerHTML = list.map(s => {
-    const rec = getTodayRecord(s.id);
-    let tag = '';
-    if(rec && rec.checkOutTime) tag = `<span class="status-tag 출석">하원 완료</span>`;
-    else if(rec && rec.checkInTime) tag = `<span class="status-tag 출석">등원 완료</span>`;
+  // 검색어가 있으면: 오늘 일정과 상관없이 전체 학생 중에서 이름으로 찾기 (보강 학생용)
+  if(keyword){
+    const list = students.filter(s => s.name.toLowerCase().includes(keyword))
+      .sort((a,b)=> a.name.localeCompare(b.name, 'ko'));
+    grid.innerHTML = list.length
+      ? `<div class="name-grid">${list.map(tileHtml).join('')}</div>`
+      : `<div class="empty-msg">검색 결과가 없습니다.</div>`;
+    return;
+  }
+
+  // 검색어가 없으면: 오늘 등원 예정인 학생만, 등원 시간 순으로 그룹핑
+  const today = todayStr();
+  const weekday = weekdayLabelOf(today);
+  const visible = students.filter(s => getDayTime(s, weekday) || getTodayRecord(s.id));
+
+  if(!visible.length){
+    grid.innerHTML = `<div class="empty-msg">오늘(${weekday}요일) 등원 예정인 학생이 없습니다.<br>보강으로 오신 친구는 위 검색창에서 이름을 찾아주세요.</div>`;
+    return;
+  }
+
+  const groups = {};
+  visible.forEach(s => {
+    const t = getDayTime(s, weekday) || '99:99';
+    if(!groups[t]) groups[t] = [];
+    groups[t].push(s);
+  });
+  const sortedTimes = Object.keys(groups).sort();
+
+  grid.innerHTML = sortedTimes.map(t => {
+    const groupStudents = groups[t].sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+    const label = t === '99:99' ? '보강 · 시간 미정' : `${t} 타임`;
     return `
-      <button class="name-tile ${rec ? 'checked' : ''}" onclick="selectStudent('${s.id}')">
-        <span class="n">${escapeHtml(s.name)}</span>
-        <span class="g">${escapeHtml(s.grade)}</span>
-        ${tag}
-      </button>`;
+      <div class="group-title">${label}</div>
+      <div class="name-grid">${groupStudents.map(tileHtml).join('')}</div>`;
   }).join('');
 }
 
