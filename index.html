@@ -289,6 +289,7 @@
   .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
   .cal-legend .dot.event-dot-시험{background:var(--color-danger);}
   .cal-legend .dot.event-dot-상담{background:var(--color-accent-dark);}
+  .cal-legend .dot.event-dot-기타{background:#64748B;}
 
   /* ===== 캘린더 탭: 큰 달력 ===== */
   .bigcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px;}
@@ -308,6 +309,7 @@
   }
   .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
+  .bc-chip.기타{background:#E7EBEF;color:#475569;}
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
 
   /* ===== 조교 선생님 출근 표시 ===== */
@@ -335,12 +337,14 @@
   }
   .cal-num{position:relative;}
   .cal-cell.has-event-시험 .cal-num::after,
-  .cal-cell.has-event-상담 .cal-num::after{
+  .cal-cell.has-event-상담 .cal-num::after,
+  .cal-cell.has-event-기타 .cal-num::after{
     content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
     width:5px;height:5px;border-radius:50%;
   }
   .cal-cell.has-event-시험 .cal-num::after{background:var(--color-danger);}
   .cal-cell.has-event-상담 .cal-num::after{background:var(--color-accent-dark);}
+  .cal-cell.has-event-기타 .cal-num::after{background:#64748B;}
   .cal-cell.selected .cal-num{outline:2px solid var(--color-primary-light);outline-offset:1px;}
   .cal-cell{cursor:default;}
   .cal-cell:not(.empty){cursor:pointer;}
@@ -353,9 +357,11 @@
   }
   .event-item.시험{border-left-color:var(--color-danger);}
   .event-item.상담{border-left-color:var(--color-accent-dark);}
+  .event-item.기타{border-left-color:#64748B;}
   .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
+  .event-type-tag.기타{background:#E7EBEF;color:#475569;}
   /* ===== 요일별 개인 시간표 입력 ===== */
   .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
   .schedule-cell{display:flex;flex-direction:column;gap:5px;align-items:center;}
@@ -526,6 +532,7 @@
             <div class="cal-legend">
               <span><i class="dot event-dot-시험"></i>시험</span>
               <span><i class="dot event-dot-상담"></i>상담</span>
+              <span><i class="dot event-dot-기타"></i>기타</span>
             </div>
 
             <div class="event-day-panel">
@@ -535,6 +542,7 @@
                 <select id="eventType" style="flex:0 0 90px;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
                   <option value="상담">상담</option>
                   <option value="시험">시험</option>
+                  <option value="기타">기타</option>
                 </select>
                 <input type="text" id="eventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:8px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
                 <button class="btn btn-primary btn-sm" onclick="addEvent(false)">추가</button>
@@ -691,6 +699,7 @@
             <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);">
               <span><i class="dot event-dot-시험"></i>시험</span>
               <span><i class="dot event-dot-상담"></i>상담</span>
+              <span><i class="dot event-dot-기타"></i>기타</span>
             </div>
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
@@ -711,6 +720,7 @@
               <select id="bigEventType" style="flex:0 0 100px;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
                 <option value="상담">상담</option>
                 <option value="시험">시험</option>
+                <option value="기타">기타</option>
               </select>
               <input type="text" id="bigEventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
               <button class="btn btn-primary" onclick="addEvent(true)">일정 추가</button>
@@ -719,6 +729,7 @@
 
           <div class="card">
             <div class="card-title">이 날짜 조교 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
+            <p class="cell-muted" style="font-size:11.5px;margin:-6px 0 10px 0;">누군가 휴무이면, 그날 대신 오시는 다른 선생님의 상태도 함께 "출근"으로 눌러 표시해 주세요.</p>
             <div id="teacherDayStatus"></div>
           </div>
         </div>
@@ -1147,9 +1158,11 @@ function renderDashCalendar(){
     const dayEvents = events.filter(e => e.date === dateStr);
     const hasExam = dayEvents.some(e => e.type === '시험');
     const hasCounsel = dayEvents.some(e => e.type === '상담');
+    const hasOther = dayEvents.some(e => e.type === '기타');
     let cls = '';
     if(hasExam) cls += ' has-event-시험';
     else if(hasCounsel) cls += ' has-event-상담';
+    else if(hasOther) cls += ' has-event-기타';
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
     cells += `<div class="cal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="cal-num">${d}</span></div>`;
@@ -1182,10 +1195,8 @@ function renderBigCalendar(){
     if(dateStr === selectedEventDate) cls += ' selected';
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
-    const teacherDots = workingTeachers.length
-      ? `<div class="bc-teacher-dots" title="${escapeHtml(workingTeachers.map(t=>t.name).join(', '))}">${workingTeachers.map(t => `<span class="t-dot" style="background:${t.color};"></span>`).join('')}</div>`
-      : '';
-    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}${teacherDots}</div>`;
+    const teacherChips = workingTeachers.map(t => `<span class="bc-chip" style="background:${t.color}26;color:${t.color};font-weight:800;" title="${escapeHtml(t.name)}">👤 ${escapeHtml(t.name)}</span>`).join('');
+    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}${teacherChips}</div>`;
   }
 
   grid.innerHTML = cells;
