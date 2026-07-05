@@ -334,6 +334,36 @@
   .teacher-day-row .t-status{margin-left:auto;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;}
   .teacher-day-row .t-status.on{background:var(--color-success-soft);color:var(--color-success);}
   .teacher-day-row .t-status.off{background:var(--color-neutral-soft);color:var(--color-neutral);}
+  .sms-header-row{
+    display:flex;align-items:center;gap:14px;padding:0 12px 8px 12px;
+    border-bottom:2px solid var(--color-surface-alt);margin-bottom:10px;
+  }
+  .sms-name-col{flex:1 1 160px;font-size:11.5px;font-weight:700;text-transform:uppercase;}
+  .sms-contact-col{flex:0 0 190px;}
+  .sms-group-title{
+    font-size:12.5px;font-weight:800;color:var(--color-text-muted);
+    margin:14px 0 8px 4px;
+  }
+  .sms-group-title.notyet{color:var(--color-danger);}
+  .sms-group-title.done{color:var(--color-success);}
+  .sms-row{
+    display:flex;align-items:center;gap:14px;padding:10px 12px;
+    border:1px solid var(--color-border);border-radius:10px;margin-bottom:8px;background:var(--color-surface);
+  }
+  .sms-row.arrived{opacity:0.6;}
+  .sms-name{flex:1 1 160px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .sms-contact{
+    flex:0 0 190px;display:flex;align-items:center;gap:8px;font-size:12.5px;
+    padding:6px 10px;border-radius:8px;
+  }
+  .sms-contact.parent{background:#FDF0E4;color:#9C5F27;}
+  .sms-contact input:disabled + span{color:var(--color-text-muted);}
+  .sms-others-toggle{
+    display:flex;align-items:center;gap:8px;cursor:pointer;
+    padding:10px 12px;margin-top:14px;border-top:1px dashed var(--color-border);
+    font-size:12.5px;font-weight:700;color:var(--color-text-muted);
+  }
+  .sms-others-toggle:hover{color:var(--color-text);}
   .teacher-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
@@ -803,9 +833,20 @@
         <div class="card section-gap">
           <div class="toolbar">
             <div class="card-title" style="margin:0;">받는 사람 명단 <span class="hint" id="smsListHint"></span></div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-ghost btn-sm" onclick="toggleAllSmsSelection(true)">전체 선택</button>
-              <button class="btn btn-ghost btn-sm" onclick="toggleAllSmsSelection(false)">전체 해제</button>
+          </div>
+          <div class="sms-header-row">
+            <div class="sms-name-col cell-muted">이름</div>
+            <div class="sms-contact-col">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
+                <input type="checkbox" id="smsSelectAllStudent" onchange="toggleAllSmsType('stu')" style="width:16px;height:16px;">
+                학생 전체
+              </label>
+            </div>
+            <div class="sms-contact-col parent">
+              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
+                <input type="checkbox" id="smsSelectAllParent" onchange="toggleAllSmsType('parent')" style="width:16px;height:16px;">
+                학부모 전체
+              </label>
             </div>
           </div>
           <div id="smsStudentList"></div>
@@ -1042,7 +1083,6 @@ let smsFilterGrades = [];
 let smsFilterDays = [];
 let smsFilterStatus = [];
 let smsFilteredList = [];   // 필터에 걸린 학생 목록
-let smsEntries = [];        // 학생별 학생/학부모 연락처를 펼친 목록
 let smsSelectedKeys = new Set(); // 선택된 연락처 항목의 key
 
 function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
@@ -1078,15 +1118,15 @@ function resetSmsFilter(){
   applySmsFilter();
 }
 
-// 학생 한 명당 학생 연락처 / 학부모 연락처를 각각 별도 항목으로 펼침
+// 학생 한 명당 학생 연락처 / 학부모 연락처를 각각 별도 항목으로 펼침 (문자 발송/복사용)
 function buildSmsEntries(list){
   const entries = [];
   list.forEach(s => {
-    if(s.phone && s.phone.trim()){
-      entries.push({ key: `${s.id}_stu`, studentId: s.id, name: s.name, grade: s.grade, type:'학생', number: s.phone.trim() });
+    if(smsSelectedKeys.has(`${s.id}_stu`) && s.phone && s.phone.trim()){
+      entries.push({ name: s.name, type:'학생', number: s.phone.trim() });
     }
-    if(s.parentPhone && s.parentPhone.trim()){
-      entries.push({ key: `${s.id}_parent`, studentId: s.id, name: s.name, grade: s.grade, type:'학부모', number: s.parentPhone.trim() });
+    if(smsSelectedKeys.has(`${s.id}_parent`) && s.parentPhone && s.parentPhone.trim()){
+      entries.push({ name: s.name, type:'학부모', number: s.parentPhone.trim() });
     }
   });
   return entries;
@@ -1114,53 +1154,136 @@ function applySmsFilter(){
       if(!smsFilterStatus.includes(status)) return false;
     }
     return true;
-  }).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+  });
 
-  smsEntries = buildSmsEntries(smsFilteredList);
-  smsSelectedKeys = new Set(smsEntries.map(e => e.key));
+  smsSelectedKeys = new Set();
+  smsFilteredList.forEach(s => {
+    if(s.phone && s.phone.trim()) smsSelectedKeys.add(`${s.id}_stu`);
+    if(s.parentPhone && s.parentPhone.trim()) smsSelectedKeys.add(`${s.id}_parent`);
+  });
+  smsShowOthers = false;
   renderSmsStudentList();
 }
 
-function toggleSmsEntry(key){
+function toggleSmsKey(key){
   if(smsSelectedKeys.has(key)) smsSelectedKeys.delete(key); else smsSelectedKeys.add(key);
   renderSmsStudentList();
 }
 
-function toggleAllSmsSelection(select){
-  smsSelectedKeys = select ? new Set(smsEntries.map(e => e.key)) : new Set();
+function toggleAllSmsType(type){
+  const key = s => type === 'stu' ? `${s.id}_stu` : `${s.id}_parent`;
+  const hasContact = s => type === 'stu' ? !!(s.phone && s.phone.trim()) : !!(s.parentPhone && s.parentPhone.trim());
+  const eligible = smsFilteredList.filter(hasContact);
+  const allSelected = eligible.length > 0 && eligible.every(s => smsSelectedKeys.has(key(s)));
+  eligible.forEach(s => {
+    if(allSelected) smsSelectedKeys.delete(key(s));
+    else smsSelectedKeys.add(key(s));
+  });
   renderSmsStudentList();
+}
+
+function smsRowHtml(s, dimmed){
+  const hasPhone = !!(s.phone && s.phone.trim());
+  const hasParent = !!(s.parentPhone && s.parentPhone.trim());
+  const stuKey = `${s.id}_stu`;
+  const parentKey = `${s.id}_parent`;
+  const stuChecked = smsSelectedKeys.has(stuKey);
+  const parentChecked = smsSelectedKeys.has(parentKey);
+  return `
+    <div class="sms-row ${dimmed ? 'arrived' : ''}">
+      <div class="sms-name">
+        <strong>${escapeHtml(s.name)}</strong>
+        ${gradeBadge(s.grade)}
+      </div>
+      <div class="sms-contact student">
+        <input type="checkbox" ${stuChecked ? 'checked' : ''} ${hasPhone ? '' : 'disabled'} onchange="toggleSmsKey('${stuKey}')" style="width:16px;height:16px;">
+        <span>${hasPhone ? escapeHtml(s.phone) : '연락처 없음'}</span>
+      </div>
+      <div class="sms-contact parent">
+        <input type="checkbox" ${parentChecked ? 'checked' : ''} ${hasParent ? '' : 'disabled'} onchange="toggleSmsKey('${parentKey}')" style="width:16px;height:16px;">
+        <span>${hasParent ? escapeHtml(s.parentPhone) : '연락처 없음'}</span>
+      </div>
+    </div>`;
+}
+
+let smsShowOthers = false;
+
+function toggleSmsOthers(){
+  smsShowOthers = !smsShowOthers;
+  renderSmsStudentList();
+}
+
+function smsByName(a, b){ return a.name.localeCompare(b.name, 'ko'); }
+
+function renderSmsBundle(title, list, today){
+  if(!list.length) return '';
+  const notYet = list.filter(s => { const rec = getAttendanceRecord(s.id, today); return !(rec && rec.checkInTime); }).sort(smsByName);
+  const arrived = list.filter(s => { const rec = getAttendanceRecord(s.id, today); return rec && rec.checkInTime; }).sort(smsByName);
+  let html = '';
+  if(notYet.length){
+    html += `<div class="sms-group-title notyet">🔴 ${title} · 아직 등원 전 (${notYet.length}명)</div>`;
+    html += notYet.map(s => smsRowHtml(s, false)).join('');
+  }
+  if(arrived.length){
+    html += `<div class="sms-group-title done">🟢 ${title} · 등원 완료 (${arrived.length}명)</div>`;
+    html += arrived.map(s => smsRowHtml(s, true)).join('');
+  }
+  return html;
 }
 
 function renderSmsStudentList(){
   const box = document.getElementById('smsStudentList');
   const hint = document.getElementById('smsListHint');
   const noContactCount = smsFilteredList.filter(s => !(s.phone && s.phone.trim()) && !(s.parentPhone && s.parentPhone.trim())).length;
-  hint.textContent = `(학생 ${smsFilteredList.length}명 · 연락처 ${smsEntries.length}건 · 선택됨 ${smsSelectedKeys.size}건${noContactCount ? ` · 연락처 없음 ${noContactCount}명 제외` : ''})`;
+  hint.textContent = `(학생 ${smsFilteredList.length}명 · 선택됨 ${smsSelectedKeys.size}건${noContactCount ? ` · 연락처 없음 ${noContactCount}명 포함` : ''})`;
+
+  // 헤더 체크박스 상태 동기화
+  const stuEligible = smsFilteredList.filter(s => s.phone && s.phone.trim());
+  const parentEligible = smsFilteredList.filter(s => s.parentPhone && s.parentPhone.trim());
+  const stuAllChecked = document.getElementById('smsSelectAllStudent');
+  const parentAllChecked = document.getElementById('smsSelectAllParent');
+  if(stuAllChecked) stuAllChecked.checked = stuEligible.length > 0 && stuEligible.every(s => smsSelectedKeys.has(`${s.id}_stu`));
+  if(parentAllChecked) parentAllChecked.checked = parentEligible.length > 0 && parentEligible.every(s => smsSelectedKeys.has(`${s.id}_parent`));
 
   if(!smsFilteredList.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생이 없습니다.</div>`;
     return;
   }
-  if(!smsEntries.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생은 있지만, 등록된 연락처가 없습니다.</div>`;
-    return;
+
+  const today = todayStr();
+  const weekday = weekdayLabelOf(today);
+
+  // 오늘 등원 예정인 학생만 우선 표시 (초등은 한 묶음, 나머지는 타임별)
+  const scheduledToday = smsFilteredList.filter(s => getDayTime(s, weekday));
+  const others = smsFilteredList.filter(s => !getDayTime(s, weekday)); // 다른 요일에만 오거나 시간 미정(보강)인 학생
+
+  const elementary = scheduledToday.filter(s => (s.grade || '').startsWith('초'));
+  const byTime = scheduledToday.filter(s => !(s.grade || '').startsWith('초'));
+
+  let html = '';
+  html += renderSmsBundle('초등부', elementary, today);
+
+  const timeGroups = {};
+  byTime.forEach(s => {
+    const t = getDayTime(s, weekday);
+    if(!timeGroups[t]) timeGroups[t] = [];
+    timeGroups[t].push(s);
+  });
+  Object.keys(timeGroups).sort().forEach(t => {
+    html += renderSmsBundle(`${t} 타임`, timeGroups[t], today);
+  });
+
+  if(others.length){
+    html += `
+      <div class="sms-others-toggle" onclick="toggleSmsOthers()">
+        <span>${smsShowOthers ? '▾' : '▸'}</span> 그 외 학생 (다른 요일 · 시간 미정 · 보강) ${others.length}명
+      </div>`;
+    if(smsShowOthers){
+      html += others.sort(smsByName).map(s => smsRowHtml(s, true)).join('');
+    }
   }
 
-  box.innerHTML = smsEntries.map(e => {
-    const checked = smsSelectedKeys.has(e.key);
-    return `
-      <div class="att-row">
-        <div class="att-row-main" style="flex:0 0 24px;">
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleSmsEntry('${e.key}')" style="width:18px;height:18px;">
-        </div>
-        <div class="att-row-main">
-          <strong>${escapeHtml(e.name)}</strong>
-          ${gradeBadge(e.grade)}
-          <span class="badge">${e.type}</span>
-        </div>
-        <div class="cell-muted" style="font-size:12.5px;">${escapeHtml(e.number)}</div>
-      </div>`;
-  }).join('');
+  box.innerHTML = html || `<div class="cell-muted" style="font-size:13px;">표시할 학생이 없습니다.</div>`;
 }
 
 function fillSmsTemplate(type){
@@ -1174,7 +1297,7 @@ function fillSmsTemplate(type){
 }
 
 function openSmsApp(){
-  const chosen = smsEntries.filter(e => smsSelectedKeys.has(e.key));
+  const chosen = buildSmsEntries(smsFilteredList);
   if(!chosen.length){ alert('받는 사람을 선택해 주세요.'); return; }
   const numbers = chosen.map(e => e.number.replace(/[^0-9]/g, '')).filter(Boolean);
   const body = document.getElementById('smsBody').value;
@@ -1183,7 +1306,7 @@ function openSmsApp(){
 }
 
 function copySmsNumbers(){
-  const chosen = smsEntries.filter(e => smsSelectedKeys.has(e.key));
+  const chosen = buildSmsEntries(smsFilteredList);
   if(!chosen.length){ alert('선택된 연락처가 없습니다.'); return; }
   const numbers = chosen.map(e => e.number).join(', ');
   navigator.clipboard.writeText(numbers)
