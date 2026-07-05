@@ -361,14 +361,14 @@
   .sms-contact input:disabled + span{color:var(--color-text-muted);}
   .sms-others-toggle{
     display:flex;align-items:center;gap:8px;cursor:pointer;
-    padding:10px 14px;margin-top:14px;border-top:1px dashed var(--color-border);border-radius:10px;
-    font-size:12.5px;font-weight:700;color:var(--color-text-muted);
+    padding:10px 14px;margin-top:14px;border:1px solid var(--color-accent-dark);border-radius:10px;
+    font-size:12.5px;font-weight:800;color:var(--color-accent-dark);background:#FFF8E7;
     transition:background .12s ease, color .12s ease;
   }
-  .sms-others-toggle:hover{color:var(--color-text);}
+  .sms-others-toggle:hover{background:#FFF0CC;}
   .sms-others-toggle.open{
-    background:var(--color-primary);color:#fff;font-weight:800;
-    margin-top:14px;border-top:none;
+    background:var(--color-primary);color:#fff;font-weight:800;border-color:var(--color-primary);
+    margin-top:14px;
   }
   .teacher-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -639,6 +639,16 @@
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
+          <div class="toolbar" style="margin-top:-6px;margin-bottom:14px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <select id="studentFilterGrade" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <option value="">전체 학년</option>
+              </select>
+              <select id="studentFilterSchool" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <option value="">전체 학교</option>
+              </select>
+            </div>
+          </div>
           <div id="studentListBody">
             <div class="table-wrap">
               <table>
@@ -819,7 +829,7 @@
             <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
           </div>
 
-          <div class="form-row" style="margin-bottom:0;">
+          <div class="form-row" style="margin-bottom:0;align-items:flex-start;">
             <div class="field" style="flex:1;min-width:220px;">
               <label>학년 (선택 안 하면 전체)</label>
               <div class="weekday-picker" id="smsGradePicker"></div>
@@ -827,17 +837,17 @@
             <div class="field" style="flex:1;min-width:220px;border-left:1px solid var(--color-border);padding-left:20px;">
               <label>등원 요일 (선택 안 하면 전체)</label>
               <div class="weekday-picker" id="smsDayPicker"></div>
-            </div>
-          </div>
 
-          <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
-            <div class="field" style="flex:1;margin-bottom:0;">
-              <label>오늘 출결 상태 (선택 안 하면 전체)</label>
-              <div class="weekday-picker" id="smsStatusPicker"></div>
-            </div>
-            <div class="form-actions" style="flex:0 0 auto;">
-              <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
-              <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+              <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
+                <div class="field" style="flex:1;margin-bottom:0;">
+                  <label>오늘 출결 상태 (선택 안 하면 전체)</label>
+                  <div class="weekday-picker" id="smsStatusPicker"></div>
+                </div>
+                <div class="form-actions" style="flex:0 0 auto;">
+                  <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
+                  <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -890,43 +900,36 @@
       <!-- ================= 성적 관리 ================= -->
       <section class="view" id="view-scores">
         <div class="card">
-          <div class="card-title" id="scoreFormTitle">성적 등록</div>
-          <div class="form-row">
-            <div class="field" style="flex:1.3;">
-              <label>학생 선택</label>
-              <select id="scoreStudent"></select>
-            </div>
-            <div class="field">
-              <label>과목</label>
-              <input type="text" id="scoreSubject" placeholder="예: 수학">
-            </div>
-            <div class="field" style="flex:1.3;">
-              <label>시험명</label>
-              <input type="text" id="scoreExamName" placeholder="예: 6월 모의고사">
-            </div>
-            <div class="field">
-              <label>날짜</label>
-              <input type="date" id="scoreDate">
-            </div>
-            <div class="field" style="flex:0 0 100px;">
-              <label>점수</label>
-              <input type="number" id="scoreValue" min="0" max="1000" placeholder="0">
-            </div>
-            <div class="field" style="flex:0 0 100px;">
-              <label>총점</label>
-              <input type="number" id="scoreMax" min="1" max="1000" value="100">
-            </div>
+          <div class="card-title">성적 입력 <span class="hint">학년 · 시험을 고르면 과목별 표가 나와요</span></div>
+
+          <div class="toolbar" style="margin-bottom:10px;">
+            <div id="scoreGradeTabs" class="weekday-picker"></div>
+            <select id="scoreSchoolFilter" onchange="renderScoreGrid()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <option value="">전체 학교</option>
+            </select>
           </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" id="scoreSubmitBtn" onclick="submitScore()">성적 등록</button>
-            <button class="btn btn-ghost" id="scoreCancelBtn" style="display:none;" onclick="cancelScoreEdit()">취소</button>
+          <div id="scoreExamTabs" class="weekday-picker" style="margin-bottom:16px;"></div>
+
+          <div class="table-wrap">
+            <table id="scoreGridTable">
+              <thead id="scoreGridHead"></thead>
+              <tbody id="scoreGridBody"></tbody>
+            </table>
           </div>
         </div>
 
-        <div class="grid grid-2 section-gap">
-          <div class="card" style="grid-column:1/-1;">
+        <div class="card section-gap">
+          <div class="card-title">학생별 평균 점수</div>
+          <div id="avgByStudent"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title" style="cursor:pointer;" onclick="toggleScoreHistoryCollapse()">
+            <span id="scoreHistoryCollapseIcon">▸</span> 전체 성적 원본 기록 <span class="hint">개별 삭제 · 예전 방식으로 입력된 기록 포함</span>
+          </div>
+          <div id="scoreHistoryBody" style="display:none;">
             <div class="toolbar">
-              <div class="card-title" style="margin:0;">성적 목록</div>
+              <div></div>
               <select class="search-input" id="scoreFilterStudent" onchange="renderScores()" style="min-width:180px;"></select>
             </div>
             <div class="table-wrap">
@@ -938,11 +941,6 @@
               </table>
             </div>
           </div>
-        </div>
-
-        <div class="card section-gap">
-          <div class="card-title">학생별 평균 점수</div>
-          <div id="avgByStudent"></div>
         </div>
       </section>
 
@@ -1014,6 +1012,10 @@ db.ref('teacherExceptions').on('value', snap => {
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar') renderBigCalendar();
 });
+db.ref('examSubjects').on('value', snap => {
+  examSubjects = snap.val() || {};
+  if(currentView === 'scores') renderScoreGrid();
+});
 
 // 연결 상태 표시
 db.ref('.info/connected').on('value', snap => {
@@ -1033,7 +1035,7 @@ function refreshCurrentView(){
   if(currentView === 'students') renderStudents();
   if(currentView === 'attendance') renderAttendance();
   if(currentView === 'calendar') renderBigCalendar();
-  if(currentView === 'scores') renderScores();
+  if(currentView === 'scores'){ renderScoreGrid(); renderScores(); }
   populateStudentDropdowns();
 }
 
@@ -1426,7 +1428,7 @@ function switchView(view){
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); }
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
-  if(view === 'scores') renderScores();
+  if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); }
 }
 
 /* =========================================================
@@ -1983,7 +1985,7 @@ function importBulkStudents(){
   showToast(`${successCount}명 일괄 등록 완료${skipCount ? ` (이름 없는 ${skipCount}줄 제외)` : ''}`);
 }
 
-let studentSortMode = 'recent'; // 'recent' | 'grade'
+let studentSortMode = 'grade'; // 'recent' | 'grade'
 let studentListCollapsed = false;
 
 function toggleStudentListCollapse(){
@@ -2020,11 +2022,32 @@ function setStudentSort(mode){
   renderStudents();
 }
 
+function populateStudentListFilters(){
+  const gradeSel = document.getElementById('studentFilterGrade');
+  const schoolSel = document.getElementById('studentFilterSchool');
+  if(!gradeSel || !schoolSel) return;
+
+  const prevGrade = gradeSel.value;
+  gradeSel.innerHTML = `<option value="">전체 학년</option>` + GRADES.map(g => `<option value="${g}">${g}</option>`).join('');
+  if(GRADES.includes(prevGrade)) gradeSel.value = prevGrade;
+
+  const prevSchool = schoolSel.value;
+  const schools = [...new Set(students.map(s => s.school).filter(Boolean))].sort((a,b)=> a.localeCompare(b,'ko'));
+  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('');
+  if(schools.includes(prevSchool)) schoolSel.value = prevSchool;
+}
+
 function renderStudents(){
+  populateStudentListFilters();
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
-  const list = students.filter(s =>
-    !keyword || s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword)
-  ).sort(studentSortMode === 'grade' ? compareByGradeThenName : (a,b)=> b.createdAt - a.createdAt);
+  const filterGrade = document.getElementById('studentFilterGrade').value;
+  const filterSchool = document.getElementById('studentFilterSchool').value;
+  const list = students.filter(s => {
+    if(keyword && !(s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword))) return false;
+    if(filterGrade && s.grade !== filterGrade) return false;
+    if(filterSchool && s.school !== filterSchool) return false;
+    return true;
+  }).sort(studentSortMode === 'grade' ? compareByGradeThenName : (a,b)=> b.createdAt - a.createdAt);
 
   document.getElementById('studentCountHint').textContent = `(총 ${students.length}명)`;
 
@@ -2298,8 +2321,6 @@ function populateStudentDropdowns(){
     ? students.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')
     : `<option value="">등록된 학생 없음</option>`;
 
-  document.getElementById('scoreStudent').innerHTML = options;
-
   const historySel = document.getElementById('attHistoryStudent');
   const prevHistory = historySel.value;
   historySel.innerHTML = `<option value="">학생을 선택하세요</option>` + options;
@@ -2311,62 +2332,152 @@ function populateStudentDropdowns(){
   if(students.some(s=>s.id===prevFilter)) filterSel.value = prevFilter;
 }
 
-function submitScore(){
-  const studentId = document.getElementById('scoreStudent').value;
-  const subject = document.getElementById('scoreSubject').value.trim();
-  const examName = document.getElementById('scoreExamName').value.trim();
-  const date = document.getElementById('scoreDate').value || todayStr();
-  const score = parseFloat(document.getElementById('scoreValue').value);
-  const maxScore = parseFloat(document.getElementById('scoreMax').value) || 100;
+/* =========================================================
+   성적 관리 — 학년 탭 + 시험(연 4회) 탭 + 과목별 입력표
+========================================================= */
+const EXAM_PERIODS = ['1학기 중간고사','1학기 기말고사','2학기 중간고사','2학기 기말고사'];
+const SCORE_GRADES = GRADES.filter(g => !g.startsWith('초')); // 초등 제외
+let scoreGradeTab = SCORE_GRADES[0];
+let scoreExamTab = EXAM_PERIODS[0];
+let examSubjects = {}; // `${grade}__${examName}` -> [과목명, ...]
 
-  if(!studentId){ alert('학생을 선택해 주세요.'); return; }
-  if(!subject){ alert('과목을 입력해 주세요.'); return; }
-  if(isNaN(score)){ alert('점수를 입력해 주세요.'); return; }
-  if(score < 0 || score > maxScore){ alert('점수는 0점 이상, 총점 이하로 입력해 주세요.'); return; }
+function examSubjectKey(grade, examName){ return grade + '__' + examName; }
 
-  if(editingScoreId){
-    db.ref('scores/' + editingScoreId).update({ studentId, subject, examName, date, score, maxScore });
-    showToast('성적이 수정되었습니다.');
-  }else{
-    db.ref('scores').push({ studentId, subject, examName, date, score, maxScore, createdAt:Date.now() });
-    showToast('성적이 등록되었습니다.');
+function getExamSubjects(grade, examName){
+  const key = examSubjectKey(grade, examName);
+  if(examSubjects[key] && examSubjects[key].length) return examSubjects[key];
+  return grade === '고2' ? ['과목1','과목2'] : ['과목1'];
+}
+
+function saveExamSubjects(grade, examName, subjectsArr){
+  const key = examSubjectKey(grade, examName);
+  examSubjects[key] = subjectsArr;
+  db.ref('examSubjects/' + key).set(subjectsArr);
+}
+
+function renderScoreTabs(){
+  const gradeTabs = document.getElementById('scoreGradeTabs');
+  gradeTabs.innerHTML = SCORE_GRADES.map(g => `
+    <button type="button" class="weekday-chip ${scoreGradeTab === g ? 'active' : ''}" onclick="setScoreGradeTab('${g}')">${g}</button>
+  `).join('');
+
+  const examTabs = document.getElementById('scoreExamTabs');
+  examTabs.innerHTML = EXAM_PERIODS.map(e => `
+    <button type="button" class="weekday-chip ${scoreExamTab === e ? 'active' : ''}" onclick="setScoreExamTab('${e}')">${e}</button>
+  `).join('');
+
+  const schoolSel = document.getElementById('scoreSchoolFilter');
+  const prevSchool = schoolSel.value;
+  const schools = [...new Set(students.filter(s => s.grade === scoreGradeTab).map(s => s.school).filter(Boolean))].sort((a,b)=> a.localeCompare(b,'ko'));
+  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('');
+  if(schools.includes(prevSchool)) schoolSel.value = prevSchool;
+}
+
+function setScoreGradeTab(g){ scoreGradeTab = g; renderScoreTabs(); renderScoreGrid(); }
+function setScoreExamTab(e){ scoreExamTab = e; renderScoreTabs(); renderScoreGrid(); }
+
+function addExamSubject(){
+  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+  subjects.push(`과목${subjects.length + 1}`);
+  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+  renderScoreGrid();
+}
+
+function removeExamSubject(index){
+  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+  if(subjects.length <= 1){ alert('과목이 최소 1개는 있어야 해요.'); return; }
+  subjects.splice(index, 1);
+  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+  renderScoreGrid();
+}
+
+function renameExamSubject(index, newName){
+  newName = newName.trim();
+  if(!newName) return;
+  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+  const oldName = subjects[index];
+  if(oldName === newName) return;
+  subjects[index] = newName;
+  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+
+  // 기존에 저장된 점수도 새 과목명으로 함께 옮겨줌
+  scores.filter(sc => sc.examName === scoreExamTab && sc.subject === oldName && studentById(sc.studentId)?.grade === scoreGradeTab)
+    .forEach(sc => db.ref('scores/' + sc.id).update({ subject: newName }));
+}
+
+function getGridScore(studentId, subject){
+  return scores.find(sc => sc.studentId === studentId && sc.examName === scoreExamTab && sc.subject === subject);
+}
+
+function setGridScore(studentId, subject, rawValue){
+  const value = rawValue.trim();
+  const existing = getGridScore(studentId, subject);
+  if(!value){
+    if(existing) db.ref('scores/' + existing.id).remove();
+    return;
   }
-  cancelScoreEdit();
+  const score = parseFloat(value);
+  if(isNaN(score)) return;
+  if(existing){
+    db.ref('scores/' + existing.id).update({ score });
+  }else{
+    db.ref('scores').push({ studentId, subject, examName: scoreExamTab, date: todayStr(), score, maxScore: 100, createdAt: Date.now() });
+  }
 }
 
-function editScore(id){
-  const sc = scores.find(s => s.id === id);
-  if(!sc) return;
-  editingScoreId = id;
-  document.getElementById('scoreStudent').value = sc.studentId;
-  document.getElementById('scoreSubject').value = sc.subject;
-  document.getElementById('scoreExamName').value = sc.examName;
-  document.getElementById('scoreDate').value = sc.date;
-  document.getElementById('scoreValue').value = sc.score;
-  document.getElementById('scoreMax').value = sc.maxScore;
-  document.getElementById('scoreFormTitle').textContent = '성적 수정';
-  document.getElementById('scoreSubmitBtn').textContent = '수정 완료';
-  document.getElementById('scoreCancelBtn').style.display = 'inline-flex';
-  window.scrollTo({top:0, behavior:'smooth'});
+function renderScoreGrid(){
+  const head = document.getElementById('scoreGridHead');
+  const body = document.getElementById('scoreGridBody');
+  const subjects = getExamSubjects(scoreGradeTab, scoreExamTab);
+  const schoolFilter = document.getElementById('scoreSchoolFilter').value;
+
+  head.innerHTML = `
+    <tr>
+      <th>이름</th><th>학교</th>
+      ${subjects.map((subj, i) => `
+        <th style="text-align:center;">
+          <input type="text" value="${escapeHtml(subj)}" onchange="renameExamSubject(${i}, this.value)"
+            style="width:80px;text-align:center;padding:5px;border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:700;">
+          ${subjects.length > 1 ? `<span class="link-btn" style="margin-left:4px;color:var(--color-danger);" onclick="removeExamSubject(${i})">✕</span>` : ''}
+        </th>`).join('')}
+      <th><span class="link-btn" onclick="addExamSubject()">+ 과목 추가</span></th>
+    </tr>`;
+
+  const gradeStudents = students
+    .filter(s => s.grade === scoreGradeTab && (!schoolFilter || s.school === schoolFilter))
+    .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+
+  body.innerHTML = gradeStudents.length ? gradeStudents.map(s => `
+    <tr>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
+      <td class="cell-muted">${escapeHtml(s.school)}</td>
+      ${subjects.map(subj => {
+        const rec = getGridScore(s.id, subj);
+        return `<td style="text-align:center;">
+          <input type="number" value="${rec ? rec.score : ''}" placeholder="-" onchange="setGridScore('${s.id}','${escapeHtml(subj)}', this.value)"
+            style="width:64px;text-align:center;padding:6px;border:1px solid var(--color-border);border-radius:6px;">
+        </td>`;
+      }).join('')}
+      <td></td>
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="${subjects.length + 3}">${scoreGradeTab} 학생이 없습니다.</td></tr>`;
 }
 
-function cancelScoreEdit(){
-  editingScoreId = null;
-  document.getElementById('scoreSubject').value = '';
-  document.getElementById('scoreExamName').value = '';
-  document.getElementById('scoreDate').value = todayStr();
-  document.getElementById('scoreValue').value = '';
-  document.getElementById('scoreMax').value = 100;
-  document.getElementById('scoreFormTitle').textContent = '성적 등록';
-  document.getElementById('scoreSubmitBtn').textContent = '성적 등록';
-  document.getElementById('scoreCancelBtn').style.display = 'none';
-}
+function submitScore(){}
+function editScore(){}
+function cancelScoreEdit(){}
 
 function deleteScore(id){
   if(!confirm('이 성적 기록을 삭제하시겠습니까?')) return;
   db.ref('scores/' + id).remove();
-  if(editingScoreId === id) cancelScoreEdit();
   showToast('성적이 삭제되었습니다.');
+}
+
+function toggleScoreHistoryCollapse(){
+  const body = document.getElementById('scoreHistoryBody');
+  const icon = document.getElementById('scoreHistoryCollapseIcon');
+  const collapsed = body.style.display !== 'none';
+  body.style.display = collapsed ? 'none' : 'block';
+  icon.textContent = collapsed ? '▸' : '▾';
 }
 
 function renderScores(){
@@ -2390,7 +2501,6 @@ function renderScores(){
         <td>${s.score} / ${s.maxScore}</td>
         <td style="color:${pctColor};font-weight:700;">${pct.toFixed(1)}%</td>
         <td style="text-align:right;white-space:nowrap;">
-          <button class="btn btn-ghost btn-sm" onclick="editScore('${s.id}')">수정</button>
           <button class="btn btn-danger-outline btn-sm" onclick="deleteScore('${s.id}')">삭제</button>
         </td>
       </tr>`;
@@ -2493,7 +2603,6 @@ function exportMonthlyAttendance(){
 function init(){
   initGradeSelect(document.getElementById('stuGrade'));
   document.getElementById('attDate').value = todayStr();
-  document.getElementById('scoreDate').value = todayStr();
   document.getElementById('exportMonthInput').value = todayStr().slice(0,7);
   renderScheduleGrid();
   renderTeacherDaysPicker();
@@ -2502,7 +2611,9 @@ function init(){
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
-  document.getElementById('studentSortRecentBtn').classList.add('btn-primary');
+  renderScoreTabs();
+  renderScoreGrid();
+  document.getElementById('studentSortGradeBtn').classList.add('btn-primary');
   renderDashboard();
 }
 init();
