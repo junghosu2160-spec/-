@@ -801,9 +801,9 @@
         <div class="card section-gap">
           <div class="card-title">
             <span id="teacherFormTitleText" style="font-weight:800;">조교 선생님 등록</span>
-            <span class="link-btn" id="teacherFormToggleLabel" onclick="toggleTeacherFormCollapse()">숨기기</span>
+            <span class="link-btn" id="teacherFormToggleLabel" onclick="toggleTeacherFormCollapse()">보이기</span>
           </div>
-          <div id="teacherFormBody">
+          <div id="teacherFormBody" style="display:none;">
             <div class="form-row">
               <div class="field" style="flex:1.2;">
                 <label>이름</label>
@@ -1053,18 +1053,18 @@ const GRADES = ['초3','초4','초5','초6','중1','중2','중3','고1','고2','
 
 // 학년별 파스텔 색상 (학년만 봐도 한눈에 구분되도록)
 const GRADE_COLORS = {
-  '초1': { bg:'#FFE1E1', text:'#B33A3A' },
-  '초2': { bg:'#FFEAD5', text:'#B36B1D' },
-  '초3': { bg:'#FFF6C9', text:'#9C8400' },
-  '초4': { bg:'#E8F7D4', text:'#4F7A1F' },
-  '초5': { bg:'#D8F5E4', text:'#1F7A55' },
-  '초6': { bg:'#D6F3F3', text:'#1F7A7A' },
+  '초1': { bg:'#D8F5E4', text:'#1F7A55' },
+  '초2': { bg:'#CFF0DD', text:'#1B6B4A' },
+  '초3': { bg:'#D8F5E4', text:'#1F7A55' },
+  '초4': { bg:'#CFF0DD', text:'#1B6B4A' },
+  '초5': { bg:'#C6ECD6', text:'#1B6B47' },
+  '초6': { bg:'#BEE7CF', text:'#186040' },
   '중1': { bg:'#D7ECFB', text:'#1F5FA8' },
-  '중2': { bg:'#DCE0FB', text:'#3F4FB8' },
-  '중3': { bg:'#E7DCFB', text:'#6B3FA8' },
-  '고1': { bg:'#F5DCFB', text:'#963FA8' },
-  '고2': { bg:'#FBDCEC', text:'#A83F7A' },
-  '고3': { bg:'#FBDCE0', text:'#A83F55' },
+  '중2': { bg:'#CDE4FB', text:'#1B5599' },
+  '중3': { bg:'#C0DBFB', text:'#1B4D8C' },
+  '고1': { bg:'#FFD9E8', text:'#7A2E4D' },
+  '고2': { bg:'#EDE4FF', text:'#4C2A85' },
+  '고3': { bg:'#FFC7DE', text:'#8A1F52' },
   'N수/기타': { bg:'#ECECEC', text:'#666666' },
 };
 function gradeBadge(grade){
@@ -1084,9 +1084,9 @@ function gradeCategoryOf(grade){
   return '기타';
 }
 const CATEGORY_COLORS = {
-  '초등': { bg:'#DCEEFF', text:'#1E3A5F' },
-  '중등': { bg:'#DFF5E6', text:'#1B6B5A' },
-  '고등': { bg:'#FFE8D6', text:'#7C4A1E' },
+  '초등': { bg:'#D8F5E4', text:'#1F7A55' },
+  '중등': { bg:'#D7ECFB', text:'#1F5FA8' },
+  '고등': { bg:'#FFE0EC', text:'#8A2456' },
   '기타': { bg:'#ECECEC', text:'#666666' },
 };
 function categoryColor(grade){ return CATEGORY_COLORS[gradeCategoryOf(grade)]; }
@@ -1127,8 +1127,21 @@ function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
   `).join('');
 }
 
+// 학년 필터 칩: 초등(초록)/중등(파랑)/고등(핑크·보라) 계열 색상 적용
+function smsGradeChipColor(g){
+  if(g === '초등') return CATEGORY_COLORS['초등'];
+  return GRADE_COLORS[g] || CATEGORY_COLORS['기타'];
+}
+function renderSmsGradePicker(containerEl, values, selectedArr, onToggleFnName){
+  containerEl.innerHTML = values.map(v => {
+    const isActive = selectedArr.includes(v);
+    const c = smsGradeChipColor(v);
+    return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="${onToggleFnName}('${v}')">${v}</button>`;
+  }).join('');
+}
+
 function renderSmsFilterPickers(){
-  renderTogglePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
+  renderSmsGradePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
 }
@@ -1699,7 +1712,7 @@ function deleteEvent(id){
    조교 선생님 근무 캘린더
 ========================================================= */
 let editingTeacherId = null;
-let teacherFormCollapsed = false;
+let teacherFormCollapsed = true;
 
 function toggleTeacherFormCollapse(){
   teacherFormCollapsed = !teacherFormCollapsed;
