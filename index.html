@@ -1053,18 +1053,18 @@ const GRADES = ['초3','초4','초5','초6','중1','중2','중3','고1','고2','
 
 // 학년별 파스텔 색상 (학년만 봐도 한눈에 구분되도록)
 const GRADE_COLORS = {
-  '초1': { bg:'#D8F5E4', text:'#1F7A55' },
-  '초2': { bg:'#CFF0DD', text:'#1B6B4A' },
-  '초3': { bg:'#D8F5E4', text:'#1F7A55' },
-  '초4': { bg:'#CFF0DD', text:'#1B6B4A' },
-  '초5': { bg:'#C6ECD6', text:'#1B6B47' },
-  '초6': { bg:'#BEE7CF', text:'#186040' },
-  '중1': { bg:'#D7ECFB', text:'#1F5FA8' },
-  '중2': { bg:'#CDE4FB', text:'#1B5599' },
-  '중3': { bg:'#C0DBFB', text:'#1B4D8C' },
-  '고1': { bg:'#FFD9E8', text:'#7A2E4D' },
-  '고2': { bg:'#EDE4FF', text:'#4C2A85' },
-  '고3': { bg:'#FFC7DE', text:'#8A1F52' },
+  '초1': { bg:'#DFF7E9', text:'#1F7A55' },
+  '초2': { bg:'#C3EFD7', text:'#1B6B4A' },
+  '초3': { bg:'#DFF7E9', text:'#1F7A55' },
+  '초4': { bg:'#C3EFD7', text:'#1B6B4A' },
+  '초5': { bg:'#A3E5C0', text:'#145C3D' },
+  '초6': { bg:'#82D9A8', text:'#0F4A2E' },
+  '중1': { bg:'#DCEEFF', text:'#1F5FA8' },
+  '중2': { bg:'#BFE0FB', text:'#1B4D8C' },
+  '중3': { bg:'#9ECFFA', text:'#123D73' },
+  '고1': { bg:'#FFE1EC', text:'#8A2456' },
+  '고2': { bg:'#FFC2D9', text:'#7A1642' },
+  '고3': { bg:'#FFA3C4', text:'#6B1238' },
   'N수/기타': { bg:'#ECECEC', text:'#666666' },
 };
 function gradeBadge(grade){
@@ -2157,7 +2157,7 @@ function renderStudents(){
   tbody.innerHTML = list.length ? list.map(s => {
     const c = categoryColor(s.grade);
     return `
-    <tr style="background:${c.bg}22;">
+    <tr style="background:${c.bg}55;">
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
