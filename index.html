@@ -648,6 +648,8 @@
             <div class="card-title" style="margin:0;">학생 명단 <span class="hint" id="studentCountHint"></span></div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input type="text" class="search-input" id="studentSearch" placeholder="이름 또는 학교로 검색" oninput="renderStudents()">
+              <button class="btn btn-ghost btn-sm" id="studentSortGradeBtn" onclick="setStudentSort('grade')">학년순</button>
+              <button class="btn btn-ghost btn-sm" id="studentSortRecentBtn" onclick="setStudentSort('recent')">최근 등록순</button>
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
@@ -814,17 +816,18 @@
             <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
           </div>
 
-          <div class="field" style="margin-bottom:14px;">
-            <label>학년 (선택 안 하면 전체)</label>
-            <div class="weekday-picker" id="smsGradePicker"></div>
+          <div class="form-row" style="margin-bottom:0;">
+            <div class="field" style="flex:1;min-width:220px;">
+              <label>학년 (선택 안 하면 전체)</label>
+              <div class="weekday-picker" id="smsGradePicker"></div>
+            </div>
+            <div class="field" style="flex:1;min-width:220px;border-left:1px solid var(--color-border);padding-left:20px;">
+              <label>등원 요일 (선택 안 하면 전체)</label>
+              <div class="weekday-picker" id="smsDayPicker"></div>
+            </div>
           </div>
 
-          <div class="field" style="margin-bottom:14px;">
-            <label>등원 요일 (선택 안 하면 전체)</label>
-            <div class="weekday-picker" id="smsDayPicker"></div>
-          </div>
-
-          <div class="field" style="margin-bottom:14px;">
+          <div class="field" style="margin:14px 0;">
             <label>오늘 출결 상태 (선택 안 하면 전체)</label>
             <div class="weekday-picker" id="smsStatusPicker"></div>
           </div>
@@ -858,15 +861,6 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">휴대폰에 연락처 한 번에 저장하기 <span class="hint">전체 학생·학부모 대상</span></div>
-          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 12px 0;line-height:1.6;">
-            등록된 모든 학생·학부모 연락처를 연락처 파일(.vcf)로 내려받을 수 있어요. 이 파일을 휴대폰에서 열면, 이름이 붙은 채로 연락처 앱에 한 번에 저장돼요.
-            (예: "김민준 학생", "김민준 학부모")
-          </p>
-          <button class="btn btn-primary" onclick="exportContactsVcf()">📇 전체 연락처 파일 내려받기 (.vcf)</button>
-        </div>
-
-        <div class="card section-gap">
           <div class="card-title">메시지 내용</div>
           <div class="form-actions" style="margin-bottom:10px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" onclick="fillSmsTemplate('absent')">결석 안내 템플릿</button>
@@ -882,6 +876,10 @@
             "문자 앱으로 보내기"를 누르면 이 기기(휴대폰/태블릿)의 문자 앱이 선택된 학부모 번호와 함께 열려요. 내용을 확인하고 직접 눌러서 보내시면 됩니다.
             기기에 따라 여러 명에게 한 번에 열리지 않을 수 있어요 — 그럴 땐 "번호만 복사"로 번호를 복사해서 카카오톡 단체방이나 문자 앱에 직접 붙여넣어 주세요.
           </p>
+        </div>
+
+        <div class="section-gap" style="text-align:center;">
+          <button class="link-btn" onclick="exportContactsVcf()" style="font-size:11.5px;">📇 전체 연락처 파일 내려받기 (.vcf) — 휴대폰 연락처 앱에 한 번에 저장</button>
         </div>
       </section>
 
@@ -1284,7 +1282,7 @@ function renderSmsStudentList(){
         <span>${smsShowOthers ? '▾' : '▸'}</span> 그 외 학생 (다른 요일 · 시간 미정 · 보강) ${others.length}명
       </div>`;
     if(smsShowOthers){
-      html += others.sort(smsByName).map(s => smsRowHtml(s, false)).join('');
+      html += others.sort(compareByGradeThenName).map(s => smsRowHtml(s, false)).join('');
     }
   }
 
@@ -1980,11 +1978,20 @@ function importBulkStudents(){
   showToast(`${successCount}명 일괄 등록 완료${skipCount ? ` (이름 없는 ${skipCount}줄 제외)` : ''}`);
 }
 
+let studentSortMode = 'recent'; // 'recent' | 'grade'
+
+function setStudentSort(mode){
+  studentSortMode = mode;
+  document.getElementById('studentSortGradeBtn').classList.toggle('btn-primary', mode === 'grade');
+  document.getElementById('studentSortRecentBtn').classList.toggle('btn-primary', mode === 'recent');
+  renderStudents();
+}
+
 function renderStudents(){
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
   const list = students.filter(s =>
     !keyword || s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword)
-  ).sort((a,b)=> b.createdAt - a.createdAt);
+  ).sort(studentSortMode === 'grade' ? compareByGradeThenName : (a,b)=> b.createdAt - a.createdAt);
 
   document.getElementById('studentCountHint').textContent = `(총 ${students.length}명)`;
 
@@ -2462,6 +2469,7 @@ function init(){
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
+  document.getElementById('studentSortRecentBtn').classList.add('btn-primary');
   renderDashboard();
 }
 init();
