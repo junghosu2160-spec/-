@@ -639,15 +639,11 @@
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
-          <div class="toolbar" style="margin-top:-6px;margin-bottom:14px;">
-            <div style="display:flex;gap:8px;align-items:center;">
-              <select id="studentFilterGrade" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-                <option value="">전체 학년</option>
-              </select>
-              <select id="studentFilterSchool" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-                <option value="">전체 학교</option>
-              </select>
-            </div>
+          <div class="toolbar" style="margin-top:-6px;margin-bottom:14px;align-items:center;">
+            <div id="studentGradeFilterChips" class="weekday-picker"></div>
+            <select id="studentFilterSchool" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <option value="">전체 학교</option>
+            </select>
           </div>
           <div id="studentListBody">
             <div class="table-wrap">
@@ -797,8 +793,9 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title" style="cursor:pointer;" onclick="toggleTeacherFormCollapse()">
-            <span id="teacherFormCollapseIcon">▾</span> <span id="teacherFormTitleText">조교 선생님 등록</span>
+          <div class="card-title">
+            <span id="teacherFormTitleText" style="font-weight:800;">조교 선생님 등록</span>
+            <span class="link-btn" id="teacherFormToggleLabel" onclick="toggleTeacherFormCollapse()">숨기기</span>
           </div>
           <div id="teacherFormBody">
             <div class="form-row">
@@ -910,12 +907,16 @@
           </div>
           <div id="scoreExamTabs" class="weekday-picker" style="margin-bottom:16px;"></div>
 
-          <div class="table-wrap">
-            <table id="scoreGridTable">
-              <thead id="scoreGridHead"></thead>
-              <tbody id="scoreGridBody"></tbody>
-            </table>
+          <div id="scoreGridContainer"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">학생별 성적 이력 <span class="hint">학년이 바뀌어도 과거 성적을 계속 볼 수 있어요</span></div>
+          <div class="field" style="max-width:320px;margin-bottom:14px;">
+            <label>학생 선택</label>
+            <select id="scoreHistoryStudentSelect" onchange="renderStudentScoreHistory()"></select>
           </div>
+          <div id="studentScoreHistoryBody"></div>
         </div>
 
         <div class="card section-gap">
@@ -1035,7 +1036,7 @@ function refreshCurrentView(){
   if(currentView === 'students') renderStudents();
   if(currentView === 'attendance') renderAttendance();
   if(currentView === 'calendar') renderBigCalendar();
-  if(currentView === 'scores'){ renderScoreGrid(); renderScores(); }
+  if(currentView === 'scores'){ renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   populateStudentDropdowns();
 }
 
@@ -1428,7 +1429,7 @@ function switchView(view){
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); }
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
-  if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); }
+  if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
 }
 
 /* =========================================================
@@ -1677,7 +1678,7 @@ let teacherFormCollapsed = false;
 function toggleTeacherFormCollapse(){
   teacherFormCollapsed = !teacherFormCollapsed;
   document.getElementById('teacherFormBody').style.display = teacherFormCollapsed ? 'none' : 'block';
-  document.getElementById('teacherFormCollapseIcon').textContent = teacherFormCollapsed ? '▸' : '▾';
+  document.getElementById('teacherFormToggleLabel').textContent = teacherFormCollapsed ? '보이기' : '숨기기';
 }
 let selectedTeacherDays = [];
 
@@ -2022,14 +2023,20 @@ function setStudentSort(mode){
   renderStudents();
 }
 
-function populateStudentListFilters(){
-  const gradeSel = document.getElementById('studentFilterGrade');
-  const schoolSel = document.getElementById('studentFilterSchool');
-  if(!gradeSel || !schoolSel) return;
+let studentFilterGrade = ''; // '' = 전체
 
-  const prevGrade = gradeSel.value;
-  gradeSel.innerHTML = `<option value="">전체 학년</option>` + GRADES.map(g => `<option value="${g}">${g}</option>`).join('');
-  if(GRADES.includes(prevGrade)) gradeSel.value = prevGrade;
+function setStudentGradeFilter(g){
+  studentFilterGrade = g;
+  renderStudents();
+}
+
+function populateStudentListFilters(){
+  const gradeChips = document.getElementById('studentGradeFilterChips');
+  const schoolSel = document.getElementById('studentFilterSchool');
+  if(!gradeChips || !schoolSel) return;
+
+  gradeChips.innerHTML = `<button type="button" class="weekday-chip ${studentFilterGrade === '' ? 'active' : ''}" onclick="setStudentGradeFilter('')">전체</button>` +
+    GRADES.map(g => `<button type="button" class="weekday-chip ${studentFilterGrade === g ? 'active' : ''}" onclick="setStudentGradeFilter('${g}')">${g}</button>`).join('');
 
   const prevSchool = schoolSel.value;
   const schools = [...new Set(students.map(s => s.school).filter(Boolean))].sort((a,b)=> a.localeCompare(b,'ko'));
@@ -2040,11 +2047,10 @@ function populateStudentListFilters(){
 function renderStudents(){
   populateStudentListFilters();
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
-  const filterGrade = document.getElementById('studentFilterGrade').value;
   const filterSchool = document.getElementById('studentFilterSchool').value;
   const list = students.filter(s => {
     if(keyword && !(s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword))) return false;
-    if(filterGrade && s.grade !== filterGrade) return false;
+    if(studentFilterGrade && s.grade !== studentFilterGrade) return false;
     if(filterSchool && s.school !== filterSchool) return false;
     return true;
   }).sort(studentSortMode === 'grade' ? compareByGradeThenName : (a,b)=> b.createdAt - a.createdAt);
@@ -2364,7 +2370,7 @@ function renderScoreTabs(){
   const examTabs = document.getElementById('scoreExamTabs');
   examTabs.innerHTML = EXAM_PERIODS.map(e => `
     <button type="button" class="weekday-chip ${scoreExamTab === e ? 'active' : ''}" onclick="setScoreExamTab('${e}')">${e}</button>
-  `).join('');
+  `).join('') + `<button type="button" class="weekday-chip ${scoreExamTab === 'ALL' ? 'active' : ''}" onclick="setScoreExamTab('ALL')">📋 전체보기</button>`;
 
   const schoolSel = document.getElementById('scoreSchoolFilter');
   const prevSchool = schoolSel.value;
@@ -2376,42 +2382,42 @@ function renderScoreTabs(){
 function setScoreGradeTab(g){ scoreGradeTab = g; renderScoreTabs(); renderScoreGrid(); }
 function setScoreExamTab(e){ scoreExamTab = e; renderScoreTabs(); renderScoreGrid(); }
 
-function addExamSubject(){
-  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+function addExamSubject(examName){
+  const subjects = [...getExamSubjects(scoreGradeTab, examName)];
   subjects.push(`과목${subjects.length + 1}`);
-  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+  saveExamSubjects(scoreGradeTab, examName, subjects);
   renderScoreGrid();
 }
 
-function removeExamSubject(index){
-  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+function removeExamSubject(examName, index){
+  const subjects = [...getExamSubjects(scoreGradeTab, examName)];
   if(subjects.length <= 1){ alert('과목이 최소 1개는 있어야 해요.'); return; }
   subjects.splice(index, 1);
-  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+  saveExamSubjects(scoreGradeTab, examName, subjects);
   renderScoreGrid();
 }
 
-function renameExamSubject(index, newName){
+function renameExamSubject(examName, index, newName){
   newName = newName.trim();
   if(!newName) return;
-  const subjects = [...getExamSubjects(scoreGradeTab, scoreExamTab)];
+  const subjects = [...getExamSubjects(scoreGradeTab, examName)];
   const oldName = subjects[index];
   if(oldName === newName) return;
   subjects[index] = newName;
-  saveExamSubjects(scoreGradeTab, scoreExamTab, subjects);
+  saveExamSubjects(scoreGradeTab, examName, subjects);
 
   // 기존에 저장된 점수도 새 과목명으로 함께 옮겨줌
-  scores.filter(sc => sc.examName === scoreExamTab && sc.subject === oldName && studentById(sc.studentId)?.grade === scoreGradeTab)
+  scores.filter(sc => sc.examName === examName && sc.subject === oldName && studentById(sc.studentId)?.grade === scoreGradeTab)
     .forEach(sc => db.ref('scores/' + sc.id).update({ subject: newName }));
 }
 
-function getGridScore(studentId, subject){
-  return scores.find(sc => sc.studentId === studentId && sc.examName === scoreExamTab && sc.subject === subject);
+function getGridScore(studentId, examName, subject){
+  return scores.find(sc => sc.studentId === studentId && sc.examName === examName && sc.subject === subject);
 }
 
-function setGridScore(studentId, subject, rawValue){
+function setGridScore(studentId, examName, subject, rawValue){
   const value = rawValue.trim();
-  const existing = getGridScore(studentId, subject);
+  const existing = getGridScore(studentId, examName, subject);
   if(!value){
     if(existing) db.ref('scores/' + existing.id).remove();
     return;
@@ -2421,45 +2427,57 @@ function setGridScore(studentId, subject, rawValue){
   if(existing){
     db.ref('scores/' + existing.id).update({ score });
   }else{
-    db.ref('scores').push({ studentId, subject, examName: scoreExamTab, date: todayStr(), score, maxScore: 100, createdAt: Date.now() });
+    db.ref('scores').push({ studentId, subject, examName, date: todayStr(), score, maxScore: 100, createdAt: Date.now() });
   }
 }
 
-function renderScoreGrid(){
-  const head = document.getElementById('scoreGridHead');
-  const body = document.getElementById('scoreGridBody');
-  const subjects = getExamSubjects(scoreGradeTab, scoreExamTab);
-  const schoolFilter = document.getElementById('scoreSchoolFilter').value;
-
-  head.innerHTML = `
+function buildExamTableHtml(examName, gradeStudents, showTitle){
+  const subjects = getExamSubjects(scoreGradeTab, examName);
+  const head = `
     <tr>
       <th>이름</th><th>학교</th>
       ${subjects.map((subj, i) => `
         <th style="text-align:center;">
-          <input type="text" value="${escapeHtml(subj)}" onchange="renameExamSubject(${i}, this.value)"
+          <input type="text" value="${escapeHtml(subj)}" onchange="renameExamSubject('${examName}', ${i}, this.value)"
             style="width:80px;text-align:center;padding:5px;border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:700;">
-          ${subjects.length > 1 ? `<span class="link-btn" style="margin-left:4px;color:var(--color-danger);" onclick="removeExamSubject(${i})">✕</span>` : ''}
+          ${subjects.length > 1 ? `<span class="link-btn" style="margin-left:4px;color:var(--color-danger);" onclick="removeExamSubject('${examName}',${i})">✕</span>` : ''}
         </th>`).join('')}
-      <th><span class="link-btn" onclick="addExamSubject()">+ 과목 추가</span></th>
+      <th><span class="link-btn" onclick="addExamSubject('${examName}')">+ 과목 추가</span></th>
     </tr>`;
 
-  const gradeStudents = students
-    .filter(s => s.grade === scoreGradeTab && (!schoolFilter || s.school === schoolFilter))
-    .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
-
-  body.innerHTML = gradeStudents.length ? gradeStudents.map(s => `
+  const body = gradeStudents.length ? gradeStudents.map(s => `
     <tr>
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td class="cell-muted">${escapeHtml(s.school)}</td>
       ${subjects.map(subj => {
-        const rec = getGridScore(s.id, subj);
+        const rec = getGridScore(s.id, examName, subj);
         return `<td style="text-align:center;">
-          <input type="number" value="${rec ? rec.score : ''}" placeholder="-" onchange="setGridScore('${s.id}','${escapeHtml(subj)}', this.value)"
+          <input type="number" value="${rec ? rec.score : ''}" placeholder="-" onchange="setGridScore('${s.id}','${examName}','${escapeHtml(subj)}', this.value)"
             style="width:64px;text-align:center;padding:6px;border:1px solid var(--color-border);border-radius:6px;">
         </td>`;
       }).join('')}
       <td></td>
     </tr>`).join('') : `<tr class="empty-row"><td colspan="${subjects.length + 3}">${scoreGradeTab} 학생이 없습니다.</td></tr>`;
+
+  return `
+    ${showTitle ? `<div class="sms-group-title" style="color:var(--color-primary-light);">${examName}</div>` : ''}
+    <div class="table-wrap">
+      <table><thead>${head}</thead><tbody>${body}</tbody></table>
+    </div>`;
+}
+
+function renderScoreGrid(){
+  const container = document.getElementById('scoreGridContainer');
+  const schoolFilter = document.getElementById('scoreSchoolFilter').value;
+  const gradeStudents = students
+    .filter(s => s.grade === scoreGradeTab && (!schoolFilter || s.school === schoolFilter))
+    .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+
+  if(scoreExamTab === 'ALL'){
+    container.innerHTML = EXAM_PERIODS.map(exam => buildExamTableHtml(exam, gradeStudents, true)).join('<div class="divider"></div>');
+  }else{
+    container.innerHTML = buildExamTableHtml(scoreExamTab, gradeStudents, false);
+  }
 }
 
 function submitScore(){}
@@ -2507,6 +2525,55 @@ function renderScores(){
   }).join('') : `<tr class="empty-row"><td colspan="8">등록된 성적이 없습니다.</td></tr>`;
 
   renderAvgByStudent();
+}
+
+function populateScoreHistorySelect(){
+  const sel = document.getElementById('scoreHistoryStudentSelect');
+  if(!sel) return;
+  const prev = sel.value;
+  sel.innerHTML = students.length
+    ? students.slice().sort(compareByGradeThenName).map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')
+    : `<option value="">등록된 학생 없음</option>`;
+  if(students.some(s => s.id === prev)) sel.value = prev;
+  renderStudentScoreHistory();
+}
+
+function renderStudentScoreHistory(){
+  const box = document.getElementById('studentScoreHistoryBody');
+  const sel = document.getElementById('scoreHistoryStudentSelect');
+  if(!box || !sel || !sel.value){
+    if(box) box.innerHTML = `<div class="cell-muted" style="font-size:13px;">학생을 선택해 주세요.</div>`;
+    return;
+  }
+  const studentId = sel.value;
+  const examOrder = s => { const i = EXAM_PERIODS.indexOf(s); return i === -1 ? 99 : i; };
+  const list = scores.filter(sc => sc.studentId === studentId)
+    .sort((a,b)=> examOrder(a.examName) - examOrder(b.examName) || a.subject.localeCompare(b.subject,'ko'));
+
+  if(!list.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 성적이 없습니다.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>시험</th><th>과목</th><th>점수</th><th>백분율</th><th>날짜</th></tr></thead>
+        <tbody>
+          ${list.map(sc => {
+            const pct = sc.score / sc.maxScore * 100;
+            const pctColor = pct >= 80 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-warning)' : 'var(--color-danger)';
+            return `<tr>
+              <td class="cell-muted">${escapeHtml(sc.examName)}</td>
+              <td>${escapeHtml(sc.subject)}</td>
+              <td>${sc.score} / ${sc.maxScore}</td>
+              <td style="color:${pctColor};font-weight:700;">${pct.toFixed(1)}%</td>
+              <td class="cell-muted">${sc.date}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function renderAvgByStudent(){
@@ -2613,6 +2680,7 @@ function init(){
   renderTeacherList();
   renderScoreTabs();
   renderScoreGrid();
+  populateScoreHistorySelect();
   document.getElementById('studentSortGradeBtn').classList.add('btn-primary');
   renderDashboard();
 }
