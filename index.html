@@ -360,10 +360,15 @@
   .sms-contact input:disabled + span{color:var(--color-text-muted);}
   .sms-others-toggle{
     display:flex;align-items:center;gap:8px;cursor:pointer;
-    padding:10px 12px;margin-top:14px;border-top:1px dashed var(--color-border);
+    padding:10px 14px;margin-top:14px;border-top:1px dashed var(--color-border);border-radius:10px;
     font-size:12.5px;font-weight:700;color:var(--color-text-muted);
+    transition:background .12s ease, color .12s ease;
   }
   .sms-others-toggle:hover{color:var(--color-text);}
+  .sms-others-toggle.open{
+    background:var(--color-primary);color:#fff;font-weight:800;
+    margin-top:14px;border-top:none;
+  }
   .teacher-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
@@ -1275,11 +1280,11 @@ function renderSmsStudentList(){
 
   if(others.length){
     html += `
-      <div class="sms-others-toggle" onclick="toggleSmsOthers()">
+      <div class="sms-others-toggle ${smsShowOthers ? 'open' : ''}" onclick="toggleSmsOthers()">
         <span>${smsShowOthers ? '▾' : '▸'}</span> 그 외 학생 (다른 요일 · 시간 미정 · 보강) ${others.length}명
       </div>`;
     if(smsShowOthers){
-      html += others.sort(smsByName).map(s => smsRowHtml(s, true)).join('');
+      html += others.sort(smsByName).map(s => smsRowHtml(s, false)).join('');
     }
   }
 
