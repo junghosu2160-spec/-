@@ -634,6 +634,7 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input type="text" class="search-input" id="studentSearch" placeholder="이름 또는 학교로 검색" oninput="renderStudents()">
               <button class="btn btn-ghost btn-sm" id="studentSortGradeBtn" onclick="setStudentSort('grade')">학년순</button>
+              <button class="btn btn-ghost btn-sm" id="studentSortSchoolBtn" onclick="setStudentSort('school')">학교순</button>
               <button class="btn btn-ghost btn-sm" id="studentSortRecentBtn" onclick="setStudentSort('recent')">최근 등록순</button>
               <button class="btn btn-ghost btn-sm" onclick="exportStudentListExcel()">📊 엑셀로 다운로드</button>
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
@@ -658,15 +659,20 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">여러 학생 한 번에 등록 <span class="hint">엑셀에서 복사해서 붙여넣기</span></div>
-          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 10px 0;line-height:1.6;">
-            엑셀에서 <strong>학년 · 이름 · 학교 · 월 · 화 · 수 · 목 · 금 · 토 · 일 · 학생 연락처 · 학부모 연락처</strong> 순서로 셀을 드래그해서 복사한 뒤, 아래 칸에 그대로 붙여넣고 버튼을 누르세요.
-            안 오는 요일 칸이나 연락처는 비워두면 됩니다. (시간은 4:30처럼 입력하면 자동으로 오후 16:30으로 인식돼요. 오전이면 09:00처럼 직접 입력해 주세요)
+          <div class="card-title">여러 학생 한 번에 등록 <span class="hint">엑셀 양식 다운로드 → 작성 → 업로드</span></div>
+          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 14px 0;line-height:1.6;">
+            1) 아래 <strong>"엑셀 양식 다운로드"</strong>를 눌러 파일을 받으세요.<br>
+            2) 엑셀에서 열어 <strong>학년 · 이름 · 학교 · 월 · 화 · 수 · 목 · 금 · 토 · 일 · 학생 연락처 · 학부모 연락처</strong> 순서로 한 줄에 한 명씩 채워주세요. 안 오는 요일이나 연락처는 비워두면 돼요.
+            (시간은 4:30처럼 적으면 자동으로 오후 16:30으로 인식돼요. 오전이면 09:00처럼 적어주세요)<br>
+            3) 저장한 파일을 <strong>"파일 업로드"</strong>로 올리면 자동으로 학생들이 등록돼요.
           </p>
-          <textarea id="bulkImportText" placeholder="중3	이윤아	새론중	4:30			4:30			010-1111-2222	010-3333-4444
-중3	박정후	강동중		6:30		4:30				010-5555-6666" style="width:100%;min-height:120px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13px;font-family:monospace;resize:vertical;"></textarea>
-          <div class="form-actions" style="margin-top:12px;">
-            <button class="btn btn-primary" onclick="importBulkStudents()">📋 붙여넣은 내용으로 일괄 등록</button>
+          <div class="form-actions" style="flex-wrap:wrap;">
+            <button class="btn btn-ghost" onclick="downloadBulkTemplate()">📥 엑셀 양식 다운로드</button>
+            <label class="btn btn-primary" style="cursor:pointer;">
+              📤 파일 업로드
+              <input type="file" id="bulkImportFile" accept=".csv,.tsv,.txt" onchange="handleBulkFileUpload(this)" style="display:none;">
+            </label>
+            <span class="cell-muted" id="bulkImportFileName" style="font-size:12px;"></span>
           </div>
         </div>
       </section>
@@ -1043,7 +1049,7 @@ function refreshCurrentView(){
 // 시간이 지나면서 '미출석' 표시가 자동으로 뜨도록 1분마다 출결 화면 갱신
 setInterval(() => { if(currentView === 'attendance') renderAttendance(); }, 60000);
 
-const GRADES = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수/기타'];
+const GRADES = ['초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수/기타'];
 
 // 학년별 파스텔 색상 (학년만 봐도 한눈에 구분되도록)
 const GRADE_COLORS = {
@@ -1068,6 +1074,26 @@ function gradeBadge(grade){
 // 학년이 중등(초등 포함)인지 고등인지 대략 구분 (출결 체크 2단 배치용)
 function isHighSchoolGrade(grade){
   return grade === '고1' || grade === '고2' || grade === '고3' || grade === 'N수/기타';
+}
+// 학년을 초등/중등/고등 카테고리로 구분 (배경색 구분용)
+function gradeCategoryOf(grade){
+  if(!grade) return '기타';
+  if(grade.startsWith('초')) return '초등';
+  if(grade.startsWith('중')) return '중등';
+  if(grade.startsWith('고')) return '고등';
+  return '기타';
+}
+const CATEGORY_COLORS = {
+  '초등': { bg:'#DCEEFF', text:'#1E3A5F' },
+  '중등': { bg:'#DFF5E6', text:'#1B6B5A' },
+  '고등': { bg:'#FFE8D6', text:'#7C4A1E' },
+  '기타': { bg:'#ECECEC', text:'#666666' },
+};
+function categoryColor(grade){ return CATEGORY_COLORS[gradeCategoryOf(grade)]; }
+// 초등<중등<고등 순서를 위한 카테고리 정렬값
+function categorySortValue(grade){
+  const order = { '초등':0, '중등':1, '고등':2, '기타':3 };
+  return order[gradeCategoryOf(grade)] ?? 9;
 }
 
 // 전체 학생/출결/성적 일괄 삭제 (비밀번호 확인 필요)
@@ -1866,7 +1892,7 @@ function renderScheduleGrid(){
   grid.innerHTML = WEEKDAYS.map(d => `
     <div class="schedule-cell">
       <span class="sc-day">${d}</span>
-      <input type="time" id="stuSched-${d}">
+      <input type="time" id="stuSched-${d}" step="1800">
     </div>
   `).join('');
 }
@@ -1948,23 +1974,30 @@ function deleteStudent(id){
   showToast('학생이 삭제되었습니다.');
 }
 
-function importBulkStudents(){
-  const raw = document.getElementById('bulkImportText').value;
-  const lines = raw.split(/\r?\n/).filter(l => l.trim());
-  if(!lines.length){ alert('붙여넣을 데이터를 입력해 주세요.'); return; }
+function parseBulkImportRow(line){
+  return line.includes('\t') ? line.split('\t') : line.split(',');
+}
 
-  function normalizeTime(str){
-    const m = String(str||'').trim().match(/^(\d{1,2}):(\d{2})$/);
-    if(!m) return '';
-    let h = parseInt(m[1],10);
-    if(h < 9) h += 12; // 학원 특성상 한 자리 시(예: 4:30)는 오후로 간주
-    if(h > 23) h = 23;
-    return String(h).padStart(2,'0') + ':' + m[2];
-  }
+function normalizeBulkTime(str){
+  const m = String(str||'').trim().match(/^(\d{1,2}):(\d{2})$/);
+  if(!m) return '';
+  let h = parseInt(m[1],10);
+  if(h < 9) h += 12; // 학원 특성상 한 자리 시(예: 4:30)는 오후로 간주
+  if(h > 23) h = 23;
+  return String(h).padStart(2,'0') + ':' + m[2];
+}
+
+function processBulkImportText(raw){
+  let lines = raw.split(/\r?\n/).filter(l => l.trim());
+  if(!lines.length){ alert('업로드할 데이터가 없습니다.'); return; }
+
+  // 첫 줄이 안내용 머리글(예: "학년")이면 건너뜀
+  const firstCols = parseBulkImportRow(lines[0]);
+  if((firstCols[0]||'').trim() === '학년'){ lines = lines.slice(1); }
 
   let successCount = 0, skipCount = 0;
   lines.forEach(line => {
-    const cols = line.includes('\t') ? line.split('\t') : line.split(',');
+    const cols = parseBulkImportRow(line);
     const grade = (cols[0]||'').trim();
     const name = (cols[1]||'').trim();
     const school = (cols[2]||'').trim();
@@ -1972,7 +2005,7 @@ function importBulkStudents(){
 
     const schedule = {};
     WEEKDAYS.forEach((day, idx) => {
-      const t = normalizeTime(cols[3+idx]);
+      const t = normalizeBulkTime(cols[3+idx]);
       if(t) schedule[day] = t;
     });
     const phone = (cols[10]||'').trim();
@@ -1982,11 +2015,40 @@ function importBulkStudents(){
     successCount++;
   });
 
-  document.getElementById('bulkImportText').value = '';
   showToast(`${successCount}명 일괄 등록 완료${skipCount ? ` (이름 없는 ${skipCount}줄 제외)` : ''}`);
 }
 
-let studentSortMode = 'grade'; // 'recent' | 'grade'
+function handleBulkFileUpload(inputEl){
+  const file = inputEl.files[0];
+  if(!file) return;
+  document.getElementById('bulkImportFileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    processBulkImportText(e.target.result);
+    inputEl.value = '';
+  };
+  reader.onerror = () => alert('파일을 읽는 중 문제가 발생했습니다.');
+  reader.readAsText(file, 'utf-8');
+}
+
+function downloadBulkTemplate(){
+  const rows = [
+    ['학년','이름','학교','월','화','수','목','금','토','일','학생 연락처','학부모 연락처'],
+    ['중1','예시학생','예시중학교','16:30','','16:30','','','','','010-0000-0000','010-1111-1111'],
+  ];
+  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '학생등록양식.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+let studentSortMode = 'grade'; // 'recent' | 'grade' | 'school'
 let studentListCollapsed = false;
 
 function toggleStudentListCollapse(){
@@ -2019,6 +2081,7 @@ function exportStudentListExcel(){
 function setStudentSort(mode){
   studentSortMode = mode;
   document.getElementById('studentSortGradeBtn').classList.toggle('btn-primary', mode === 'grade');
+  document.getElementById('studentSortSchoolBtn').classList.toggle('btn-primary', mode === 'school');
   document.getElementById('studentSortRecentBtn').classList.toggle('btn-primary', mode === 'recent');
   renderStudents();
 }
@@ -2036,12 +2099,22 @@ function populateStudentListFilters(){
   if(!gradeChips || !schoolSel) return;
 
   gradeChips.innerHTML = `<button type="button" class="weekday-chip ${studentFilterGrade === '' ? 'active' : ''}" onclick="setStudentGradeFilter('')">전체</button>` +
-    GRADES.map(g => `<button type="button" class="weekday-chip ${studentFilterGrade === g ? 'active' : ''}" onclick="setStudentGradeFilter('${g}')">${g}</button>`).join('');
+    GRADES.map(g => {
+      const c = categoryColor(g);
+      const isActive = studentFilterGrade === g;
+      return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="setStudentGradeFilter('${g}')">${g}</button>`;
+    }).join('');
 
   const prevSchool = schoolSel.value;
   const schools = [...new Set(students.map(s => s.school).filter(Boolean))].sort((a,b)=> a.localeCompare(b,'ko'));
   schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('');
   if(schools.includes(prevSchool)) schoolSel.value = prevSchool;
+}
+
+function compareBySchoolThenGrade(a, b){
+  const si = (a.school||'').localeCompare(b.school||'', 'ko');
+  if(si !== 0) return si;
+  return compareByGradeThenName(a, b); // 학교가 같으면 초등→중등→고등, 그 안에서 학년·이름순
 }
 
 function renderStudents(){
@@ -2053,13 +2126,25 @@ function renderStudents(){
     if(studentFilterGrade && s.grade !== studentFilterGrade) return false;
     if(filterSchool && s.school !== filterSchool) return false;
     return true;
-  }).sort(studentSortMode === 'grade' ? compareByGradeThenName : (a,b)=> b.createdAt - a.createdAt);
+  }).sort(
+    studentSortMode === 'grade' ? compareByGradeThenName :
+    studentSortMode === 'school' ? compareBySchoolThenGrade :
+    (a,b)=> b.createdAt - a.createdAt
+  );
 
-  document.getElementById('studentCountHint').textContent = `(총 ${students.length}명)`;
+  const hintParts = [];
+  if(filterSchool) hintParts.push(filterSchool);
+  if(studentFilterGrade) hintParts.push(studentFilterGrade);
+  if(keyword) hintParts.push(`"${keyword}" 검색`);
+  document.getElementById('studentCountHint').textContent = hintParts.length
+    ? `(${hintParts.join(' · ')} · ${list.length}명)`
+    : `(전체 ${list.length}명)`;
 
   const tbody = document.getElementById('studentTableBody');
-  tbody.innerHTML = list.length ? list.map(s => `
-    <tr>
+  tbody.innerHTML = list.length ? list.map(s => {
+    const c = categoryColor(s.grade);
+    return `
+    <tr style="background:${c.bg}22;">
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
@@ -2071,7 +2156,8 @@ function renderStudents(){
         <button class="btn btn-danger-outline btn-sm" onclick="deleteStudent('${s.id}')">삭제</button>
       </td>
     </tr>
-  `).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  `;
+  }).join('') : `<tr class="empty-row"><td colspan="7">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
 }
 
 /* =========================================================
