@@ -132,8 +132,9 @@
   /* ===== Cards & grid ===== */
   .grid{display:grid;gap:16px;}
   .grid-4{grid-template-columns:repeat(4,1fr);}
+  .grid-3{grid-template-columns:repeat(3,1fr);}
   .grid-2{grid-template-columns:1.3fr 1fr;}
-  @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}}
+  @media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}}
 
   .card{
     background:var(--color-surface);
@@ -526,7 +527,7 @@
 
       <!-- ================= 대시보드 ================= -->
       <section class="view active" id="view-dashboard">
-        <div class="grid grid-4">
+        <div class="grid grid-3">
           <div class="card stat-card">
             <div class="label">전체 학생 수</div>
             <div class="value" id="statTotalStudents">0</div>
@@ -541,11 +542,6 @@
             <div class="label">오늘 결석 · 지각</div>
             <div class="value danger" id="statTodayAbsent">0</div>
             <div class="sub" id="statTodayAbsentSub">결석 0 · 지각 0</div>
-          </div>
-          <div class="card stat-card">
-            <div class="label">전체 평균 점수</div>
-            <div class="value" id="statAvgScore">-</div>
-            <div class="sub" id="statScoreCountSub">등록된 성적 0건</div>
           </div>
         </div>
 
@@ -631,35 +627,40 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">여러 학생 한 번에 등록 <span class="hint">엑셀에서 복사해서 붙여넣기</span></div>
-          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 10px 0;line-height:1.6;">
-            엑셀에서 <strong>학년 · 이름 · 학교 · 월 · 화 · 수 · 목 · 금 · 토 · 일</strong> 순서로 셀을 드래그해서 복사한 뒤, 아래 칸에 그대로 붙여넣고 버튼을 누르세요.
-            안 오는 요일 칸은 비워두면 됩니다. (시간은 4:30처럼 입력하면 자동으로 오후 16:30으로 인식돼요. 오전이면 09:00처럼 직접 입력해 주세요)
-          </p>
-          <textarea id="bulkImportText" placeholder="중3	이윤아	새론중	4:30			4:30		
-중3	박정후	강동중		6:30		4:30		" style="width:100%;min-height:120px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13px;font-family:monospace;resize:vertical;"></textarea>
-          <div class="form-actions" style="margin-top:12px;">
-            <button class="btn btn-primary" onclick="importBulkStudents()">📋 붙여넣은 내용으로 일괄 등록</button>
-          </div>
-        </div>
-
-        <div class="card section-gap">
           <div class="toolbar">
-            <div class="card-title" style="margin:0;">학생 명단 <span class="hint" id="studentCountHint"></span></div>
+            <div class="card-title" style="margin:0;cursor:pointer;" onclick="toggleStudentListCollapse()">
+              <span id="studentListCollapseIcon">▾</span> 학생 명단 <span class="hint" id="studentCountHint"></span>
+            </div>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <input type="text" class="search-input" id="studentSearch" placeholder="이름 또는 학교로 검색" oninput="renderStudents()">
               <button class="btn btn-ghost btn-sm" id="studentSortGradeBtn" onclick="setStudentSort('grade')">학년순</button>
               <button class="btn btn-ghost btn-sm" id="studentSortRecentBtn" onclick="setStudentSort('recent')">최근 등록순</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportStudentListExcel()">📊 엑셀로 다운로드</button>
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:right;">관리</th></tr>
-              </thead>
-              <tbody id="studentTableBody"></tbody>
-            </table>
+          <div id="studentListBody">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:right;">관리</th></tr>
+                </thead>
+                <tbody id="studentTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">여러 학생 한 번에 등록 <span class="hint">엑셀에서 복사해서 붙여넣기</span></div>
+          <p class="cell-muted" style="font-size:12.5px;margin:-6px 0 10px 0;line-height:1.6;">
+            엑셀에서 <strong>학년 · 이름 · 학교 · 월 · 화 · 수 · 목 · 금 · 토 · 일 · 학생 연락처 · 학부모 연락처</strong> 순서로 셀을 드래그해서 복사한 뒤, 아래 칸에 그대로 붙여넣고 버튼을 누르세요.
+            안 오는 요일 칸이나 연락처는 비워두면 됩니다. (시간은 4:30처럼 입력하면 자동으로 오후 16:30으로 인식돼요. 오전이면 09:00처럼 직접 입력해 주세요)
+          </p>
+          <textarea id="bulkImportText" placeholder="중3	이윤아	새론중	4:30			4:30			010-1111-2222	010-3333-4444
+중3	박정후	강동중		6:30		4:30				010-5555-6666" style="width:100%;min-height:120px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13px;font-family:monospace;resize:vertical;"></textarea>
+          <div class="form-actions" style="margin-top:12px;">
+            <button class="btn btn-primary" onclick="importBulkStudents()">📋 붙여넣은 내용으로 일괄 등록</button>
           </div>
         </div>
       </section>
@@ -786,31 +787,33 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title" id="teacherFormTitle">조교 선생님 등록</div>
-          <div class="form-row">
-            <div class="field" style="flex:1.2;">
-              <label>이름</label>
-              <input type="text" id="teacherName" placeholder="예: 김민지 선생님">
-            </div>
-            <div class="field" style="flex:2;">
-              <label>기본 출근 요일</label>
-              <div class="weekday-picker" id="teacherDaysPicker"></div>
-            </div>
+          <div class="card-title" style="cursor:pointer;" onclick="toggleTeacherFormCollapse()">
+            <span id="teacherFormCollapseIcon">▾</span> <span id="teacherFormTitleText">조교 선생님 등록</span>
           </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
-            <button class="btn btn-ghost" id="teacherCancelBtn" style="display:none;" onclick="cancelTeacherEdit()">취소</button>
+          <div id="teacherFormBody">
+            <div class="form-row">
+              <div class="field" style="flex:1.2;">
+                <label>이름</label>
+                <input type="text" id="teacherName" placeholder="예: 김민지 선생님">
+              </div>
+              <div class="field" style="flex:2;">
+                <label>기본 출근 요일</label>
+                <div class="weekday-picker" id="teacherDaysPicker"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
+              <button class="btn btn-ghost" id="teacherCancelBtn" style="display:none;" onclick="cancelTeacherEdit()">취소</button>
+            </div>
+            <div class="divider"></div>
+            <div id="teacherList"></div>
           </div>
-          <div class="divider"></div>
-          <div id="teacherList"></div>
         </div>
       </section>
 
       <!-- ================= 문자 발송 ================= -->
       <section class="view" id="view-sms">
         <div class="card">
-          <div class="card-title">받는 사람 필터 <span class="hint">조건을 선택하면 아래 명단이 자동으로 좁혀져요</span></div>
-
           <div class="field" style="margin-bottom:14px;">
             <label>이름으로 검색</label>
             <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
@@ -827,14 +830,15 @@
             </div>
           </div>
 
-          <div class="field" style="margin:14px 0;">
-            <label>오늘 출결 상태 (선택 안 하면 전체)</label>
-            <div class="weekday-picker" id="smsStatusPicker"></div>
-          </div>
-
-          <div class="form-actions">
-            <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
-            <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+          <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
+            <div class="field" style="flex:1;margin-bottom:0;">
+              <label>오늘 출결 상태 (선택 안 하면 전체)</label>
+              <div class="weekday-picker" id="smsStatusPicker"></div>
+            </div>
+            <div class="form-actions" style="flex:0 0 auto;">
+              <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
+              <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+            </div>
           </div>
         </div>
 
@@ -1493,14 +1497,6 @@ function renderDashboard(){
   document.getElementById('statTodayAbsent').textContent = absent + late;
   document.getElementById('statTodayAbsentSub').textContent = `결석 ${absent} · 지각 ${late}`;
 
-  if(scores.length){
-    const avg = scores.reduce((sum,s)=> sum + (s.score/s.maxScore*100), 0) / scores.length;
-    document.getElementById('statAvgScore').textContent = avg.toFixed(1) + '점';
-  }else{
-    document.getElementById('statAvgScore').textContent = '-';
-  }
-  document.getElementById('statScoreCountSub').textContent = `등록된 성적 ${scores.length}건`;
-
   renderDonut(document.getElementById('dashDonut'), [
     {label:'출석', value:present, color:'var(--color-success)'},
     {label:'지각', value:late,    color:'var(--color-warning)'},
@@ -1674,6 +1670,13 @@ function deleteEvent(id){
    조교 선생님 근무 캘린더
 ========================================================= */
 let editingTeacherId = null;
+let teacherFormCollapsed = false;
+
+function toggleTeacherFormCollapse(){
+  teacherFormCollapsed = !teacherFormCollapsed;
+  document.getElementById('teacherFormBody').style.display = teacherFormCollapsed ? 'none' : 'block';
+  document.getElementById('teacherFormCollapseIcon').textContent = teacherFormCollapsed ? '▸' : '▾';
+}
 let selectedTeacherDays = [];
 
 function teacherById(id){ return teachers.find(t => t.id === id); }
@@ -1721,7 +1724,7 @@ function editTeacher(id){
   document.getElementById('teacherName').value = t.name;
   selectedTeacherDays = [...(t.days || [])];
   renderTeacherDaysPicker();
-  document.getElementById('teacherFormTitle').textContent = '조교 정보 수정';
+  document.getElementById('teacherFormTitleText').textContent = '조교 정보 수정';
   document.getElementById('teacherSubmitBtn').textContent = '수정 완료';
   document.getElementById('teacherCancelBtn').style.display = 'inline-flex';
   window.scrollTo({top:0, behavior:'smooth'});
@@ -1732,7 +1735,7 @@ function cancelTeacherEdit(){
   document.getElementById('teacherName').value = '';
   selectedTeacherDays = [];
   renderTeacherDaysPicker();
-  document.getElementById('teacherFormTitle').textContent = '조교 선생님 등록';
+  document.getElementById('teacherFormTitleText').textContent = '조교 선생님 등록';
   document.getElementById('teacherSubmitBtn').textContent = '조교 등록';
   document.getElementById('teacherCancelBtn').style.display = 'none';
 }
@@ -1969,8 +1972,10 @@ function importBulkStudents(){
       const t = normalizeTime(cols[3+idx]);
       if(t) schedule[day] = t;
     });
+    const phone = (cols[10]||'').trim();
+    const parentPhone = (cols[11]||'').trim();
 
-    db.ref('students').push({ name, grade: grade || '기타', school, phone:'', schedule, createdAt: Date.now() });
+    db.ref('students').push({ name, grade: grade || '기타', school, phone, parentPhone, schedule, createdAt: Date.now() });
     successCount++;
   });
 
@@ -1979,6 +1984,34 @@ function importBulkStudents(){
 }
 
 let studentSortMode = 'recent'; // 'recent' | 'grade'
+let studentListCollapsed = false;
+
+function toggleStudentListCollapse(){
+  studentListCollapsed = !studentListCollapsed;
+  document.getElementById('studentListBody').style.display = studentListCollapsed ? 'none' : 'block';
+  document.getElementById('studentListCollapseIcon').textContent = studentListCollapsed ? '▸' : '▾';
+}
+
+function exportStudentListExcel(){
+  if(!students.length){ alert('등록된 학생이 없습니다.'); return; }
+  const rows = [];
+  rows.push(['학년','이름','학교', ...WEEKDAYS, '학생 연락처','학부모 연락처']);
+  students.slice().sort(compareByGradeThenName).forEach(s => {
+    const dayValues = WEEKDAYS.map(d => (s.schedule && s.schedule[d]) || '');
+    rows.push([s.grade, s.name, s.school, ...dayValues, s.phone || '', s.parentPhone || '']);
+  });
+  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `학생명단_${todayStr()}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`학생 ${students.length}명의 명단을 다운로드했습니다.`);
+}
 
 function setStudentSort(mode){
   studentSortMode = mode;
