@@ -927,15 +927,14 @@
       <!-- ================= 성적 관리 ================= -->
       <section class="view" id="view-scores">
         <div class="card">
-          <div class="card-title">성적 입력 <span class="hint">학년 · 시험을 고르면 과목별 표가 나와요</span></div>
+          <div class="card-title">성적 입력 <span class="hint">학년을 고르면 1년치 4개 시험이 한 번에 나와요</span></div>
 
-          <div class="toolbar" style="margin-bottom:10px;">
+          <div class="toolbar" style="margin-bottom:14px;">
             <div id="scoreGradeTabs" class="weekday-picker"></div>
             <select id="scoreSchoolFilter" onchange="renderScoreGrid()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
               <option value="">전체 학교</option>
             </select>
           </div>
-          <div id="scoreExamTabs" class="weekday-picker" style="margin-bottom:16px;"></div>
 
           <div id="scoreGridContainer"></div>
         </div>
@@ -945,6 +944,16 @@
           <div class="field" style="max-width:320px;margin-bottom:14px;">
             <label>학생 선택</label>
             <select id="scoreHistoryStudentSelect" onchange="renderStudentScoreHistory()"></select>
+          </div>
+          <div class="form-row" style="margin-bottom:0;">
+            <div class="field" style="flex:1;">
+              <label>학년 (선택 안 하면 전체)</label>
+              <div id="historyGradeFilterChips" class="weekday-picker"></div>
+            </div>
+            <div class="field" style="flex:1;">
+              <label>시험 (선택 안 하면 전체)</label>
+              <div id="historyExamFilterChips" class="weekday-picker"></div>
+            </div>
           </div>
           <div id="studentScoreHistoryBody"></div>
         </div>
@@ -2582,12 +2591,11 @@ function populateStudentDropdowns(){
 }
 
 /* =========================================================
-   성적 관리 — 학년 탭 + 시험(연 4회) 탭 + 과목별 입력표
+   성적 관리 — 학년 탭 + 1년치(4개 시험) 통합 입력표
 ========================================================= */
 const EXAM_PERIODS = ['1학기 중간고사','1학기 기말고사','2학기 중간고사','2학기 기말고사'];
 const SCORE_GRADES = GRADES.filter(g => !g.startsWith('초')); // 초등 제외
 let scoreGradeTab = SCORE_GRADES[0];
-let scoreExamTab = EXAM_PERIODS[0];
 let examSubjects = {}; // `${grade}__${examName}` -> [과목명, ...]
 
 function examSubjectKey(grade, examName){ return grade + '__' + examName; }
@@ -2606,14 +2614,11 @@ function saveExamSubjects(grade, examName, subjectsArr){
 
 function renderScoreTabs(){
   const gradeTabs = document.getElementById('scoreGradeTabs');
-  gradeTabs.innerHTML = SCORE_GRADES.map(g => `
-    <button type="button" class="weekday-chip ${scoreGradeTab === g ? 'active' : ''}" onclick="setScoreGradeTab('${g}')">${g}</button>
-  `).join('');
-
-  const examTabs = document.getElementById('scoreExamTabs');
-  examTabs.innerHTML = EXAM_PERIODS.map(e => `
-    <button type="button" class="weekday-chip ${scoreExamTab === e ? 'active' : ''}" onclick="setScoreExamTab('${e}')">${e}</button>
-  `).join('') + `<button type="button" class="weekday-chip ${scoreExamTab === 'ALL' ? 'active' : ''}" onclick="setScoreExamTab('ALL')">📋 전체보기</button>`;
+  gradeTabs.innerHTML = SCORE_GRADES.map(g => {
+    const c = GRADE_COLORS[g] || CATEGORY_COLORS['기타'];
+    const isActive = scoreGradeTab === g;
+    return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="setScoreGradeTab('${g}')">${g}</button>`;
+  }).join('');
 
   const schoolSel = document.getElementById('scoreSchoolFilter');
   const prevSchool = schoolSel.value;
@@ -2623,7 +2628,6 @@ function renderScoreTabs(){
 }
 
 function setScoreGradeTab(g){ scoreGradeTab = g; renderScoreTabs(); renderScoreGrid(); }
-function setScoreExamTab(e){ scoreExamTab = e; renderScoreTabs(); renderScoreGrid(); }
 
 function addExamSubject(examName){
   const subjects = [...getExamSubjects(scoreGradeTab, examName)];
@@ -2649,18 +2653,23 @@ function renameExamSubject(examName, index, newName){
   subjects[index] = newName;
   saveExamSubjects(scoreGradeTab, examName, subjects);
 
-  // 기존에 저장된 점수도 새 과목명으로 함께 옮겨줌
-  scores.filter(sc => sc.examName === examName && sc.subject === oldName && studentById(sc.studentId)?.grade === scoreGradeTab)
+  // 기존에 저장된 점수도 새 과목명으로 함께 옮겨줌 (이 학년으로 태깅된 기록만)
+  scores.filter(sc => sc.examName === examName && sc.subject === oldName && sc.grade === scoreGradeTab)
     .forEach(sc => db.ref('scores/' + sc.id).update({ subject: newName }));
 }
 
-function getGridScore(studentId, examName, subject){
-  return scores.find(sc => sc.studentId === studentId && sc.examName === examName && sc.subject === subject);
+// 학년(grade)까지 함께 매칭: 같은 학생이 여러 학년에 걸쳐 같은 시험명을 치르는 경우를 구분하기 위함
+// 예전 데이터(grade 필드 없음)는 학생의 현재 학년을 볼 때만 호환되도록 표시
+function getGridScore(studentId, grade, examName, subject){
+  return scores.find(sc =>
+    sc.studentId === studentId && sc.examName === examName && sc.subject === subject &&
+    (sc.grade === grade || (!sc.grade && studentById(studentId)?.grade === grade))
+  );
 }
 
-function setGridScore(studentId, examName, subject, rawValue){
+function setGridScore(studentId, grade, examName, subject, rawValue){
   const value = rawValue.trim();
-  const existing = getGridScore(studentId, examName, subject);
+  const existing = getGridScore(studentId, grade, examName, subject);
   if(!value){
     if(existing) db.ref('scores/' + existing.id).remove();
     return;
@@ -2668,59 +2677,61 @@ function setGridScore(studentId, examName, subject, rawValue){
   const score = parseFloat(value);
   if(isNaN(score)) return;
   if(existing){
-    db.ref('scores/' + existing.id).update({ score });
+    db.ref('scores/' + existing.id).update({ score, grade });
   }else{
-    db.ref('scores').push({ studentId, subject, examName, date: todayStr(), score, maxScore: 100, createdAt: Date.now() });
+    db.ref('scores').push({ studentId, grade, subject, examName, date: todayStr(), score, maxScore: 100, createdAt: Date.now() });
   }
-}
-
-function buildExamTableHtml(examName, gradeStudents, showTitle){
-  const subjects = getExamSubjects(scoreGradeTab, examName);
-  const head = `
-    <tr>
-      <th>이름</th><th>학교</th>
-      ${subjects.map((subj, i) => `
-        <th style="text-align:center;">
-          <input type="text" value="${escapeHtml(subj)}" onchange="renameExamSubject('${examName}', ${i}, this.value)"
-            style="width:80px;text-align:center;padding:5px;border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:700;">
-          ${subjects.length > 1 ? `<span class="link-btn" style="margin-left:4px;color:var(--color-danger);" onclick="removeExamSubject('${examName}',${i})">✕</span>` : ''}
-        </th>`).join('')}
-      <th><span class="link-btn" onclick="addExamSubject('${examName}')">+ 과목 추가</span></th>
-    </tr>`;
-
-  const body = gradeStudents.length ? gradeStudents.map(s => `
-    <tr>
-      <td><strong>${escapeHtml(s.name)}</strong></td>
-      <td class="cell-muted">${escapeHtml(s.school)}</td>
-      ${subjects.map(subj => {
-        const rec = getGridScore(s.id, examName, subj);
-        return `<td style="text-align:center;">
-          <input type="number" value="${rec ? rec.score : ''}" placeholder="-" onchange="setGridScore('${s.id}','${examName}','${escapeHtml(subj)}', this.value)"
-            style="width:64px;text-align:center;padding:6px;border:1px solid var(--color-border);border-radius:6px;">
-        </td>`;
-      }).join('')}
-      <td></td>
-    </tr>`).join('') : `<tr class="empty-row"><td colspan="${subjects.length + 3}">${scoreGradeTab} 학생이 없습니다.</td></tr>`;
-
-  return `
-    ${showTitle ? `<div class="sms-group-title" style="color:var(--color-primary-light);">${examName}</div>` : ''}
-    <div class="table-wrap">
-      <table><thead>${head}</thead><tbody>${body}</tbody></table>
-    </div>`;
 }
 
 function renderScoreGrid(){
   const container = document.getElementById('scoreGridContainer');
   const schoolFilter = document.getElementById('scoreSchoolFilter').value;
+  const grade = scoreGradeTab;
   const gradeStudents = students
-    .filter(s => s.grade === scoreGradeTab && (!schoolFilter || s.school === schoolFilter))
+    .filter(s => s.grade === grade && (!schoolFilter || s.school === schoolFilter))
     .sort((a,b)=> a.name.localeCompare(b.name,'ko'));
 
-  if(scoreExamTab === 'ALL'){
-    container.innerHTML = EXAM_PERIODS.map(exam => buildExamTableHtml(exam, gradeStudents, true)).join('<div class="divider"></div>');
-  }else{
-    container.innerHTML = buildExamTableHtml(scoreExamTab, gradeStudents, false);
-  }
+  // 시험별 과목 목록을 미리 계산 (시험마다 과목 수가 다를 수 있음)
+  const examSubjectsList = EXAM_PERIODS.map(exam => ({ exam, subjects: getExamSubjects(grade, exam) }));
+
+  const headRow1 = `
+    <th rowspan="2">이름</th><th rowspan="2">학교</th>
+    ${examSubjectsList.map(({exam, subjects}) => `
+      <th colspan="${subjects.length}" style="text-align:center;background:var(--color-surface-alt);">
+        ${exam} <span class="link-btn" style="margin-left:4px;" onclick="addExamSubject('${exam}')">+ 과목</span>
+      </th>`).join('')}`;
+
+  const headRow2 = examSubjectsList.map(({exam, subjects}) =>
+    subjects.map((subj, i) => `
+      <th style="text-align:center;">
+        <input type="text" value="${escapeHtml(subj)}" onchange="renameExamSubject('${exam}', ${i}, this.value)"
+          style="width:70px;text-align:center;padding:4px;border:1px solid var(--color-border);border-radius:6px;font-size:11.5px;font-weight:700;">
+        ${subjects.length > 1 ? `<span class="link-btn" style="color:var(--color-danger);" onclick="removeExamSubject('${exam}',${i})">✕</span>` : ''}
+      </th>`).join('')
+  ).join('');
+
+  const totalCols = 2 + examSubjectsList.reduce((sum, e) => sum + e.subjects.length, 0);
+
+  const body = gradeStudents.length ? gradeStudents.map(s => `
+    <tr>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
+      <td class="cell-muted">${escapeHtml(s.school)}</td>
+      ${examSubjectsList.map(({exam, subjects}) => subjects.map(subj => {
+        const rec = getGridScore(s.id, grade, exam, subj);
+        return `<td style="text-align:center;">
+          <input type="number" value="${rec ? rec.score : ''}" placeholder="-" onchange="setGridScore('${s.id}','${grade}','${exam}','${escapeHtml(subj)}', this.value)"
+            style="width:56px;text-align:center;padding:6px;border:1px solid var(--color-border);border-radius:6px;">
+        </td>`;
+      }).join('')).join('')}
+    </tr>`).join('') : `<tr class="empty-row"><td colspan="${totalCols}">${grade} 학생이 없습니다.</td></tr>`;
+
+  container.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>${headRow1}</tr><tr>${headRow2}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
 
 function submitScore(){}
@@ -2770,6 +2781,28 @@ function renderScores(){
   renderAvgByStudent();
 }
 
+let historyGradeFilter = '';
+let historyExamFilter = '';
+
+function setHistoryGradeFilter(g){ historyGradeFilter = g; renderHistoryFilterChips(); renderStudentScoreHistory(); }
+function setHistoryExamFilter(e){ historyExamFilter = e; renderHistoryFilterChips(); renderStudentScoreHistory(); }
+
+function renderHistoryFilterChips(){
+  const gradeBox = document.getElementById('historyGradeFilterChips');
+  const examBox = document.getElementById('historyExamFilterChips');
+  if(!gradeBox || !examBox) return;
+
+  gradeBox.innerHTML = `<button type="button" class="weekday-chip ${historyGradeFilter === '' ? 'active' : ''}" onclick="setHistoryGradeFilter('')">전체</button>` +
+    SCORE_GRADES.map(g => {
+      const c = GRADE_COLORS[g] || CATEGORY_COLORS['기타'];
+      const isActive = historyGradeFilter === g;
+      return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="setHistoryGradeFilter('${g}')">${g}</button>`;
+    }).join('');
+
+  examBox.innerHTML = `<button type="button" class="weekday-chip ${historyExamFilter === '' ? 'active' : ''}" onclick="setHistoryExamFilter('')">전체</button>` +
+    EXAM_PERIODS.map(e => `<button type="button" class="weekday-chip ${historyExamFilter === e ? 'active' : ''}" onclick="setHistoryExamFilter('${e}')">${e}</button>`).join('');
+}
+
 function populateScoreHistorySelect(){
   const sel = document.getElementById('scoreHistoryStudentSelect');
   if(!sel) return;
@@ -2778,6 +2811,7 @@ function populateScoreHistorySelect(){
     ? students.slice().sort(compareByGradeThenName).map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')
     : `<option value="">등록된 학생 없음</option>`;
   if(students.some(s => s.id === prev)) sel.value = prev;
+  renderHistoryFilterChips();
   renderStudentScoreHistory();
 }
 
@@ -2789,24 +2823,35 @@ function renderStudentScoreHistory(){
     return;
   }
   const studentId = sel.value;
+  const student = studentById(studentId);
   const examOrder = s => { const i = EXAM_PERIODS.indexOf(s); return i === -1 ? 99 : i; };
-  const list = scores.filter(sc => sc.studentId === studentId)
-    .sort((a,b)=> examOrder(a.examName) - examOrder(b.examName) || a.subject.localeCompare(b.subject,'ko'));
+  const gradeOrder = g => { const i = SCORE_GRADES.indexOf(g); return i === -1 ? 99 : i; };
+
+  let list = scores.filter(sc => sc.studentId === studentId);
+  if(historyGradeFilter) list = list.filter(sc => (sc.grade || student?.grade) === historyGradeFilter);
+  if(historyExamFilter) list = list.filter(sc => sc.examName === historyExamFilter);
+
+  list = list.sort((a,b)=>
+    gradeOrder(a.grade || student?.grade) - gradeOrder(b.grade || student?.grade) ||
+    examOrder(a.examName) - examOrder(b.examName) ||
+    a.subject.localeCompare(b.subject,'ko')
+  );
 
   if(!list.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 성적이 없습니다.</div>`;
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 성적이 없습니다.</div>`;
     return;
   }
 
   box.innerHTML = `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>시험</th><th>과목</th><th>점수</th><th>백분율</th><th>날짜</th></tr></thead>
+        <thead><tr><th>학년</th><th>시험</th><th>과목</th><th>점수</th><th>백분율</th><th>날짜</th></tr></thead>
         <tbody>
           ${list.map(sc => {
             const pct = sc.score / sc.maxScore * 100;
             const pctColor = pct >= 80 ? 'var(--color-success)' : pct >= 60 ? 'var(--color-warning)' : 'var(--color-danger)';
             return `<tr>
+              <td>${gradeBadge(sc.grade || student?.grade || '-')}</td>
               <td class="cell-muted">${escapeHtml(sc.examName)}</td>
               <td>${escapeHtml(sc.subject)}</td>
               <td>${sc.score} / ${sc.maxScore}</td>
