@@ -1293,16 +1293,16 @@ function smsByName(a, b){ return a.name.localeCompare(b.name, 'ko'); }
 
 function renderSmsBundle(title, list, today){
   if(!list.length) return '';
-  const notYet = list.filter(s => { const rec = getAttendanceRecord(s.id, today); return !(rec && rec.checkInTime); }).sort(smsByName);
-  const arrived = list.filter(s => { const rec = getAttendanceRecord(s.id, today); return rec && rec.checkInTime; }).sort(smsByName);
+  const notYet = list.filter(s => !getAttendanceRecord(s.id, today)).sort(smsByName);
+  const processed = list.filter(s => !!getAttendanceRecord(s.id, today)).sort(smsByName);
   let html = '';
   if(notYet.length){
     html += `<div class="sms-group-title notyet">🔴 ${title} · 아직 등원 전 (${notYet.length}명)</div>`;
     html += notYet.map(s => smsRowHtml(s, false)).join('');
   }
-  if(arrived.length){
-    html += `<div class="sms-group-title done">🟢 ${title} · 등원 완료 (${arrived.length}명)</div>`;
-    html += arrived.map(s => smsRowHtml(s, true)).join('');
+  if(processed.length){
+    html += `<div class="sms-group-title done">🟢 ${title} · 출결 처리됨 (${processed.length}명)</div>`;
+    html += processed.map(s => smsRowHtml(s, true)).join('');
   }
   return html;
 }
@@ -2906,6 +2906,25 @@ function init(){
   populateScoreHistorySelect();
   document.getElementById('studentSortGradeBtn').classList.add('btn-primary');
   renderDashboard();
+  setTimeout(autoMarkPastAbsences, 2500); // Firebase 데이터가 다 불러와질 시간을 준 뒤 지난 결석 자동 처리
+}
+
+// 등원 예정이었는데 체크가 전혀 안 된 지난 날짜를 자동으로 '결석' 처리 (최근 14일)
+// 서버가 없는 앱이라 정확히 자정에 실행되진 않고, 프로그램을 열 때마다 놓친 날짜를 따라잡아요.
+function autoMarkPastAbsences(){
+  for(let i = 1; i <= 14; i++){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const weekday = weekdayLabelOf(dateStr);
+    students.forEach(s => {
+      const scheduledTime = getDayTime(s, weekday);
+      if(!scheduledTime) return;
+      if(s.createdAt && new Date(s.createdAt) > new Date(dateStr + 'T23:59:59')) return; // 등록 전 날짜는 제외
+      if(getAttendanceRecord(s.id, dateStr)) return; // 이미 기록이 있으면 건드리지 않음
+      db.ref('attendance').push({ studentId: s.id, date: dateStr, status:'결석', memo:'자동 결석 처리', createdAt: Date.now() });
+    });
+  }
 }
 init();
 </script>
