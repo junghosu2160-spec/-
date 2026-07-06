@@ -2263,6 +2263,30 @@ function toggleAttMakeupCollapse(){
   renderAttendance();
 }
 
+function attRowHtml(s, date, isToday, nowTime, t){
+  const rec = getAttendanceRecord(s.id, date);
+  const status = rec ? rec.status : null;
+  const overdue = isToday && t !== '99:99' && t !== 'MAKEUP' && !rec && nowTime > t;
+  return `
+    <div class="att-row ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}">
+      <div class="att-row-main">
+        <strong>${escapeHtml(s.name)}</strong>
+        ${gradeBadge(s.grade)}
+        ${overdue ? `<span class="att-overdue-tag">⏳ 미출석</span>` : ''}
+      </div>
+      <div class="status-group">
+        <button class="status-btn ${status==='출석'?'active':''}" data-status="출석" onclick="setAttendanceStatus('${s.id}','${date}','출석')">출석</button>
+        <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
+        <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
+      </div>
+      <div class="att-time-info">
+        <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
+        <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
+      </div>
+    </div>`;
+}
+
+// 한 타임 그룹을 좌우 인원수 균등하게 2단으로 배치 (학년군 구분 없이)
 function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
   if(!list.length){
     return `<div class="empty-msg cell-muted" style="text-align:center;padding:20px;font-size:12.5px;">${emptyMsg}</div>`;
@@ -2282,33 +2306,21 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
     if(t === '99:99' && attMakeupCollapsed) return ''; // 임시·보강 없음 그룹은 기본적으로 숨김
     const groupStudents = groups[t].sort(compareByGradeThenName);
     const groupLabel = t === '99:99' ? '예정 없음 (임시·보강)' : t === 'MAKEUP' ? '🗓 보강 예정' : `${t} 타임`;
-    const rows = groupStudents.map(s => {
-      const rec = getAttendanceRecord(s.id, date);
-      const status = rec ? rec.status : null;
-      const overdue = isToday && t !== '99:99' && t !== 'MAKEUP' && !rec && nowTime > t;
-      return `
-        <div class="att-row ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}">
-          <div class="att-row-main">
-            <strong>${escapeHtml(s.name)}</strong>
-            ${gradeBadge(s.grade)}
-            ${overdue ? `<span class="att-overdue-tag">⏳ 미출석</span>` : ''}
-          </div>
-          <div class="status-group">
-            <button class="status-btn ${status==='출석'?'active':''}" data-status="출석" onclick="setAttendanceStatus('${s.id}','${date}','출석')">출석</button>
-            <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
-            <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
-          </div>
-          <div class="att-time-info">
-            <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
-            <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
-          </div>
-          <input type="text" class="search-input att-memo-input" placeholder="비고" value="${escapeHtml(rec ? rec.memo || '' : '')}" onchange="setAttendanceMemo('${s.id}','${date}', this.value)">
-        </div>`;
-    }).join('');
+
+    // 좌우 인원수를 균등하게: 앞쪽 절반 왼쪽, 나머지 오른쪽
+    const half = Math.ceil(groupStudents.length / 2);
+    const leftStudents = groupStudents.slice(0, half);
+    const rightStudents = groupStudents.slice(half);
+    const leftHtml = leftStudents.map(s => attRowHtml(s, date, isToday, nowTime, t)).join('');
+    const rightHtml = rightStudents.map(s => attRowHtml(s, date, isToday, nowTime, t)).join('');
+
     return `
       <div class="att-group">
         <div class="att-group-title">${groupLabel} <span class="cnt">${groupStudents.length}명</span></div>
-        ${rows}
+        <div class="att-columns">
+          <div class="att-column">${leftHtml}</div>
+          <div class="att-column">${rightHtml}</div>
+        </div>
       </div>`;
   }).join('');
 }
@@ -2343,25 +2355,11 @@ function renderAttendance(){
       visible = visible.filter(s => getDayTime(s, weekday) === attTimeFilter);
     }
 
-    const middleList = visible.filter(s => !isHighSchoolGrade(s.grade));
-    const highList = visible.filter(s => isHighSchoolGrade(s.grade));
-
-    const middleHtml = renderAttGroupsHtml(middleList, date, weekday, isToday, nowTime, `이 날짜(${weekday}요일)에 등원 예정인 중등 학생이 없습니다.`);
-    const highHtml = renderAttGroupsHtml(highList, date, weekday, isToday, nowTime, `이 날짜(${weekday}요일)에 등원 예정인 고등 학생이 없습니다.`);
-
     const hiddenCount = visible.filter(s => !getEffectiveDayTime(s, weekday, date)).length; // 99:99 인원 수
+    const groupsHtml = renderAttGroupsHtml(visible, date, weekday, isToday, nowTime, `이 날짜(${weekday}요일)에 등원 예정인 학생이 없습니다.`);
 
     container.innerHTML = `
-      <div class="att-columns">
-        <div class="att-column">
-          <div class="att-column-title">🎒 중등</div>
-          ${middleHtml}
-        </div>
-        <div class="att-column">
-          <div class="att-column-title">🎓 고등</div>
-          ${highHtml}
-        </div>
-      </div>
+      ${groupsHtml}
       ${hiddenCount > 0 ? `
         <div class="att-makeup-toggle" onclick="toggleAttMakeupCollapse()">
           <span>${attMakeupCollapsed ? '▸' : '▾'}</span> 예정 없음 (임시·보강) ${hiddenCount}명 ${attMakeupCollapsed ? '보기' : '숨기기'}
