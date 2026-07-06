@@ -1301,24 +1301,16 @@ function smsByName(a, b){ return a.name.localeCompare(b.name, 'ko'); }
 function renderSmsBundle(title, list, today){
   if(!list.length) return '';
   const notYet = list.filter(s => !getAttendanceRecord(s.id, today)).sort(smsByName);
-  const absent = list.filter(s => getAttendanceRecord(s.id, today)?.status === '결석').sort(smsByName);
-  const others = list.filter(s => {
-    const rec = getAttendanceRecord(s.id, today);
-    return rec && rec.status !== '결석';
-  }).sort(smsByName);
+  const processed = list.filter(s => !!getAttendanceRecord(s.id, today)).sort(smsByName);
 
   let html = '';
   if(notYet.length){
     html += `<div class="sms-group-title notyet">🔴 ${title} · 아직 등원 전 (${notYet.length}명)</div>`;
     html += notYet.map(s => smsRowHtml(s, 'notyet', today)).join('');
   }
-  if(absent.length){
-    html += `<div class="sms-group-title absent">🚨 ${title} · 결석 (${absent.length}명)</div>`;
-    html += absent.map(s => smsRowHtml(s, 'absent', today)).join('');
-  }
-  if(others.length){
-    html += `<div class="sms-group-title done">🟢 ${title} · 출석·지각 처리됨 (${others.length}명)</div>`;
-    html += others.map(s => smsRowHtml(s, 'processed', today)).join('');
+  if(processed.length){
+    html += `<div class="sms-group-title done">🟢 ${title} · 출석·지각 처리됨 (${processed.length}명)</div>`;
+    html += processed.map(s => smsRowHtml(s, 'processed', today)).join('');
   }
   return html;
 }
@@ -1345,14 +1337,26 @@ function renderSmsStudentList(){
   const today = todayStr();
   const weekday = weekdayLabelOf(today);
 
+  // 오늘 결석한 학생은 학년·시간대와 상관없이 맨 위에 따로 모아서 표시
+  const absentToday = smsFilteredList
+    .filter(s => getAttendanceRecord(s.id, today)?.status === '결석')
+    .sort(compareByGradeThenName);
+  const absentIds = new Set(absentToday.map(s => s.id));
+  const rest = smsFilteredList.filter(s => !absentIds.has(s.id));
+
+  let html = '';
+  if(absentToday.length){
+    html += `<div class="sms-group-title absent">🚨 오늘 결석 (${absentToday.length}명)</div>`;
+    html += absentToday.map(s => smsRowHtml(s, 'absent', today)).join('');
+  }
+
   // 오늘 등원 예정인 학생만 우선 표시 (초등은 한 묶음, 나머지는 타임별)
-  const scheduledToday = smsFilteredList.filter(s => getDayTime(s, weekday));
-  const others = smsFilteredList.filter(s => !getDayTime(s, weekday)); // 다른 요일에만 오거나 시간 미정(보강)인 학생
+  const scheduledToday = rest.filter(s => getDayTime(s, weekday));
+  const others = rest.filter(s => !getDayTime(s, weekday)); // 다른 요일에만 오거나 시간 미정(보강)인 학생
 
   const elementary = scheduledToday.filter(s => (s.grade || '').startsWith('초'));
   const byTime = scheduledToday.filter(s => !(s.grade || '').startsWith('초'));
 
-  let html = '';
   html += renderSmsBundle('초등부', elementary, today);
 
   const timeGroups = {};
