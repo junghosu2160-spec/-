@@ -673,10 +673,7 @@
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
-          <div class="toolbar" style="margin-top:-6px;margin-bottom:8px;align-items:center;">
-            <div id="studentCategoryFilterChips" class="weekday-picker"></div>
-          </div>
-          <div class="toolbar" style="margin-top:0;margin-bottom:14px;align-items:center;">
+          <div class="toolbar" style="margin-top:-6px;margin-bottom:14px;align-items:center;">
             <div id="studentGradeFilterChips" class="weekday-picker"></div>
             <select id="studentFilterSchool" onchange="renderStudents()" style="padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
               <option value="">전체 학교</option>
@@ -2280,14 +2277,16 @@ function generateComment(studentId, tone){
   const monthNum = parseInt(billingMonth.split('-')[1], 10);
   const { line: attendanceLine } = buildAttendanceSummaryLine(studentId);
   const scoreLine = buildScoreSummaryLine(studentId);
+  const opening = `안녕하세요. 델타수학입니다. ${monthNum}월 청구서 발송드립니다.`;
+  const closing = `궁금한 점 있으시면 연락주세요. 감사합니다.`;
 
   if(tone === 'warm'){
-    return `안녕하세요! ${stu.name} 학생이 ${monthNum}월 한 달 정말 열심히 참여해주었어요. ${attendanceLine} ${scoreLine} 앞으로도 옆에서 잘 이끌어가겠습니다 :) 항상 감사합니다.`.trim();
+    return `${opening} ${stu.name} 학생이 이번 달 정말 열심히 참여해주었어요. ${attendanceLine} ${scoreLine} 앞으로도 옆에서 잘 이끌어가겠습니다 :) ${closing}`.trim();
   }
   if(tone === 'brief'){
-    return `[${monthNum}월 학습안내] ${stu.name} 학생 - ${attendanceLine} ${scoreLine}`.trim();
+    return `${opening} ${stu.name} 학생 - ${attendanceLine} ${scoreLine} ${closing}`.trim();
   }
-  return `안녕하세요, ${stu.name} 학생 학부모님. ${monthNum}월 한 달간 ${attendanceLine} ${scoreLine} 앞으로도 꾸준히 지도하겠습니다. 감사합니다.`.trim();
+  return `${opening} ${stu.name} 학생은 이번 달 ${attendanceLine} ${scoreLine} ${closing}`.trim();
 }
 
 function openCommentModal(studentId){
@@ -2337,33 +2336,23 @@ function setStudentGradeFilter(g){
   studentFilterGrade = g;
   renderStudents();
 }
-function setStudentCategoryFilter(cat){
-  studentFilterGrade = studentFilterGrade === cat ? '' : cat;
-  renderStudents();
-}
 
 function studentGradeMatchesFilter(grade, filterValue){
   if(!filterValue) return true;
-  if(filterValue.startsWith('CAT:')) return gradeCategoryOf(grade) === filterValue.slice(4);
+  if(filterValue === '초등') return (grade || '').startsWith('초');
   return grade === filterValue;
 }
 
+const STUDENT_GRADE_FILTER_OPTIONS = ['초등','중1','중2','중3','고1','고2','고3','N수/기타'];
+
 function populateStudentListFilters(){
-  const catChips = document.getElementById('studentCategoryFilterChips');
   const gradeChips = document.getElementById('studentGradeFilterChips');
   const schoolSel = document.getElementById('studentFilterSchool');
-  if(!gradeChips || !schoolSel || !catChips) return;
-
-  catChips.innerHTML = ['초등','중등','고등'].map(cat => {
-    const key = 'CAT:' + cat;
-    const c = CATEGORY_COLORS[cat];
-    const isActive = studentFilterGrade === key;
-    return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="setStudentCategoryFilter('${key}')">${cat}부</button>`;
-  }).join('');
+  if(!gradeChips || !schoolSel) return;
 
   gradeChips.innerHTML = `<button type="button" class="weekday-chip ${studentFilterGrade === '' ? 'active' : ''}" onclick="setStudentGradeFilter('')">전체</button>` +
-    GRADES.map(g => {
-      const c = GRADE_COLORS[g] || CATEGORY_COLORS['기타'];
+    STUDENT_GRADE_FILTER_OPTIONS.map(g => {
+      const c = smsGradeChipColor(g);
       const isActive = studentFilterGrade === g;
       return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="setStudentGradeFilter('${g}')">${g}</button>`;
     }).join('');
@@ -2399,7 +2388,7 @@ function renderStudents(){
 
   const hintParts = [];
   if(filterSchool) hintParts.push(filterSchool);
-  if(studentFilterGrade) hintParts.push(studentFilterGrade.startsWith('CAT:') ? studentFilterGrade.slice(4) + '부' : studentFilterGrade);
+  if(studentFilterGrade) hintParts.push(studentFilterGrade);
   if(keyword) hintParts.push(`"${keyword}" 검색`);
   if(unsentOnly) hintParts.push('미발송만');
   document.getElementById('studentCountHint').textContent = hintParts.length
