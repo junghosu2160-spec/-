@@ -735,7 +735,13 @@
       <section class="view" id="view-attendance">
         <div class="card">
           <div class="toolbar" style="margin-bottom:6px;">
-            <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+              <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
+                <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
+                이 날짜에 등원 예정인 학생만 보기
+              </label>
+            </div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;">
               <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:160px;">
               <div class="field" style="min-width:180px;flex:0 0 auto;">
@@ -744,10 +750,7 @@
             </div>
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
-            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);">
-              <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
-              이 날짜에 등원 예정인 학생만 보기
-            </label>
+            <div id="attTimeFilterChips" class="weekday-picker"></div>
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
               <div class="field" style="flex:0 0 auto;min-width:140px;">
                 <label>다운로드할 월</label>
@@ -756,7 +759,6 @@
               <button class="btn btn-primary btn-sm" onclick="exportMonthlyAttendance()">📊 월별 엑셀 다운로드</button>
             </div>
           </div>
-          <div id="attTimeFilterChips" class="weekday-picker" style="margin-bottom:14px;"></div>
           <div id="attGroups"></div>
         </div>
 
@@ -2651,28 +2653,53 @@ function renderWeeklyAbsentList(){
   const { start, end } = getThisWeekRange();
   const weekAbsences = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
-    .sort((a,b)=> a.date.localeCompare(b.date));
+    .map(a => ({ ...a, stu: studentById(a.studentId) }))
+    .filter(a => a.stu)
+    .map(a => ({ ...a, alreadyMakeup: makeupSchedules.some(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`) }));
 
   if(!weekAbsences.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 결석 기록이 없습니다.</div>`;
     return;
   }
 
-  box.innerHTML = weekAbsences.map(a => {
-    const stu = studentById(a.studentId);
-    if(!stu) return '';
+  const rowHtml = a => {
     const weekday = weekdayLabelOf(a.date);
-    const alreadyMakeup = makeupSchedules.some(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
     const inputId = `makeupDate-${a.id}`;
     return `
-      <div class="weekly-absent-row">
-        <div class="wa-name"><strong>${escapeHtml(stu.name)}</strong> ${gradeBadge(stu.grade)} <span class="cell-muted" style="font-size:12px;">${weekday}요일 결석</span></div>
-        ${alreadyMakeup
+      <div class="weekly-absent-row ${a.alreadyMakeup ? 'makeup-done' : ''}">
+        <div class="wa-name"><strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${weekday}요일 결석</span></div>
+        ${a.alreadyMakeup
           ? `<span class="status-pill 출석">보강 예약됨</span>`
           : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${stu.id}','${inputId}','${a.date}')">보강 예약</button>`}
+             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>`}
       </div>`;
-  }).join('');
+  };
+
+  const pending = weekAbsences.filter(a => !a.alreadyMakeup);
+  const done = weekAbsences.filter(a => a.alreadyMakeup);
+
+  const byGrade = list => {
+    const groups = {};
+    list.forEach(a => {
+      const g = a.stu.grade;
+      if(!groups[g]) groups[g] = [];
+      groups[g].push(a);
+    });
+    return Object.keys(groups)
+      .sort((a,b)=> GRADES.indexOf(a) - GRADES.indexOf(b))
+      .map(g => {
+        const rows = groups[g].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
+        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(rowHtml).join('')}`;
+      }).join('');
+  };
+
+  let html = byGrade(pending);
+  if(done.length){
+    html += `<div class="sms-group-title done" style="margin-top:16px;">✓ 예약 완료</div>`;
+    html += `<div style="opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
+  }
+
+  box.innerHTML = html || `<div class="cell-muted" style="font-size:13px;">이번 주 결석 기록이 없습니다.</div>`;
 }
 
 function scheduleMakeup(studentId, inputId, absenceDate){
