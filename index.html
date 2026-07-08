@@ -1099,7 +1099,7 @@ db.ref('scores').on('value', snap => {
 });
 db.ref('events').on('value', snap => {
   events = snapshotToArray(snap.val());
-  if(currentView === 'dashboard') renderDashCalendar();
+  if(currentView === 'dashboard'){ renderDashCalendar(); renderWeeklyCounselList(); }
   if(currentView === 'calendar') renderBigCalendar();
 });
 db.ref('teachers').on('value', snap => {
