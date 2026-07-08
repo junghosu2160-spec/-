@@ -33,6 +33,10 @@
     --font-sans:-apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
   }
   *{box-sizing:border-box;}
+  /* 점수 입력칸 실수 방지: 위아래 화살표(스피너) 제거, 마우스 휠로도 값이 안 바뀌게 */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  input[type=number]{-moz-appearance:textfield;}
   html,body{height:100%;}
   body{
     margin:0;
@@ -584,8 +588,11 @@
             <div class="donut-wrap" id="dashDonut"></div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
             <div class="divider"></div>
-            <div class="card-title" style="margin-bottom:8px;">최근 성적 등록</div>
-            <div id="recentScores"></div>
+            <div class="toolbar" style="margin:0 0 8px 0;">
+              <div class="card-title" style="margin:0;">이번 주 상담일정</div>
+              <span class="cell-muted" id="weeklyCounselProgress" style="font-size:12px;font-weight:700;"></span>
+            </div>
+            <div id="weeklyCounselList"></div>
           </div>
           <div class="card">
             <div class="toolbar" style="margin-bottom:0;">
@@ -650,12 +657,13 @@
             </div>
           </div>
           <div class="field" style="margin-bottom:14px;">
-            <label>요일별 등원 시간</label>
-            <div class="schedule-grid" id="stuScheduleGrid"></div>
+            <div style="display:flex;align-items:flex-end;gap:10px;">
+              <div class="schedule-grid" id="stuScheduleGrid" style="flex:1;"></div>
+              <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()" style="flex:0 0 auto;">학생 등록</button>
+            </div>
           </div>
-          <div class="form-actions">
-            <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()">학생 등록</button>
-            <button class="btn btn-ghost" id="stuCancelBtn" style="display:none;" onclick="cancelStudentEdit()">취소</button>
+          <div class="form-actions" id="stuCancelRow" style="display:none;">
+            <button class="btn btn-ghost" id="stuCancelBtn" onclick="cancelStudentEdit()">취소</button>
           </div>
         </div>
 
@@ -1028,13 +1036,9 @@
       <div id="commentModalTitle" style="font-weight:800;font-size:15px;">학생 코멘트</div>
       <span class="link-btn" onclick="closeCommentModal()">닫기 ✕</span>
     </div>
-    <div id="commentModalSummary" class="cell-muted" style="font-size:12px;margin-bottom:14px;"></div>
-    <div class="form-actions" style="margin-bottom:10px;">
-      <button class="btn btn-ghost btn-sm" id="toneCalmBtn" onclick="setCommentTone('calm')">차분한 톤</button>
-      <button class="btn btn-ghost btn-sm" id="toneWarmBtn" onclick="setCommentTone('warm')">격려 톤</button>
-      <button class="btn btn-ghost btn-sm" id="toneBriefBtn" onclick="setCommentTone('brief')">간결 톤</button>
-    </div>
-    <textarea id="commentTextarea" style="width:100%;min-height:130px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;"></textarea>
+    <div id="commentModalSummary" class="cell-muted" style="font-size:12px;margin-bottom:10px;"></div>
+    <p class="cell-muted" style="font-size:11.5px;margin:-2px 0 10px 0;">대괄호 [ ] 부분에 이 학생만의 특이사항(예: 실수 유형, 어려워한 단원)을 직접 적어주세요.</p>
+    <textarea id="commentTextarea" style="width:100%;min-height:150px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;"></textarea>
     <div class="form-actions" style="margin-top:14px;justify-content:flex-end;">
       <button class="btn btn-primary" onclick="copyComment()">📋 복사해서 결제선생에 붙여넣기</button>
     </div>
@@ -1663,14 +1667,48 @@ function renderDashboard(){
         : `<span class="cell-muted" style="font-size:12.5px;">오늘 출근 예정인 조교가 없습니다.</span>`}
     </div>`;
 
-  const recentScoresEl = document.getElementById('recentScores');
-  const recentSc = [...scores].sort((a,b)=> b.date.localeCompare(a.date) || b.createdAt-a.createdAt).slice(0,5);
-  recentScoresEl.innerHTML = recentSc.length ? recentSc.map(s => {
-    const stu = studentById(s.studentId);
-    return `<div class="avg-mini"><span>${escapeHtml(stu? stu.name : '삭제된 학생')} <span class="cell-muted">· ${escapeHtml(s.subject)}</span></span><span class="cell-muted">${s.score}/${s.maxScore}점</span></div>`;
-  }).join('') : `<div class="cell-muted" style="font-size:13px;">등록된 성적이 없습니다.</div>`;
+  renderWeeklyCounselList();
 
   renderDashCalendar();
+}
+
+function toggleCounselDone(eventId, currentDone){
+  db.ref('events/' + eventId).update({ done: !currentDone });
+}
+
+function renderWeeklyCounselList(){
+  const box = document.getElementById('weeklyCounselList');
+  const progressEl = document.getElementById('weeklyCounselProgress');
+  if(!box) return;
+
+  const { start, end } = getThisWeekRange();
+  const weekCounsel = events
+    .filter(e => e.type === '상담' && e.date >= start && e.date <= end)
+    .sort((a,b)=> a.date.localeCompare(b.date));
+
+  if(progressEl){
+    const doneCount = weekCounsel.filter(e => e.done).length;
+    progressEl.textContent = weekCounsel.length ? `${doneCount} / ${weekCounsel.length} 완료` : '';
+  }
+
+  if(!weekCounsel.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 등록된 상담 일정이 없습니다.</div>`;
+    return;
+  }
+
+  const today = todayStr();
+  box.innerHTML = weekCounsel.map(e => {
+    const isToday = e.date === today;
+    const weekday = weekdayLabelOf(e.date);
+    return `
+      <div class="avg-mini" style="align-items:center;${e.done ? 'opacity:0.55;' : ''}">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleCounselDone('${e.id}', ${!!e.done})" style="width:16px;height:16px;cursor:pointer;">
+          <span style="${e.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(e.title)}</span>
+        </span>
+        <span class="cell-muted" style="font-size:11.5px;">${weekday}${isToday ? ' · 오늘' : ''}</span>
+      </div>`;
+  }).join('');
 }
 
 /* =========================================================
@@ -1804,7 +1842,7 @@ function addEvent(fromBig){
   const titleInput = document.getElementById(fromBig ? 'bigEventTitle' : 'eventTitle');
   const title = titleInput.value.trim();
   if(!title){ alert('일정 제목을 입력해 주세요.'); return; }
-  db.ref('events').push({ date: selectedEventDate, type, title, createdAt: Date.now() });
+  db.ref('events').push({ date: selectedEventDate, type, title, done:false, createdAt: Date.now() });
   titleInput.value = '';
   showToast('일정이 추가되었습니다.');
 }
@@ -2069,7 +2107,7 @@ function editStudent(id){
   fillScheduleForm(stu.schedule);
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 정보 수정 ';
   document.getElementById('stuSubmitBtn').textContent = '수정 완료';
-  document.getElementById('stuCancelBtn').style.display = 'inline-flex';
+  document.getElementById('stuCancelRow').style.display = 'flex';
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -2083,7 +2121,7 @@ function cancelStudentEdit(){
   fillScheduleForm({});
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 등록 ';
   document.getElementById('stuSubmitBtn').textContent = '학생 등록';
-  document.getElementById('stuCancelBtn').style.display = 'none';
+  document.getElementById('stuCancelRow').style.display = 'none';
 }
 
 function deleteStudent(id){
@@ -2243,14 +2281,12 @@ function toggleBillingSent(studentId){
    학생별 전문 코멘트 자동 생성 (출석 + 성적 기반)
 ========================================================= */
 let commentModalStudentId = null;
-let commentTone = 'calm';
-
 function buildAttendanceSummaryLine(studentId){
   const monthRecords = attendance.filter(a => a.studentId === studentId && a.date.startsWith(billingMonth));
   const present = monthRecords.filter(a => a.status === '출석').length;
   const late = monthRecords.filter(a => a.status === '지각').length;
   const absent = monthRecords.filter(a => a.status === '결석').length;
-  let line = `이번 달 출석 ${present}회`;
+  let line = `출석 ${present}회`;
   if(late) line += `, 지각 ${late}회`;
   if(absent) line += `, 결석 ${absent}회`;
   line += '.';
@@ -2271,27 +2307,20 @@ function buildScoreSummaryLine(studentId){
   return `최근 ${latest.subject} 평가에서 ${latest.score}점을 받았습니다.`;
 }
 
-function generateComment(studentId, tone){
+function generateComment(studentId){
   const stu = studentById(studentId);
   if(!stu) return '';
   const monthNum = parseInt(billingMonth.split('-')[1], 10);
   const { line: attendanceLine } = buildAttendanceSummaryLine(studentId);
   const scoreLine = buildScoreSummaryLine(studentId);
   const opening = `안녕하세요. 델타수학입니다. ${monthNum}월 청구서 발송드립니다.`;
-  const closing = `궁금한 점 있으시면 연락주세요. 감사합니다.`;
+  const closing = `저도 앞으로도 옆에서 잘 이끌어가겠습니다. 궁금한 점 있으시면 연락주세요. 감사합니다.`;
 
-  if(tone === 'warm'){
-    return `${opening} ${stu.name} 학생이 이번 달 정말 열심히 참여해주었어요. ${attendanceLine} ${scoreLine} 앞으로도 옆에서 잘 이끌어가겠습니다 :) ${closing}`.trim();
-  }
-  if(tone === 'brief'){
-    return `${opening} ${stu.name} 학생 - ${attendanceLine} ${scoreLine} ${closing}`.trim();
-  }
-  return `${opening} ${stu.name} 학생은 이번 달 ${attendanceLine} ${scoreLine} ${closing}`.trim();
+  return `${opening} ${stu.name} 학생은 이번 달 ${attendanceLine} ${scoreLine} [여기에 ${stu.name} 학생의 특이사항(실수 유형, 어려워한 단원 등)을 적어주세요.] ${closing}`.trim();
 }
 
 function openCommentModal(studentId){
   commentModalStudentId = studentId;
-  commentTone = 'calm';
   renderCommentModal();
   document.getElementById('commentModalOverlay').style.display = 'flex';
 }
@@ -2299,11 +2328,6 @@ function openCommentModal(studentId){
 function closeCommentModal(){
   document.getElementById('commentModalOverlay').style.display = 'none';
   commentModalStudentId = null;
-}
-
-function setCommentTone(tone){
-  commentTone = tone;
-  renderCommentModal();
 }
 
 function renderCommentModal(){
@@ -2317,12 +2341,7 @@ function renderCommentModal(){
   document.getElementById('commentModalSummary').textContent =
     `이번 달 출석 ${present}회 · 지각 ${late}회 · 결석 ${absent}회${scoreLine ? ' · ' + scoreLine.replace(/\.$/, '') : ' · 등록된 성적 없음'}`;
 
-  ['calm','warm','brief'].forEach(t => {
-    const btn = document.getElementById('tone' + t.charAt(0).toUpperCase() + t.slice(1) + 'Btn');
-    if(btn) btn.classList.toggle('btn-primary', commentTone === t);
-  });
-
-  document.getElementById('commentTextarea').value = generateComment(commentModalStudentId, commentTone);
+  document.getElementById('commentTextarea').value = generateComment(commentModalStudentId);
 }
 
 function copyComment(){
@@ -2798,7 +2817,7 @@ function examSubjectKey(grade, examName){ return grade + '__' + examName; }
 function getExamSubjects(grade, examName){
   const key = examSubjectKey(grade, examName);
   if(examSubjects[key] && examSubjects[key].length) return examSubjects[key];
-  return grade === '고2' ? ['과목1','과목2'] : ['과목1'];
+  return grade === '고2' ? ['대수','확통','미적'] : ['과목1'];
 }
 
 function saveExamSubjects(grade, examName, subjectsArr){
@@ -3189,6 +3208,13 @@ function autoMarkPastAbsences(){
   }
 }
 init();
+
+// 점수 입력칸에 마우스 휠을 올렸을 때 실수로 값이 바뀌는 것 방지
+document.addEventListener('wheel', function(e){
+  if(document.activeElement && document.activeElement.type === 'number'){
+    document.activeElement.blur();
+  }
+}, { passive:true });
 </script>
 </body>
 </html>
