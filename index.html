@@ -716,15 +716,9 @@
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:14px;align-items:center;">
             <div style="font-size:12.5px;font-weight:700;color:var(--color-text-muted);" id="billingSummaryHint">이번 달 결제선생 발송 완료: 0 / 0명</div>
-            <div style="display:flex;gap:16px;align-items:flex-end;">
-              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
-                <input type="checkbox" id="billingUnsentOnlyToggle" onchange="renderStudents()" style="width:16px;height:16px;">
-                미발송 학생만 보기
-              </label>
-              <div class="field" style="flex:0 0 auto;margin-bottom:0;">
-                <label>결제선생 발송 기준 월</label>
-                <input type="month" id="billingMonthInput" onchange="setBillingMonth(this.value)">
-              </div>
+            <div class="field" style="flex:0 0 auto;margin-bottom:0;">
+              <label>결제선생 발송 기준 월</label>
+              <input type="month" id="billingMonthInput" onchange="setBillingMonth(this.value)">
             </div>
           </div>
           <div id="studentListBody">
@@ -732,7 +726,8 @@
               <table>
                 <thead>
                   <tr>
-                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th><th style="text-align:center;">결제선생 발송</th>
+                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th>
+                    <th style="text-align:center;cursor:pointer;user-select:none;" id="billingFilterHeader" onclick="cycleBillingFilterMode()" title="눌러서 전체/미발송만/발송만 순서로 필터해요">결제선생 발송</th>
                     <th style="text-align:right;">
                       <input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:6px;">관리
                     </th>
@@ -1414,8 +1409,8 @@ function smsByName(a, b){ return a.name.localeCompare(b.name, 'ko'); }
 
 function renderSmsBundle(title, list, today){
   if(!list.length) return '';
-  const notYet = list.filter(s => !getAttendanceRecord(s.id, today)).sort(smsByName);
-  const processed = list.filter(s => !!getAttendanceRecord(s.id, today)).sort(smsByName);
+  const notYet = list.filter(s => !getAttendanceRecord(s.id, today)).sort(compareByGradeThenName);
+  const processed = list.filter(s => !!getAttendanceRecord(s.id, today)).sort(compareByGradeThenName);
 
   let html = '';
   if(notYet.length){
@@ -2404,6 +2399,27 @@ let selectedStudentIds = new Set();
 ========================================================= */
 let billingMonth = todayStr().slice(0,7);
 let billingSentMap = {};
+let billingFilterMode = 'all'; // 'all' | 'unsent' | 'sent' - 결제선생 발송 헤더 클릭 필터
+
+function cycleBillingFilterMode(){
+  billingFilterMode = billingFilterMode === 'all' ? 'unsent' : billingFilterMode === 'unsent' ? 'sent' : 'all';
+  renderStudents();
+}
+
+function updateBillingFilterHeader(){
+  const th = document.getElementById('billingFilterHeader');
+  if(!th) return;
+  if(billingFilterMode === 'unsent'){
+    th.textContent = '결제선생 발송 ▼미발송만';
+    th.style.color = 'var(--color-danger)';
+  }else if(billingFilterMode === 'sent'){
+    th.textContent = '결제선생 발송 ▼발송만';
+    th.style.color = 'var(--color-success)';
+  }else{
+    th.textContent = '결제선생 발송';
+    th.style.color = '';
+  }
+}
 let billingListenerRef = null;
 
 function subscribeBillingMonth(month){
@@ -2547,12 +2563,12 @@ function renderStudents(){
   populateStudentListFilters();
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
   const filterSchool = document.getElementById('studentFilterSchool').value;
-  const unsentOnly = document.getElementById('billingUnsentOnlyToggle').checked;
   const list = students.filter(s => {
     if(keyword && !(s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword))) return false;
     if(!studentGradeMatchesFilter(s.grade, studentFilterGrade)) return false;
     if(filterSchool && s.school !== filterSchool) return false;
-    if(unsentOnly && billingSentMap[s.id]) return false;
+    if(billingFilterMode === 'unsent' && billingSentMap[s.id]) return false;
+    if(billingFilterMode === 'sent' && !billingSentMap[s.id]) return false;
     return true;
   }).sort(
     studentSortMode === 'grade' ? compareByGradeThenName :
@@ -2579,6 +2595,7 @@ function renderStudents(){
     const [by, bm] = billingMonth.split('-');
     summaryEl.textContent = `${by}년 ${parseInt(bm,10)}월 결제선생 발송 완료: ${sentCount} / ${students.length}명`;
   }
+  updateBillingFilterHeader();
 
   const tbody = document.getElementById('studentTableBody');
   tbody.innerHTML = list.length ? list.map(s => {
@@ -2620,16 +2637,14 @@ function toggleStudentSelected(studentId){
 }
 
 function toggleSelectAllStudents(checked){
-  const rows = document.querySelectorAll('#studentTableBody tr td:first-child input[type=checkbox]');
-  // 현재 화면에 보이는 학생들의 id를 renderStudents가 그린 순서 그대로 가져오기 위해 studentTableBody의 데이터 속성 대신 다시 필터링
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
   const filterSchool = document.getElementById('studentFilterSchool').value;
-  const unsentOnly = document.getElementById('billingUnsentOnlyToggle').checked;
   const list = students.filter(s => {
     if(keyword && !(s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword))) return false;
     if(!studentGradeMatchesFilter(s.grade, studentFilterGrade)) return false;
     if(filterSchool && s.school !== filterSchool) return false;
-    if(unsentOnly && billingSentMap[s.id]) return false;
+    if(billingFilterMode === 'unsent' && billingSentMap[s.id]) return false;
+    if(billingFilterMode === 'sent' && !billingSentMap[s.id]) return false;
     return true;
   });
   if(checked) list.forEach(s => selectedStudentIds.add(s.id));
