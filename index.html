@@ -786,7 +786,7 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">이번 주 결석 → 보강 예약 <span class="hint">날짜를 정하면 그 날 출결 화면에 자동으로 나타나요</span></div>
+          <div class="card-title">결석 → 보강 예약 <span class="hint">보강 예약 안 한 학생은 계속 남아있어요 · 예약하면 그 날 출결 화면에 자동으로 나타나요</span></div>
           <div id="weeklyAbsentList"></div>
         </div>
 
@@ -2908,33 +2908,48 @@ function getThisWeekRange(){
 function renderWeeklyAbsentList(){
   const box = document.getElementById('weeklyAbsentList');
   if(!box) return;
-  const { start, end } = getThisWeekRange();
-  const weekAbsences = attendance
+
+  // 보강 예약 안 한 결석은 주가 바뀌어도 계속 남아있도록 최근 60일까지 넉넉히 확인
+  const today = new Date();
+  const lookbackStart = new Date(today);
+  lookbackStart.setDate(today.getDate() - 60);
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const start = fmt(lookbackStart);
+  const end = todayStr();
+
+  const absences = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu)
-    .map(a => ({ ...a, alreadyMakeup: makeupSchedules.some(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`) }));
+    .map(a => {
+      const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
+      return { ...a, alreadyMakeup: !!makeup, makeupDate: makeup ? makeup.date : null };
+    });
 
-  if(!weekAbsences.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 결석 기록이 없습니다.</div>`;
+  if(!absences.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">최근 결석 기록이 없습니다.</div>`;
     return;
   }
 
+  const fmtDateKR = dateStr => {
+    const [y,m,d] = dateStr.split('-');
+    return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
+  };
+
   const rowHtml = a => {
-    const weekday = weekdayLabelOf(a.date);
     const inputId = `makeupDate-${a.id}`;
     return `
       <div class="weekly-absent-row ${a.alreadyMakeup ? 'makeup-done' : ''}">
-        <div class="wa-name"><strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${weekday}요일 결석</span></div>
+        <div class="wa-name"><strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석</span></div>
         ${a.alreadyMakeup
-          ? `<span class="status-pill 출석">보강 예약됨</span>`
+          ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>`
           : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
              <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>`}
       </div>`;
   };
 
-  const pending = weekAbsences.filter(a => !a.alreadyMakeup);
-  const done = weekAbsences.filter(a => a.alreadyMakeup);
+  const pending = absences.filter(a => !a.alreadyMakeup);
+  const done = absences.filter(a => a.alreadyMakeup);
 
   const byGrade = list => {
     const groups = {};
@@ -2957,7 +2972,7 @@ function renderWeeklyAbsentList(){
     html += `<div style="opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
   }
 
-  box.innerHTML = html || `<div class="cell-muted" style="font-size:13px;">이번 주 결석 기록이 없습니다.</div>`;
+  box.innerHTML = html || `<div class="cell-muted" style="font-size:13px;">최근 결석 기록이 없습니다.</div>`;
 }
 
 function scheduleMakeup(studentId, inputId, absenceDate){
