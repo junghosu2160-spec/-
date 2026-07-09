@@ -286,6 +286,8 @@
   .cal-cell.status-결석 .cal-num{background:var(--color-danger-soft);color:var(--color-danger);}
   .cal-cell.attended .cal-num{box-shadow:0 0 0 2px currentColor inset;}
   .cal-cell.today .cal-num{outline:2px solid var(--color-primary);outline-offset:1px;}
+  .cal-cell.teacher-cal-work .cal-num{background:var(--color-primary);color:#fff;}
+  .cal-cell.teacher-cal-exception .cal-num{border:2px dashed var(--color-danger);}
   .cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--color-text-muted);}
   .cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
   .cal-legend .dot.status-출석{background:var(--color-success);}
@@ -893,6 +895,18 @@
                 <div class="weekday-picker" id="teacherDaysPicker"></div>
               </div>
             </div>
+            <div class="field" id="teacherMonthCalWrap" style="display:none;margin-bottom:14px;">
+              <label>이번 달 출근일 조정 <span class="hint">클릭해서 그 날만 켜고 끄기</span></label>
+              <div class="cal-header">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(-1)">‹</button>
+                <div class="cal-month-label" id="teacherEditCalMonthLabel">-</div>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(1)">›</button>
+              </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="cal-grid" id="teacherEditCalGrid"></div>
+            </div>
             <div class="form-actions">
               <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
               <button class="btn btn-ghost" id="teacherCancelBtn" style="display:none;" onclick="cancelTeacherEdit()">취소</button>
@@ -1130,7 +1144,7 @@ db.ref('teachers').on('value', snap => {
 db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
-  if(currentView === 'calendar') renderBigCalendar();
+  if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
 });
 db.ref('examSubjects').on('value', snap => {
   examSubjects = snap.val() || {};
@@ -1959,6 +1973,10 @@ function editTeacher(id){
   document.getElementById('teacherFormTitleText').textContent = '조교 정보 수정';
   document.getElementById('teacherSubmitBtn').textContent = '수정 완료';
   document.getElementById('teacherCancelBtn').style.display = 'inline-flex';
+  const now = new Date();
+  teacherEditCalYear = now.getFullYear();
+  teacherEditCalMonth = now.getMonth();
+  renderTeacherEditCalendar();
   window.scrollTo({top:0, behavior:'smooth'});
 }
 
@@ -1971,6 +1989,66 @@ function cancelTeacherEdit(){
   document.getElementById('teacherFormTitleText').textContent = '조교 선생님 등록';
   document.getElementById('teacherSubmitBtn').textContent = '조교 등록';
   document.getElementById('teacherCancelBtn').style.display = 'none';
+  document.getElementById('teacherMonthCalWrap').style.display = 'none';
+}
+
+/* ===== 조교 편집 폼 안의 "이번 달 출근일 조정" 미니 달력 ===== */
+let teacherEditCalYear = new Date().getFullYear();
+let teacherEditCalMonth = new Date().getMonth();
+
+function shiftTeacherEditCalMonth(delta){
+  teacherEditCalMonth += delta;
+  if(teacherEditCalMonth < 0){ teacherEditCalMonth = 11; teacherEditCalYear--; }
+  if(teacherEditCalMonth > 11){ teacherEditCalMonth = 0; teacherEditCalYear++; }
+  renderTeacherEditCalendar();
+}
+
+function renderTeacherEditCalendar(){
+  const wrap = document.getElementById('teacherMonthCalWrap');
+  if(!wrap) return;
+  if(!editingTeacherId){ wrap.style.display = 'none'; return; }
+  const teacher = teacherById(editingTeacherId);
+  if(!teacher){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  document.getElementById('teacherEditCalMonthLabel').textContent = `${teacherEditCalYear}년 ${teacherEditCalMonth + 1}월`;
+
+  const firstWeekday = new Date(teacherEditCalYear, teacherEditCalMonth, 1).getDay();
+  const daysInMonth = new Date(teacherEditCalYear, teacherEditCalMonth + 1, 0).getDate();
+
+  let cells = '';
+  for(let i = 0; i < firstWeekday; i++){
+    cells += `<div class="cal-cell empty"></div>`;
+  }
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${teacherEditCalYear}-${String(teacherEditCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const working = isTeacherWorking(teacher, dateStr);
+    const isException = teacherExceptions.some(e => e.teacherId === teacher.id && e.date === dateStr);
+    let cls = working ? 'teacher-cal-work' : '';
+    if(isException) cls += ' teacher-cal-exception';
+    cells += `<div class="cal-cell ${cls}" onclick="toggleTeacherWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근일 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
+  }
+  document.getElementById('teacherEditCalGrid').innerHTML = cells;
+}
+
+function toggleTeacherWorkDate(teacherId, dateStr){
+  const teacher = teacherById(teacherId);
+  if(!teacher) return;
+  const currentlyWorking = isTeacherWorking(teacher, dateStr);
+  const newStatus = currentlyWorking ? 'off' : 'on';
+  const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === dateStr);
+  const weekday = weekdayLabelOf(dateStr);
+  const defaultWorking = (teacher.days || []).includes(weekday);
+
+  if(existing){
+    if(newStatus === (defaultWorking ? 'on' : 'off')){
+      db.ref('teacherExceptions/' + existing.id).remove();
+    }else{
+      db.ref('teacherExceptions/' + existing.id).update({ status: newStatus });
+    }
+  }else{
+    db.ref('teacherExceptions').push({ teacherId, date: dateStr, status: newStatus });
+  }
 }
 
 function deleteTeacher(id){
