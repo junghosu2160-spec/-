@@ -373,6 +373,22 @@
     padding:10px 12px;border:1px solid var(--color-border);border-radius:10px;margin-bottom:8px;background:var(--color-surface);
   }
   .weekly-absent-row .wa-name{flex:1 1 160px;font-weight:700;font-size:13.5px;}
+  .elem-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  @media(max-width:880px){.elem-card-grid{grid-template-columns:repeat(2,1fr);}}
+  .elem-card{
+    padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
+    transition:filter .1s ease;user-select:none;
+  }
+  .elem-card:hover{filter:brightness(0.97);}
+  .elem-card-name{font-weight:800;font-size:12.5px;}
+  .elem-card-status{font-size:10.5px;font-weight:700;margin-top:2px;color:var(--color-text-muted);}
+  .elem-card.출석{border-color:var(--color-success);background:var(--color-success-soft);}
+  .elem-card.출석 .elem-card-status{color:var(--color-success);}
+  .elem-card.지각{border-color:var(--color-warning);background:var(--color-warning-soft);}
+  .elem-card.지각 .elem-card-status{color:var(--color-warning);}
+  .elem-card.결석{border-color:var(--color-danger);background:var(--color-danger-soft);}
+  .elem-card.결석 .elem-card-status{color:var(--color-danger);}
+
   .att-makeup-toggle{
     display:flex;align-items:center;gap:8px;cursor:pointer;
     padding:9px 14px;margin:10px 0;border-radius:10px;
@@ -750,31 +766,22 @@
       <!-- ================= 출결 관리 ================= -->
       <section class="view" id="view-attendance">
         <div class="card">
-          <div class="toolbar" style="margin-bottom:6px;">
+          <div class="toolbar" style="margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
               <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
               <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
                 <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
-                이 날짜에 등원 예정인 학생만 보기
+                등원 예정만
               </label>
             </div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;">
-              <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:160px;">
-              <div class="field" style="min-width:180px;flex:0 0 auto;">
-                <input type="date" id="attDate" onchange="renderAttendance()">
-              </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+              <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:130px;">
+              <input type="date" id="attDate" onchange="renderAttendance()" style="min-width:150px;">
+              <input type="month" id="exportMonthInput" style="min-width:120px;">
+              <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
             </div>
           </div>
-          <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
-            <div id="attTimeFilterChips" class="weekday-picker"></div>
-            <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-              <div class="field" style="flex:0 0 auto;min-width:140px;">
-                <label>다운로드할 월</label>
-                <input type="month" id="exportMonthInput">
-              </div>
-              <button class="btn btn-primary btn-sm" onclick="exportMonthlyAttendance()">📊 월별 엑셀 다운로드</button>
-            </div>
-          </div>
+          <div id="attTimeFilterChips" class="weekday-picker" style="margin-bottom:14px;"></div>
           <div id="attGroups"></div>
         </div>
 
@@ -2701,7 +2708,7 @@ let attMakeupCollapsed = true;
 function renderAttTimeFilterChips(weekday){
   const box = document.getElementById('attTimeFilterChips');
   if(!box) return;
-  const times = [...new Set(students.map(s => getDayTime(s, weekday)).filter(Boolean))].sort();
+  const times = [...new Set(students.filter(s => !(s.grade||'').startsWith('초')).map(s => getDayTime(s, weekday)).filter(Boolean))].sort();
   box.innerHTML = `<button type="button" class="weekday-chip ${attTimeFilter === 'ALL' ? 'active' : ''}" onclick="setAttTimeFilter('ALL')">전체</button>` +
     times.map(t => `<button type="button" class="weekday-chip ${attTimeFilter === t ? 'active' : ''}" onclick="setAttTimeFilter('${t}')">${t}</button>`).join('');
 }
@@ -2774,6 +2781,47 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
   }).join('');
 }
 
+function cycleElementaryStatus(studentId, date){
+  const order = [null, '출석', '지각', '결석'];
+  const rec = getAttendanceRecord(studentId, date);
+  const current = rec ? rec.status : null;
+  const nextIdx = (order.indexOf(current) + 1) % order.length;
+  const next = order[nextIdx];
+  if(rec){
+    if(next === null) db.ref('attendance/' + rec.id).remove();
+    else db.ref('attendance/' + rec.id).update({ status: next });
+  }else if(next !== null){
+    db.ref('attendance').push({ studentId, date, status: next, memo:'' });
+  }
+}
+
+function elementaryCardHtml(s, date){
+  const rec = getAttendanceRecord(s.id, date);
+  const status = rec ? rec.status : null;
+  const statusStyle = {
+    '출석': { cls:'출석', label:'● 출석' + (rec.checkInTime ? ' ' + rec.checkInTime : '') },
+    '지각': { cls:'지각', label:'● 지각' + (rec.checkInTime ? ' ' + rec.checkInTime : '') },
+    '결석': { cls:'결석', label:'● 결석' },
+  }[status] || { cls:'대기', label:'○ 대기중' };
+
+  return `
+    <div class="elem-card ${statusStyle.cls}" onclick="cycleElementaryStatus('${s.id}','${date}')" title="눌러서 출석→지각→결석→대기중 순서로 바꿔요">
+      <div class="elem-card-name">${escapeHtml(s.name)} <span class="cell-muted" style="font-weight:400;font-size:10.5px;">${escapeHtml(s.grade)}</span></div>
+      <div class="elem-card-status">${statusStyle.label}</div>
+    </div>`;
+}
+
+function renderElementaryBundleHtml(list, date){
+  if(!list.length) return '';
+  const sorted = [...list].sort(compareByGradeThenName);
+  return `
+    <div class="att-group">
+      <div class="att-group-title" style="color:var(--color-success);">🎒 초등부 <span class="cnt">${sorted.length}명</span></div>
+      <div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>
+      <p class="hint" style="margin-top:8px;margin-bottom:0;">카드를 누르면 출석→지각→결석→대기중 순서로 바뀌어요. 초등부 선생님 페이지와 실시간으로 같이 반영돼요.</p>
+    </div>`;
+}
+
 function renderAttendance(){
   const dateInput = document.getElementById('attDate');
   if(!dateInput.value) dateInput.value = todayStr();
@@ -2799,15 +2847,21 @@ function renderAttendance(){
       return !todayOnly || scheduled || hasRecord;
     });
 
-    // 타임 칩으로 특정 시간대만 골랐으면 그 시간에 해당하는 학생만
+    // 초등부는 타임대와 무관하게 별도 묶음으로 완전히 분리
+    const elementaryList = visible.filter(s => (s.grade || '').startsWith('초'));
+    let nonElementary = visible.filter(s => !(s.grade || '').startsWith('초'));
+
+    // 타임 칩으로 특정 시간대만 골랐으면 그 시간에 해당하는 학생만 (초등 제외 대상만 적용)
     if(attTimeFilter !== 'ALL'){
-      visible = visible.filter(s => getDayTime(s, weekday) === attTimeFilter);
+      nonElementary = nonElementary.filter(s => getDayTime(s, weekday) === attTimeFilter);
     }
 
-    const hiddenCount = visible.filter(s => !getEffectiveDayTime(s, weekday, date)).length; // 99:99 인원 수
-    const groupsHtml = renderAttGroupsHtml(visible, date, weekday, isToday, nowTime, `이 날짜(${weekday}요일)에 등원 예정인 학생이 없습니다.`);
+    const hiddenCount = nonElementary.filter(s => !getEffectiveDayTime(s, weekday, date)).length; // 99:99 인원 수
+    const elemHtml = renderElementaryBundleHtml(elementaryList, date);
+    const groupsHtml = renderAttGroupsHtml(nonElementary, date, weekday, isToday, nowTime, `이 날짜(${weekday}요일)에 등원 예정인 학생이 없습니다.`);
 
     container.innerHTML = `
+      ${elemHtml}
       ${groupsHtml}
       ${hiddenCount > 0 ? `
         <div class="att-makeup-toggle" onclick="toggleAttMakeupCollapse()">
