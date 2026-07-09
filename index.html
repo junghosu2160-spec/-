@@ -2798,16 +2798,15 @@ function cycleElementaryStatus(studentId, date){
 function elementaryCardHtml(s, date){
   const rec = getAttendanceRecord(s.id, date);
   const status = rec ? rec.status : null;
-  const statusStyle = {
-    '출석': { cls:'출석', label:'● 출석' + (rec.checkInTime ? ' ' + rec.checkInTime : '') },
-    '지각': { cls:'지각', label:'● 지각' + (rec.checkInTime ? ' ' + rec.checkInTime : '') },
-    '결석': { cls:'결석', label:'● 결석' },
-  }[status] || { cls:'대기', label:'○ 대기중' };
+  let cls = '대기', label = '○ 대기중';
+  if(status === '출석'){ cls = '출석'; label = '● 출석' + (rec.checkInTime ? ' ' + rec.checkInTime : ''); }
+  else if(status === '지각'){ cls = '지각'; label = '● 지각' + (rec.checkInTime ? ' ' + rec.checkInTime : ''); }
+  else if(status === '결석'){ cls = '결석'; label = '● 결석'; }
 
   return `
-    <div class="elem-card ${statusStyle.cls}" onclick="cycleElementaryStatus('${s.id}','${date}')" title="눌러서 출석→지각→결석→대기중 순서로 바꿔요">
+    <div class="elem-card ${cls}" onclick="cycleElementaryStatus('${s.id}','${date}')" title="눌러서 출석→지각→결석→대기중 순서로 바꿔요">
       <div class="elem-card-name">${escapeHtml(s.name)} <span class="cell-muted" style="font-weight:400;font-size:10.5px;">${escapeHtml(s.grade)}</span></div>
-      <div class="elem-card-status">${statusStyle.label}</div>
+      <div class="elem-card-status">${label}</div>
     </div>`;
 }
 
