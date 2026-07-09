@@ -2584,7 +2584,8 @@ function renderStudents(){
   if(filterSchool) hintParts.push(filterSchool);
   if(studentFilterGrade) hintParts.push(studentFilterGrade);
   if(keyword) hintParts.push(`"${keyword}" 검색`);
-  if(unsentOnly) hintParts.push('미발송만');
+  if(billingFilterMode === 'unsent') hintParts.push('미발송만');
+  if(billingFilterMode === 'sent') hintParts.push('발송만');
   document.getElementById('studentCountHint').textContent = hintParts.length
     ? `(${hintParts.join(' · ')} · ${list.length}명)`
     : `(전체 ${list.length}명)`;
