@@ -593,6 +593,9 @@
               <span class="cell-muted" id="weeklyCounselProgress" style="font-size:12px;font-weight:700;"></span>
             </div>
             <div id="weeklyCounselList"></div>
+            <div class="divider"></div>
+            <div class="card-title" style="margin-bottom:8px;">초등부 선생님 전달사항</div>
+            <div id="teacherDailyNotesList"></div>
           </div>
           <div class="card">
             <div class="toolbar" style="margin-bottom:0;">
@@ -655,6 +658,10 @@
               <label>학부모님 연락처 (선택)</label>
               <input type="text" id="stuParentPhone" placeholder="예: 010-9876-5432">
             </div>
+          </div>
+          <div class="field" style="margin-bottom:14px;">
+            <label>메모 (선택) <span class="hint">선생님께 항상 보여줄 내용 — 예: "화·목은 1시간반 수업"</span></label>
+            <input type="text" id="stuMemo" placeholder="예: 화·목은 1시간반 수업, 나머지는 1시간">
           </div>
           <div class="field" style="margin-bottom:14px;">
             <div style="display:flex;align-items:flex-end;gap:10px;">
@@ -1076,6 +1083,7 @@ let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTim
 let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
 let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
+let dailyNotes = [];   // {id, date, note, updatedAt} - 초등부 선생님이 남기는 하루 특이사항
 let teachers   = [];   // {id, name, color, days:[...]}
 let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
@@ -1109,6 +1117,10 @@ db.ref('events').on('value', snap => {
   events = snapshotToArray(snap.val());
   if(currentView === 'dashboard'){ renderDashCalendar(); renderWeeklyCounselList(); }
   if(currentView === 'calendar') renderBigCalendar();
+});
+db.ref('dailyNotes').on('value', snap => {
+  dailyNotes = snapshotToArray(snap.val());
+  if(currentView === 'dashboard') renderTeacherDailyNotes();
 });
 db.ref('teachers').on('value', snap => {
   teachers = snapshotToArray(snap.val());
@@ -1676,8 +1688,31 @@ function renderDashboard(){
     </div>`;
 
   renderWeeklyCounselList();
+  renderTeacherDailyNotes();
 
   renderDashCalendar();
+}
+
+function renderTeacherDailyNotes(){
+  const box = document.getElementById('teacherDailyNotesList');
+  if(!box) return;
+  const recent = dailyNotes
+    .filter(n => n.note && n.note.trim())
+    .sort((a,b)=> b.date.localeCompare(a.date))
+    .slice(0, 7);
+
+  if(!recent.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">아직 등록된 전달사항이 없습니다.</div>`;
+    return;
+  }
+
+  const today = todayStr();
+  box.innerHTML = recent.map(n => `
+    <div class="avg-mini" style="display:block;padding:10px 0;">
+      <div class="cell-muted" style="font-size:11px;font-weight:700;margin-bottom:4px;">${formatDateKR(n.date)}${n.date === today ? ' · 오늘' : ''}</div>
+      <div style="font-size:13px;line-height:1.5;">${escapeHtml(n.note)}</div>
+    </div>
+  `).join('');
 }
 
 function toggleCounselDone(eventId, currentDone){
@@ -2087,6 +2122,7 @@ function submitStudent(){
   const school = document.getElementById('stuSchool').value.trim();
   const phone = document.getElementById('stuPhone').value.trim();
   const parentPhone = document.getElementById('stuParentPhone').value.trim();
+  const memo = document.getElementById('stuMemo').value.trim();
 
   if(!name){ alert('이름을 입력해 주세요.'); return; }
   if(!school){ alert('학교를 입력해 주세요.'); return; }
@@ -2094,10 +2130,10 @@ function submitStudent(){
   const schedule = readScheduleFromForm();
 
   if(editingStudentId){
-    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, parentPhone, schedule });
+    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, parentPhone, memo, schedule });
     showToast('학생 정보가 수정되었습니다.');
   }else{
-    db.ref('students').push({ name, grade, school, phone, parentPhone, schedule, createdAt: Date.now() });
+    db.ref('students').push({ name, grade, school, phone, parentPhone, memo, schedule, createdAt: Date.now() });
     showToast('학생이 등록되었습니다.');
   }
   cancelStudentEdit();
@@ -2112,6 +2148,7 @@ function editStudent(id){
   document.getElementById('stuSchool').value = stu.school;
   document.getElementById('stuPhone').value = stu.phone || '';
   document.getElementById('stuParentPhone').value = stu.parentPhone || '';
+  document.getElementById('stuMemo').value = stu.memo || '';
   fillScheduleForm(stu.schedule);
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 정보 수정 ';
   document.getElementById('stuSubmitBtn').textContent = '수정 완료';
@@ -2125,6 +2162,7 @@ function cancelStudentEdit(){
   document.getElementById('stuSchool').value = '';
   document.getElementById('stuPhone').value = '';
   document.getElementById('stuParentPhone').value = '';
+  document.getElementById('stuMemo').value = '';
   document.getElementById('stuGrade').selectedIndex = 0;
   fillScheduleForm({});
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 등록 ';
