@@ -303,6 +303,7 @@ function rowHtml(stu){
   if(status === '결석'){ rowClass = 'absent'; statusTag = `<span class="status-tag 결석">결석</span>`; }
   else if(rec && rec.checkOutTime){ rowClass = 'checked-out'; statusTag = `<span class="status-tag 하원">하원 완료</span>`; }
   else if(rec && rec.checkInTime){ rowClass = 'checked-in'; statusTag = status === '지각' ? `<span class="status-tag 지각">지각</span>` : `<span class="status-tag 등원">등원 완료</span>`; }
+  else if(rec && status){ rowClass = 'checked-in'; statusTag = `<span class="status-tag 등원">${escapeHtml(status)} 처리됨 (시간 미기록)</span>`; }
 
   return `
     <div class="stu-row ${rowClass}">
