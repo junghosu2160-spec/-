@@ -288,6 +288,7 @@
   .cal-cell.today .cal-num{outline:2px solid var(--color-primary);outline-offset:1px;}
   .cal-cell.teacher-cal-work .cal-num{background:var(--color-primary);color:#fff;}
   .cal-cell.teacher-cal-exception .cal-num{border:2px dashed var(--color-danger);}
+  #teacherMonthCalWrap .cal-num{width:26px;height:26px;font-size:11px;}
   .cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--color-text-muted);}
   .cal-legend .dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle;}
   .cal-legend .dot.status-출석{background:var(--color-success);}
@@ -897,15 +898,17 @@
             </div>
             <div class="field" id="teacherMonthCalWrap" style="display:none;margin-bottom:14px;">
               <label>이번 달 출근일 조정 <span class="hint">클릭해서 그 날만 켜고 끄기</span></label>
-              <div class="cal-header">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(-1)">‹</button>
-                <div class="cal-month-label" id="teacherEditCalMonthLabel">-</div>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(1)">›</button>
+              <div style="max-width:260px;">
+                <div class="cal-header">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(-1)">‹</button>
+                  <div class="cal-month-label" id="teacherEditCalMonthLabel">-</div>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(1)">›</button>
+                </div>
+                <div class="cal-weekdays">
+                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                <div class="cal-grid" id="teacherEditCalGrid"></div>
               </div>
-              <div class="cal-weekdays">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="cal-grid" id="teacherEditCalGrid"></div>
             </div>
             <div class="form-actions">
               <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
