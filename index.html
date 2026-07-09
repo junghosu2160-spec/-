@@ -233,6 +233,9 @@
   .donut-center-sub{font-size:10.5px;fill:var(--color-text-muted);}
   .legend{display:flex;flex-direction:column;gap:8px;font-size:13px;}
   .legend-item{display:flex;align-items:center;gap:8px;}
+  .donut-wrap-compact{gap:14px;}
+  .donut-wrap-compact svg{width:92px;height:92px;}
+  .donut-wrap-compact .legend{font-size:11.5px;gap:4px;}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .legend-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;padding-left:14px;}
 
@@ -603,12 +606,18 @@
 
         <div class="grid grid-2 section-gap">
           <div class="card">
-            <div class="card-title">오늘의 출결 현황 <span class="hint" id="dashDonutDate"></span></div>
-            <div class="donut-wrap" id="dashDonut"></div>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:220px;">
+                <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">오늘의 출결 현황 <span class="hint" id="dashDonutDate"></span></div>
+                <div class="donut-wrap donut-wrap-compact" id="dashDonut"></div>
+              </div>
+              <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
+              <div style="flex:1;min-width:220px;">
+                <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">학년별 학생 수</div>
+                <div class="donut-wrap donut-wrap-compact" id="gradeDonut"></div>
+              </div>
+            </div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
-            <div class="divider"></div>
-            <div class="card-title">학년별 학생 수</div>
-            <div class="donut-wrap" id="gradeDonut"></div>
             <div class="divider"></div>
             <div class="toolbar" style="margin:0 0 8px 0;">
               <div class="card-title" style="margin:0;">이번 주 상담일정</div>
