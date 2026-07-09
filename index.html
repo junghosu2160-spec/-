@@ -678,6 +678,7 @@
               <button class="btn btn-ghost btn-sm" id="studentSortSchoolBtn" onclick="setStudentSort('school')">학교순</button>
               <button class="btn btn-ghost btn-sm" id="studentSortRecentBtn" onclick="setStudentSort('recent')">최근 등록순</button>
               <button class="btn btn-ghost btn-sm" onclick="exportStudentListExcel()">📊 엑셀로 다운로드</button>
+              <button class="btn btn-danger-outline btn-sm" id="bulkDeleteSelectedBtn" onclick="bulkDeleteSelectedStudents()" style="display:none;">🗑 선택 삭제 (<span id="selectedCountLabel">0</span>)</button>
               <button class="btn btn-danger-outline btn-sm" onclick="bulkDeleteAllStudents()">🗑 전체 학생 일괄 삭제</button>
             </div>
           </div>
@@ -704,7 +705,10 @@
             <div class="table-wrap">
               <table>
                 <thead>
-                  <tr><th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:center;">결제선생 발송</th><th style="text-align:right;">관리</th></tr>
+                  <tr>
+                    <th style="width:28px;"><input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;"></th>
+                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:center;">결제선생 발송</th><th style="text-align:right;">관리</th>
+                  </tr>
                 </thead>
                 <tbody id="studentTableBody"></tbody>
               </table>
@@ -2187,11 +2191,20 @@ function handleBulkFileUpload(inputEl){
   document.getElementById('bulkImportFileName').textContent = file.name;
   const reader = new FileReader();
   reader.onload = e => {
-    processBulkImportText(e.target.result);
+    const buffer = e.target.result;
+    let text;
+    try{
+      // 먼저 UTF-8로 시도 (깨진 문자가 있으면 오류를 내도록 fatal 옵션 사용)
+      text = new TextDecoder('utf-8', { fatal:true }).decode(buffer);
+    }catch(err){
+      // 실패하면 한글 엑셀이 기본으로 저장하는 EUC-KR(CP949)로 재시도
+      text = new TextDecoder('euc-kr').decode(buffer);
+    }
+    processBulkImportText(text);
     inputEl.value = '';
   };
   reader.onerror = () => alert('파일을 읽는 중 문제가 발생했습니다.');
-  reader.readAsText(file, 'utf-8');
+  reader.readAsArrayBuffer(file);
 }
 
 function downloadBulkTemplate(){
@@ -2250,6 +2263,7 @@ function setStudentSort(mode){
 }
 
 let studentFilterGrade = ''; // '' = 전체
+let selectedStudentIds = new Set();
 
 /* =========================================================
    결제선생 발송 여부 체크 (월별)
@@ -2407,6 +2421,10 @@ function renderStudents(){
     (a,b)=> b.createdAt - a.createdAt
   );
 
+  // 목록에서 사라진 학생은 선택 상태에서도 정리
+  const visibleIds = new Set(list.map(s => s.id));
+  selectedStudentIds.forEach(id => { if(!visibleIds.has(id)) selectedStudentIds.delete(id); });
+
   const hintParts = [];
   if(filterSchool) hintParts.push(filterSchool);
   if(studentFilterGrade) hintParts.push(studentFilterGrade);
@@ -2427,8 +2445,10 @@ function renderStudents(){
   tbody.innerHTML = list.length ? list.map(s => {
     const c = GRADE_COLORS[s.grade] || CATEGORY_COLORS['기타'];
     const sent = !!billingSentMap[s.id];
+    const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
+      <td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleStudentSelected('${s.id}')" style="width:16px;height:16px;cursor:pointer;"></td>
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
@@ -2445,7 +2465,61 @@ function renderStudents(){
       </td>
     </tr>
   `;
-  }).join('') : `<tr class="empty-row"><td colspan="8">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+
+  updateBulkDeleteSelectedUI(list);
+}
+
+function toggleStudentSelected(studentId){
+  if(selectedStudentIds.has(studentId)) selectedStudentIds.delete(studentId);
+  else selectedStudentIds.add(studentId);
+  renderStudents();
+}
+
+function toggleSelectAllStudents(checked){
+  const rows = document.querySelectorAll('#studentTableBody tr td:first-child input[type=checkbox]');
+  // 현재 화면에 보이는 학생들의 id를 renderStudents가 그린 순서 그대로 가져오기 위해 studentTableBody의 데이터 속성 대신 다시 필터링
+  const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
+  const filterSchool = document.getElementById('studentFilterSchool').value;
+  const unsentOnly = document.getElementById('billingUnsentOnlyToggle').checked;
+  const list = students.filter(s => {
+    if(keyword && !(s.name.toLowerCase().includes(keyword) || s.school.toLowerCase().includes(keyword))) return false;
+    if(!studentGradeMatchesFilter(s.grade, studentFilterGrade)) return false;
+    if(filterSchool && s.school !== filterSchool) return false;
+    if(unsentOnly && billingSentMap[s.id]) return false;
+    return true;
+  });
+  if(checked) list.forEach(s => selectedStudentIds.add(s.id));
+  else list.forEach(s => selectedStudentIds.delete(s.id));
+  renderStudents();
+}
+
+function updateBulkDeleteSelectedUI(visibleList){
+  const btn = document.getElementById('bulkDeleteSelectedBtn');
+  const countLabel = document.getElementById('selectedCountLabel');
+  const selectAllCheckbox = document.getElementById('selectAllStudentsCheckbox');
+  if(countLabel) countLabel.textContent = selectedStudentIds.size;
+  if(btn) btn.style.display = selectedStudentIds.size > 0 ? 'inline-flex' : 'none';
+  if(selectAllCheckbox){
+    const visibleIds = visibleList.map(s => s.id);
+    selectAllCheckbox.checked = visibleIds.length > 0 && visibleIds.every(id => selectedStudentIds.has(id));
+  }
+}
+
+function bulkDeleteSelectedStudents(){
+  const ids = [...selectedStudentIds];
+  if(!ids.length) return;
+  const names = ids.map(id => studentById(id)?.name).filter(Boolean).slice(0, 5).join(', ');
+  const more = ids.length > 5 ? ` 외 ${ids.length - 5}명` : '';
+  if(!confirm(`선택한 학생 ${ids.length}명(${names}${more})을 삭제하시겠습니까?\n관련된 출결/성적 기록도 함께 삭제됩니다. 이 작업은 되돌릴 수 없습니다.`)) return;
+
+  ids.forEach(id => {
+    db.ref('students/' + id).remove();
+    attendance.filter(a => a.studentId === id).forEach(a => db.ref('attendance/' + a.id).remove());
+    scores.filter(s => s.studentId === id).forEach(s => db.ref('scores/' + s.id).remove());
+  });
+  selectedStudentIds.clear();
+  showToast(`학생 ${ids.length}명을 삭제했습니다.`);
 }
 
 /* =========================================================
