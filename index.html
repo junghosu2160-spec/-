@@ -1106,6 +1106,7 @@ let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
 let makeupDismissed = {}; // {attendanceId: true} - "보강 안함" 처리된 결석 기록
+let selectedAbsenceIds = new Set(); // 보강 리스트 일괄삭제용 선택 상태
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
 let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
 let dailyNotes = [];   // {id, date, note, updatedAt} - 초등부 선생님이 남기는 하루 특이사항
@@ -2941,10 +2942,16 @@ function renderWeeklyAbsentList(){
     return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
   };
 
+  // 목록에서 사라진 항목은 선택 상태에서도 정리
+  const visibleIds = new Set(absences.map(a => a.id));
+  selectedAbsenceIds.forEach(id => { if(!visibleIds.has(id)) selectedAbsenceIds.delete(id); });
+
   const rowHtml = a => {
     const inputId = `makeupDate-${a.id}`;
+    const checked = selectedAbsenceIds.has(a.id);
     return `
       <div class="weekly-absent-row ${a.alreadyMakeup ? 'makeup-done' : ''}">
+        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAbsenceSelected('${a.id}')" style="width:16px;height:16px;cursor:pointer;">
         <div class="wa-name"><strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석</span></div>
         ${a.alreadyMakeup
           ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>
@@ -2974,13 +2981,62 @@ function renderWeeklyAbsentList(){
       }).join('');
   };
 
-  let html = byGrade(pending);
+  let html = `
+    <div class="toolbar" style="margin-top:0;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
+        <input type="checkbox" id="selectAllAbsencesCheckbox" onchange="toggleSelectAllAbsences(this.checked)" style="width:16px;height:16px;">
+        전체 선택
+      </label>
+      <button class="btn btn-danger-outline btn-sm" id="bulkDeleteAbsencesBtn" onclick="bulkDeleteSelectedAbsences()" style="display:none;">🗑 선택 삭제 (<span id="selectedAbsenceCountLabel">0</span>)</button>
+    </div>`;
+  html += byGrade(pending);
   if(done.length){
     html += `<div class="sms-group-title done" style="margin-top:16px;">✓ 예약 완료</div>`;
     html += `<div style="opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
   }
 
-  box.innerHTML = html || `<div class="cell-muted" style="font-size:13px;">최근 결석 기록이 없습니다.</div>`;
+  box.innerHTML = html;
+
+  const selectAllCheckbox = document.getElementById('selectAllAbsencesCheckbox');
+  const bulkBtn = document.getElementById('bulkDeleteAbsencesBtn');
+  const countLabel = document.getElementById('selectedAbsenceCountLabel');
+  if(countLabel) countLabel.textContent = selectedAbsenceIds.size;
+  if(bulkBtn) bulkBtn.style.display = selectedAbsenceIds.size > 0 ? 'inline-flex' : 'none';
+  if(selectAllCheckbox){
+    const ids = absences.map(a => a.id);
+    selectAllCheckbox.checked = ids.length > 0 && ids.every(id => selectedAbsenceIds.has(id));
+  }
+}
+
+function toggleAbsenceSelected(id){
+  if(selectedAbsenceIds.has(id)) selectedAbsenceIds.delete(id);
+  else selectedAbsenceIds.add(id);
+  renderWeeklyAbsentList();
+}
+
+function toggleSelectAllAbsences(checked){
+  // 현재 표시 중인 결석 id 목록을 다시 계산
+  const today = new Date();
+  const lookbackStart = new Date(today);
+  lookbackStart.setDate(today.getDate() - 60);
+  const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const start = fmt(lookbackStart);
+  const end = todayStr();
+  const ids = attendance
+    .filter(a => a.status === '결석' && a.date >= start && a.date <= end && !makeupDismissed[a.id])
+    .map(a => a.id);
+  if(checked) ids.forEach(id => selectedAbsenceIds.add(id));
+  else ids.forEach(id => selectedAbsenceIds.delete(id));
+  renderWeeklyAbsentList();
+}
+
+function bulkDeleteSelectedAbsences(){
+  const ids = [...selectedAbsenceIds];
+  if(!ids.length) return;
+  if(!confirm(`선택한 결석 기록 ${ids.length}건을 삭제하시겠습니까?\n출결 이력에서도 사라지고, 되돌릴 수 없습니다.`)) return;
+  ids.forEach(id => db.ref('attendance/' + id).remove());
+  selectedAbsenceIds.clear();
+  showToast(`결석 기록 ${ids.length}건을 삭제했습니다.`);
 }
 
 function scheduleMakeup(studentId, inputId, absenceDate){
