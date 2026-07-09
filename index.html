@@ -706,8 +706,10 @@
               <table>
                 <thead>
                   <tr>
-                    <th style="width:28px;"><input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;"></th>
-                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:center;">결제선생 발송</th><th style="text-align:right;">관리</th>
+                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:center;">결제선생 발송</th>
+                    <th style="text-align:right;">
+                      <input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:6px;">관리
+                    </th>
                   </tr>
                 </thead>
                 <tbody id="studentTableBody"></tbody>
@@ -2448,7 +2450,6 @@ function renderStudents(){
     const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
-      <td><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleStudentSelected('${s.id}')" style="width:16px;height:16px;cursor:pointer;"></td>
       <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
@@ -2459,13 +2460,14 @@ function renderStudents(){
         <span class="billing-badge ${sent ? 'sent' : ''}" onclick="toggleBillingSent('${s.id}')">${sent ? '● 발송완료' : '○ 미발송'}</span>
       </td>
       <td style="text-align:right;white-space:nowrap;">
+        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleStudentSelected('${s.id}')" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:8px;">
         <button class="btn btn-ghost btn-sm" onclick="openCommentModal('${s.id}')">📝 코멘트</button>
         <button class="btn btn-ghost btn-sm" onclick="editStudent('${s.id}')">수정</button>
         <button class="btn btn-danger-outline btn-sm" onclick="deleteStudent('${s.id}')">삭제</button>
       </td>
     </tr>
   `;
-  }).join('') : `<tr class="empty-row"><td colspan="9">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="8">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
 
   updateBulkDeleteSelectedUI(list);
 }
