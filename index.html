@@ -1105,6 +1105,7 @@ const db = firebase.database();
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
+let makeupDismissed = {}; // {attendanceId: true} - "보강 안함" 처리된 결석 기록
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
 let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
 let dailyNotes = [];   // {id, date, note, updatedAt} - 초등부 선생님이 남기는 하루 특이사항
@@ -1132,6 +1133,10 @@ db.ref('attendance').on('value', snap => {
 db.ref('makeupSchedules').on('value', snap => {
   makeupSchedules = snapshotToArray(snap.val());
   if(currentView === 'attendance') renderAttendance();
+});
+db.ref('makeupDismissed').on('value', snap => {
+  makeupDismissed = snap.val() || {};
+  if(currentView === 'attendance') renderWeeklyAbsentList();
 });
 db.ref('scores').on('value', snap => {
   scores = snapshotToArray(snap.val());
@@ -2918,6 +2923,7 @@ function renderWeeklyAbsentList(){
 
   const absences = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .filter(a => !makeupDismissed[a.id]) // "보강 안함" 처리된 건 목록에서 제외
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu)
     .map(a => {
@@ -2941,9 +2947,12 @@ function renderWeeklyAbsentList(){
       <div class="weekly-absent-row ${a.alreadyMakeup ? 'makeup-done' : ''}">
         <div class="wa-name"><strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석</span></div>
         ${a.alreadyMakeup
-          ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>`
+          ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>
+             <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>`
           : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>`}
+             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>
+             <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.id}')">보강 안함</button>
+             <button class="btn btn-danger-outline btn-sm" onclick="deleteAbsenceRecord('${a.id}')">삭제</button>`}
       </div>`;
   };
 
@@ -2979,6 +2988,23 @@ function scheduleMakeup(studentId, inputId, absenceDate){
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
   db.ref('makeupSchedules').push({ studentId, date: dateVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
   showToast('보강 일정이 등록되었습니다. 그 날짜 출결 화면에 자동으로 나타나요.');
+}
+
+function dismissMakeup(attendanceId){
+  db.ref('makeupDismissed/' + attendanceId).set(true);
+  showToast('이 결석은 보강 목록에서 제외했습니다.');
+}
+
+function deleteAbsenceRecord(attendanceId){
+  if(!confirm('이 결석 기록을 삭제하시겠습니까? 출결 이력에서도 사라지고, 되돌릴 수 없습니다.')) return;
+  db.ref('attendance/' + attendanceId).remove();
+  showToast('결석 기록이 삭제되었습니다.');
+}
+
+function cancelMakeup(studentId, absenceDate){
+  const m = makeupSchedules.find(m => m.studentId === studentId && m.note === `${absenceDate} 결석 보강`);
+  if(m) db.ref('makeupSchedules/' + m.id).remove();
+  showToast('보강 예약이 취소되었습니다.');
 }
 
 function renderAttendanceHistory(){
