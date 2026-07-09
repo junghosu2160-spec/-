@@ -713,7 +713,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th style="text-align:center;">결제선생 발송</th>
+                    <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th><th style="text-align:center;">결제선생 발송</th>
                     <th style="text-align:right;">
                       <input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:6px;">관리
                     </th>
@@ -2333,6 +2333,11 @@ function toggleBillingSent(studentId){
   else db.ref(path).set(true);
 }
 
+function quickUpdateStudentMemo(studentId, value){
+  db.ref('students/' + studentId).update({ memo: value.trim() });
+  showToast('메모가 저장되었습니다.');
+}
+
 /* =========================================================
    학생별 전문 코멘트 자동 생성 (출석 + 성적 기반)
 ========================================================= */
@@ -2494,6 +2499,10 @@ function renderStudents(){
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
       <td class="cell-muted">${escapeHtml(s.parentPhone || '-')}</td>
       <td class="cell-muted" style="font-size:12px;">${escapeHtml(scheduleSummary(s))}</td>
+      <td>
+        <input type="text" value="${escapeHtml(s.memo || '')}" placeholder="메모 없음" onchange="quickUpdateStudentMemo('${s.id}', this.value)"
+          style="width:150px;padding:6px 8px;border:1px solid var(--color-border);border-radius:6px;font-size:12px;">
+      </td>
       <td style="text-align:center;">
         <span class="billing-badge ${sent ? 'sent' : ''}" onclick="toggleBillingSent('${s.id}')">${sent ? '● 발송완료' : '○ 미발송'}</span>
       </td>
@@ -2505,7 +2514,7 @@ function renderStudents(){
       </td>
     </tr>
   `;
-  }).join('') : `<tr class="empty-row"><td colspan="8">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
+  }).join('') : `<tr class="empty-row"><td colspan="9">등록된 학생이 없습니다. 위 양식에서 학생을 등록해 주세요.</td></tr>`;
 
   updateBulkDeleteSelectedUI(list);
 }
