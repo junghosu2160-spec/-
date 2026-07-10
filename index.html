@@ -625,8 +625,16 @@
             </div>
             <div id="weeklyCounselList"></div>
             <div class="divider"></div>
-            <div class="card-title" style="margin-bottom:8px;">초등부 선생님 전달사항</div>
+            <div class="card-title" style="margin-bottom:8px;">초등부 선생님 전달사항 <span class="hint">선생님이 남긴 특이사항</span></div>
             <div id="teacherDailyNotesList"></div>
+            <div class="divider"></div>
+            <div class="card-title" style="margin-bottom:8px;">초등부 선생님께 전달 <span class="hint">선생님 페이지 맨 위에 바로 보여요</span></div>
+            <textarea id="directorNoteTextarea" placeholder="예: 오늘 김민준 학부모님이 상담 요청하셨어요. 하원 시 안내 부탁드려요." style="width:100%;min-height:70px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;"></textarea>
+            <div class="form-actions" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="sendDirectorNote()">보내기</button>
+              <button class="btn btn-ghost" onclick="clearDirectorNote()">지우기</button>
+            </div>
+            <div class="cell-muted" id="directorNoteSavedMsg" style="font-size:11px;margin-top:6px;display:none;">✓ 전달했습니다.</div>
           </div>
           <div class="card">
             <div class="toolbar" style="margin-bottom:0;">
@@ -1735,6 +1743,7 @@ function renderDashboard(){
   renderGradeDonut();
   renderWeeklyCounselList();
   renderTeacherDailyNotes();
+  loadDirectorNote();
 
   renderDashCalendar();
 }
@@ -1755,6 +1764,30 @@ function renderGradeDonut(){
     { label:'고3', value: countOf('고3'), color:'#FF7FAE' },
     { label:'N수/기타', value: countOf('N수/기타'), color:'#D1D1D1' },
   ], '전체 학생');
+}
+
+function sendDirectorNote(){
+  const note = document.getElementById('directorNoteTextarea').value.trim();
+  if(!note){ alert('내용을 입력해 주세요.'); return; }
+  db.ref('directorNotes/' + todayStr()).set({ date: todayStr(), note, updatedAt: Date.now() });
+  const msg = document.getElementById('directorNoteSavedMsg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  showToast('초등부 선생님 페이지에 전달했습니다.');
+}
+
+function clearDirectorNote(){
+  db.ref('directorNotes/' + todayStr()).remove();
+  document.getElementById('directorNoteTextarea').value = '';
+  showToast('전달사항을 지웠습니다.');
+}
+
+function loadDirectorNote(){
+  db.ref('directorNotes/' + todayStr()).once('value').then(snap => {
+    const data = snap.val();
+    const ta = document.getElementById('directorNoteTextarea');
+    if(ta) ta.value = (data && data.note) || '';
+  });
 }
 
 function renderTeacherDailyNotes(){
