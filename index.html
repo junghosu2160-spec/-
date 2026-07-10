@@ -518,6 +518,18 @@
   .billing-badge:hover{border-color:var(--color-text-muted);}
   .billing-badge.sent{background:var(--color-success);border-color:var(--color-success);color:#fff;font-weight:800;}
 
+  .teacher-note-box{
+    padding:12px 14px;border-radius:10px;margin-bottom:8px;
+    background:var(--color-surface-alt);opacity:0.65;
+  }
+  .teacher-note-box.today{
+    background:#E8F4F8;border:1px solid #3E9BB5;opacity:1;
+  }
+  .teacher-note-date{font-size:11px;font-weight:700;margin-bottom:4px;color:var(--color-text-muted);}
+  .teacher-note-box.today .teacher-note-date{color:#1A6E85;}
+  .teacher-note-text{font-size:13px;line-height:1.5;}
+  .teacher-note-box.today .teacher-note-text{color:#1A4A55;}
+
   @media(max-width:880px){
     .sidebar{position:fixed;left:0;bottom:0;top:auto;width:100%;height:auto;flex-direction:row;
       padding:8px 10px;z-index:20;box-shadow:0 -4px 16px rgba(0,0,0,0.15);}
@@ -1804,12 +1816,14 @@ function renderTeacherDailyNotes(){
   }
 
   const today = todayStr();
-  box.innerHTML = recent.map(n => `
-    <div class="avg-mini" style="display:block;padding:10px 0;">
-      <div class="cell-muted" style="font-size:11px;font-weight:700;margin-bottom:4px;">${formatDateKR(n.date)}${n.date === today ? ' · 오늘' : ''}</div>
-      <div style="font-size:13px;line-height:1.5;">${escapeHtml(n.note)}</div>
-    </div>
-  `).join('');
+  box.innerHTML = recent.map(n => {
+    const isToday = n.date === today;
+    return `
+    <div class="teacher-note-box ${isToday ? 'today' : ''}">
+      <div class="teacher-note-date">${formatDateKR(n.date)}${isToday ? ' · 오늘' : ''}</div>
+      <div class="teacher-note-text">${escapeHtml(n.note)}</div>
+    </div>`;
+  }).join('');
 }
 
 function toggleCounselDone(eventId, currentDone){
