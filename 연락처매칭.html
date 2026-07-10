@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연락처-학생 매칭 도구 · 델타수학 전문학원</title>
+<style>
+  :root{
+    --color-bg:#F5F6FA; --color-surface:#FFFFFF; --color-surface-alt:#EEF1F7; --color-border:#E3E6ED;
+    --color-primary:#161616; --color-accent:#FFC531; --color-accent-dark:#E6A800;
+    --color-text:#1F2937; --color-text-muted:#6B7280;
+    --color-success:#2E9E6C; --color-success-soft:#E4F5EC;
+    --color-warning:#C98A2E; --color-warning-soft:#FBF0DE;
+    --color-danger:#D64550; --color-danger-soft:#FBE7E8;
+    --radius-sm:8px; --radius-md:12px; --radius-lg:18px;
+    --font-sans:-apple-system,BlinkMacSystemFont,"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);}
+  .wrap{max-width:860px;margin:0 auto;padding:24px 16px 80px;}
+  h1{font-size:19px;font-weight:800;margin:0 0 4px;}
+  .sub{font-size:12.5px;color:var(--color-text-muted);margin:0 0 20px;}
+  .card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:18px;margin-bottom:16px;}
+  .card-title{font-size:14px;font-weight:800;margin:0 0 10px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .hint{font-size:11.5px;color:var(--color-text-muted);font-weight:400;}
+  .btn{padding:9px 16px;border-radius:8px;border:1px solid transparent;font-size:13px;font-weight:700;cursor:pointer;background:#fff;}
+  .btn-primary{background:var(--color-primary);color:#fff;}
+  .btn-ghost{background:#fff;color:var(--color-text);border-color:var(--color-border);}
+  .btn-sm{padding:6px 11px;font-size:12px;}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:6px;}
+  .stat{background:var(--color-surface-alt);border-radius:10px;padding:12px;text-align:center;}
+  .stat .n{font-size:20px;font-weight:800;}
+  .stat .l{font-size:11px;color:var(--color-text-muted);margin-top:2px;}
+
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 8px;border-bottom:1px solid var(--color-surface-alt);font-size:13px;}
+  .row:last-child{border-bottom:none;}
+  .row .orig{flex:1 1 150px;color:var(--color-text-muted);font-size:12px;}
+  .row .arrow{color:#C9CDD3;}
+  .row .stuname{flex:0 0 auto;font-weight:800;min-width:60px;}
+  .row select{flex:0 0 auto;padding:6px 8px;border:1px solid var(--color-border);border-radius:6px;font-size:12px;max-width:160px;}
+  .tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;flex:0 0 auto;}
+  .tag.student{background:var(--color-accent);color:#5c4400;}
+  .tag.parent{background:#E6F1FB;color:#0C447C;}
+  .phone{font-size:12px;color:var(--color-text-muted);flex:0 0 auto;font-variant-numeric:tabular-nums;}
+  .row input[type=checkbox]{width:16px;height:16px;cursor:pointer;flex:0 0 auto;}
+  .empty-msg{text-align:center;color:var(--color-text-muted);font-size:13px;padding:20px;}
+  .toggle-others{cursor:pointer;color:var(--color-primary);font-weight:700;font-size:12.5px;text-decoration:underline;}
+  #applyResult{font-size:12.5px;margin-top:10px;color:var(--color-success);font-weight:700;display:none;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>📇 연락처 → 학생 정보 매칭 도구</h1>
+  <p class="sub">휴대폰 연락처에서 뽑은 623건을 등록된 학생 명단과 자동으로 맞춰봤어요. 확인하고 체크된 것만 반영하시면 돼요.</p>
+
+  <div class="card">
+    <div class="stats">
+      <div class="stat"><div class="n" id="statMatched">-</div><div class="l">자동 매칭됨</div></div>
+      <div class="stat"><div class="n" id="statAmbiguous">-</div><div class="l">후보 여러 명 (확인 필요)</div></div>
+      <div class="stat"><div class="n" id="statUnmatched">-</div><div class="l">매칭 안 됨</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">✅ 자동 매칭됨 <span class="hint">기본으로 체크되어 있어요, 필요 없으면 해제하세요</span></div>
+    <div id="matchedList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚠️ 후보 여러 명 — 직접 골라주세요</div>
+    <div id="ambiguousList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="cursor:pointer;" onclick="toggleUnmatched()">
+      <span id="unmatchedToggleIcon">▸</span> 매칭 안 된 연락처 (참고용) <span class="hint" id="unmatchedCountHint"></span>
+    </div>
+    <div id="unmatchedList" style="display:none;"></div>
+  </div>
+
+  <div class="card" style="position:sticky;bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+    <div class="card-title" style="margin:0;">
+      <span>선택된 항목을 학생 정보에 반영</span>
+      <button class="btn btn-primary" onclick="applyMatches()">✓ 선택한 항목 반영하기</button>
+    </div>
+    <div id="applyResult"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
+  authDomain: "checkkkk-e5774.firebaseapp.com",
+  databaseURL: "https://checkkkk-e5774-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "checkkkk-e5774",
+  storageBucket: "checkkkk-e5774.firebasestorage.app",
+  messagingSenderId: "378303125830",
+  appId: "1:378303125830:web:d6ef8f50b79d83de1d2d47"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+let students = [];
+
+const CONTACTS = [{"name": "강류영", "phone": "01054757622"}, {"name": "교사용구매", "phone": "01099725469"}, {"name": "김강은조교님", "phone": "01027031461"}, {"name": "김지혜", "phone": "01062564171"}, {"name": "방주은", "phone": "01041946985"}, {"name": "사기 경산", "phone": "01054628548"}, {"name": "서상우대리님", "phone": "01062993985"}, {"name": "엄마♡", "phone": "01074752160"}, {"name": "율하공원", "phone": "01020517384"}, {"name": "장필순오빠", "phone": "01051990809"}, {"name": "채원이 어머님", "phone": "01046263220"}, {"name": "티몬 기프티콘잔액", "phone": "15446240"}, {"name": "학생어머니", "phone": "01057048500"}, {"name": "한진수교수님", "phone": "01032692294"}, {"name": "호수태블릿", "phone": "01053112160"}, {"name": "정도경", "phone": "01026822160"}, {"name": "정호수", "phone": "01080052160"}, {"name": "이소진", "phone": "01074221106"}, {"name": "이현수", "phone": "01065860709"}, {"name": "배준식", "phone": "01044868520"}, {"name": "홈플러스 ㅡ삼성점장님", "phone": "01085708205"}, {"name": "수성구 어머니", "phone": "01092814829"}, {"name": "이레수산", "phone": "01027984434"}, {"name": "이현주", "phone": "01064492627"}, {"name": "cj기사님", "phone": "01063342978"}, {"name": "삼촌♡", "phone": "01071233871"}, {"name": "롯데택배", "phone": "01040583461"}, {"name": "이쁜이", "phone": "01076752160"}, {"name": "효인 ㅡ온라인", "phone": "01062553208"}, {"name": "세현이 어머니", "phone": "01065299546"}, {"name": "이세현", "phone": "01038449546"}, {"name": "족보3", "phone": "01025305348"}, {"name": "족보8", "phone": "01084070104"}, {"name": "족보7", "phone": "01026127798"}, {"name": "족보5", "phone": "01033982222"}, {"name": "족보6", "phone": "01030385923"}, {"name": "족보2", "phone": "01079126833"}, {"name": "족보1", "phone": "01077377752"}, {"name": "안아주 아버님", "phone": "01044582801"}, {"name": "군자폰", "phone": "01098665222"}, {"name": "은지어머님 102-2903 황금힐스테이트", "phone": "01075592120"}, {"name": "경신 ㅡ102-801 종현어머님", "phone": "01065075684"}, {"name": "당근문의 ㅡ수학 고2 이과4", "phone": "01051170660"}, {"name": "김서연 학생 ㅡ신기", "phone": "01089110061"}, {"name": "웨이브", "phone": "01059532493"}, {"name": "은지", "phone": "01020937525"}, {"name": "족보4", "phone": "01077530276"}, {"name": "고1 ㅡ민성이아버님", "phone": "01082870232"}, {"name": "족보9", "phone": "01042348400"}, {"name": "상담 중2ㅡ신기", "phone": "01051420558"}, {"name": "의석오빠", "phone": "01020669528"}, {"name": "부동산", "phone": "01038168300"}, {"name": "세신사님", "phone": "01026307703"}, {"name": "신서동 영어건물", "phone": "01029814620"}, {"name": "수학 ㅡ북구", "phone": "01025152421"}, {"name": "독서실문의", "phone": "01069856102"}, {"name": "배은한어머님(캐슬104.902)", "phone": "01094553737"}, {"name": "이룸?", "phone": "01025942229"}, {"name": "배은한(학생)", "phone": "01094557511"}, {"name": "상현 어머님 중2ㅡ안심중", "phone": "01050381434"}, {"name": "김상현", "phone": "01093911434"}, {"name": "이현준 어머님ㅡ동부고", "phone": "01035424544"}, {"name": "이현준 ㅡ동부고1", "phone": "01072004739"}, {"name": "열음공방 -세운부동산", "phone": "01048800002"}, {"name": "gs25ㅡ건물 부동산", "phone": "01093840545"}, {"name": "당근 ㅡ재수", "phone": "01052639268"}, {"name": "영조부동산 ㅡ사장님", "phone": "01083488891"}, {"name": "당근 ㅡ문의 ㅡ중1", "phone": "01099982222"}, {"name": "고용노동센터", "phone": "0536676757"}, {"name": "내모바일팩스", "phone": "05040252160"}, {"name": "과외문의 ㅡ초5 율하", "phone": "01038070670"}, {"name": "고 1 민성이 -", "phone": "01081315836"}, {"name": "오성중2 고등 주2회2시간 60", "phone": "01086309260"}, {"name": "정동고1부모님", "phone": "01063911932"}, {"name": "당근 율하 중2 여", "phone": "01040866143"}, {"name": "집앞에", "phone": "01086611746"}, {"name": "당근 문의 예비중1 각산", "phone": "01022733065"}, {"name": "영조3단지ㅡ과외방", "phone": "01033362981"}, {"name": "수성구 동구청역 상담 ㅡ50", "phone": "01028964444"}, {"name": "대영셀콤", "phone": "0533826684"}, {"name": "디즈니", "phone": "01064825287"}, {"name": "동도중 (정다원)어머님", "phone": "01093499559"}, {"name": "뉴텬", "phone": "01048221745"}, {"name": "다원이", "phone": "01020168819"}, {"name": "서연학생 ㅡ어머님", "phone": "01025401302"}, {"name": "차현빈", "phone": "01044471919"}, {"name": "강동초수학과외", "phone": "01090610004"}, {"name": "부가세 담당자님", "phone": "0536620309"}, {"name": "오큘러스", "phone": "01021730794"}, {"name": "옵티멀", "phone": "01030065925"}, {"name": "중국어", "phone": "01062189665"}, {"name": "ㅅㅎㅅㅎ", "phone": "01076260328"}, {"name": "아빠", "phone": "01038112160"}, {"name": "건물주님  ㅡ학원", "phone": "01023537949"}, {"name": "신서동 공부방", "phone": "01025880751"}, {"name": "수진이는도배중 사장님", "phone": "01058084477"}, {"name": "우림서적 ㅡ디딤돌", "phone": "0534277274"}, {"name": "전기설비 ㅡ반야월", "phone": "01035136950"}, {"name": "매쓰홀릭", "phone": "01074049034"}, {"name": "간판시안", "phone": "01023562161"}, {"name": "율하상담 ㅡ고3", "phone": "01035159277"}, {"name": "디딤돌 ㅡ우림서적 사장님", "phone": "01038108794"}, {"name": "신서그린빌 ㅡ지원자님", "phone": "01035684281"}, {"name": "알바 ㅡ보온재(303-1109)", "phone": "01066358037"}, {"name": "웨이브 ㅡ6개월", "phone": "01058572981"}, {"name": "인터넷", "phone": "01089537303"}, {"name": "율림당서적 담당자님", "phone": "01063988220"}, {"name": "율림당서적 ㅡ절대등급", "phone": "01093653831"}, {"name": "차량출장", "phone": "01035036919"}, {"name": "봄날부동산", "phone": "01036956265"}, {"name": "동부고1ㅡ김지우학생 어머니", "phone": "01032139612"}, {"name": "안심역거주 알바여", "phone": "01099745356"}, {"name": "신서동 ㅡ알바 남 박세빈", "phone": "01092085953"}, {"name": "동부고 ㅡ김지우", "phone": "01074479960"}, {"name": "알바 ㅡ서하늘", "phone": "01092987008"}, {"name": "알바ㅡ박하나 님", "phone": "01090932041"}, {"name": "안서린(강동초4)어머님", "phone": "01045284235"}, {"name": "서림도서 담당자님", "phone": "01088503449"}, {"name": "1/2시작 서진어머니", "phone": "01050510120"}, {"name": "뉴타운프리다이빙", "phone": "01093775802"}, {"name": "주현이", "phone": "01037189430"}, {"name": "정창동", "phone": "01043142310"}, {"name": "시지 고1어머님", "phone": "01085838550"}, {"name": "이제빈 ㅡ시지고1", "phone": "01053248540"}, {"name": "이투스 ㅡ고쟁이 담당자님", "phone": "01075124482"}, {"name": "중1ㅡ효인이 어머님 ㅡ온라인", "phone": "01027823208"}, {"name": "영조2단지 사무소", "phone": "0539627878"}, {"name": "영조3단지 ㅡ알바 월 10시", "phone": "01079389876"}, {"name": "개념원리 총판담당자님", "phone": "01085045259"}, {"name": "강동고1ㅡ내신 부모님", "phone": "01085941898"}, {"name": "금요일 4시상담", "phone": "01026825139"}, {"name": "강동초앞 매매", "phone": "01071192117"}, {"name": "종현이", "phone": "01065015684"}, {"name": "타이백 감귤님", "phone": "01036911496"}, {"name": "일본어선생님 2", "phone": "01057170321"}, {"name": "일본어 ㅡㅡㅡㅡ", "phone": "01044457358"}, {"name": "중개사님", "phone": "01093817000"}, {"name": "옥포지구 서한이다음", "phone": "01055217551"}, {"name": "서한이다음 1층", "phone": "01040303995"}, {"name": "일본어선생님", "phone": "01089646158"}, {"name": "옥포집", "phone": "01035031588"}, {"name": "교사용 ㅡ착불", "phone": "01094341786"}, {"name": "알바??", "phone": "01041846890"}, {"name": "기사님", "phone": "01066786629"}, {"name": "제3수학", "phone": "01080086353"}, {"name": "택시기사님", "phone": "01096256666"}, {"name": "아마존고객센터", "phone": "15667796"}, {"name": "호반써밋", "phone": "01068320113"}, {"name": "개인수업상담", "phone": "01091869209"}, {"name": "유미누나", "phone": "01025304174"}, {"name": "상담사 ㅡ농협", "phone": "01076629600"}, {"name": "플래너", "phone": "01056269024"}, {"name": "집주인 ㅡ영조", "phone": "01055488478"}, {"name": "다이렉트플래너", "phone": "01026983642"}, {"name": "제일부동산", "phone": "01045231642"}, {"name": "하나은행 ㅡ담당자님", "phone": "01092186389"}, {"name": "영조3단지 ㅡㅡ주인(여)", "phone": "01048704717"}, {"name": "에어컨기사님", "phone": "01062687080"}, {"name": "신서동 임원장", "phone": "01063432193"}, {"name": "학원인수님", "phone": "01028330426"}, {"name": "매쓰플랜", "phone": "01055928917"}, {"name": "동구학원 mmmmm", "phone": "01085367812"}, {"name": "교습소222", "phone": "01050279571"}, {"name": "더단단 원장님", "phone": "01077122815"}, {"name": "각산/?", "phone": "01041228090"}, {"name": "스쿨존담당자님", "phone": "01084288216"}, {"name": "기사님11", "phone": "01055896540"}, {"name": "청소업체님", "phone": "01053901466"}, {"name": "황여사중고차", "phone": "01044116637"}, {"name": "더단단건물주 님", "phone": "01040009899"}, {"name": "안수빈 어머니", "phone": "01035154670"}, {"name": "상담문의 ㅡ중1??", "phone": "01086653912"}, {"name": "수학지원자님", "phone": "01022316305"}, {"name": "지원자님 -수학", "phone": "01063297399"}, {"name": "플래너...", "phone": "01026512367"}, {"name": "이민수선생님", "phone": "01099738306"}, {"name": "김진영 선생님", "phone": "01067038818"}, {"name": "이남영선생님", "phone": "01038213355"}, {"name": "김준혁 ㅡㅡ", "phone": "01065973107"}, {"name": "델타 구경", "phone": "01085828510"}, {"name": "성진선생님", "phone": "01095058264"}, {"name": "상담문의 ㅡㅡㅡ", "phone": "01045179881"}, {"name": "상담문의새론1", "phone": "01048055924"}, {"name": "이현지 ㅡ지원자", "phone": "01087947579"}, {"name": "홍은미 지원자님", "phone": "01025940329"}, {"name": "이서진학생", "phone": "01024624539"}, {"name": "지원자ㅡㅡㅡ", "phone": "01022288605"}, {"name": "지원자 초등", "phone": "01076743885"}, {"name": "지원자4", "phone": "01079908902"}, {"name": "예비중3 상담문의", "phone": "01048086812"}, {"name": "금요일 상담예약 ㅡ중3", "phone": "01030322789"}, {"name": "상담문의 중1 중3", "phone": "01057663993"}, {"name": "박진수 선생님", "phone": "01029970333"}, {"name": "조은경선생님", "phone": "01051504797"}, {"name": "내일6:30상담", "phone": "01040705605"}, {"name": "상담문의 ㅡ초6", "phone": "01026223934"}, {"name": "상담문의 ㅡ고1", "phone": "01082879123"}, {"name": "입석 소정어머니", "phone": "01065193884"}, {"name": "상담문의 ㅡ초5", "phone": "01024678524"}, {"name": "신화수산", "phone": "0533129595"}, {"name": "수요일2시상담", "phone": "01089336574"}, {"name": "인수인수", "phone": "01055544840"}, {"name": "서형민", "phone": "01085708699"}, {"name": "내일 오후1시^^", "phone": "01025330836"}, {"name": "서희님", "phone": "01062394671"}, {"name": "레드향 판매자님", "phone": "01077032803"}, {"name": "ㅡ선생님 ㅡ", "phone": "01029416211"}, {"name": "디즈니 1년", "phone": "01085241212"}, {"name": "이남영선생님", "phone": "01083463322"}, {"name": "에어컨사장님 ㅡ포항대구", "phone": "01054755328"}, {"name": "수학회 ㅡ김건태", "phone": "01068087071"}, {"name": "에어컨기사님 💕", "phone": "01067813434"}, {"name": "도시가스", "phone": "01052833709"}, {"name": "이석준(영남수교", "phone": "01062070964"}, {"name": "간판사장님!", "phone": "01085869957"}, {"name": "상담 쌍둥이 중1", "phone": "01064051407"}, {"name": "해외상담문의", "phone": "01086381626"}, {"name": "홍용진 선생님", "phone": "01067656866"}, {"name": "영조cj", "phone": "01077718684"}, {"name": "씰링팬", "phone": "01055868968"}, {"name": "ㅡㅡㅡㅡㅡㅡㅡ", "phone": "01071683483"}, {"name": "최경옥", "phone": "01063386968"}, {"name": "지원자님 ~!", "phone": "01046044364"}, {"name": "지원자님 ~~~~", "phone": "01022409210"}, {"name": "ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ", "phone": "01062103518"}, {"name": "민지어머님", "phone": "01093608777"}, {"name": "경도윤 선생님", "phone": "01041527424"}, {"name": "동연 ㅡ반지", "phone": "01053479509"}, {"name": "모니카블랑쉬 토3xm", "phone": "01022106636"}, {"name": "리아웨딩 토4:30", "phone": "0532527789"}, {"name": "청소이모님", "phone": "01075476009"}, {"name": "디오밸리", "phone": "0534712344"}, {"name": "리아웨딩 ❤", "phone": "01089687958"}, {"name": "동부교육청", "phone": "0532320154"}, {"name": "장자엽선생님", "phone": "01048773960"}, {"name": "더고백 패키지", "phone": "01093156240"}, {"name": "aw호텔", "phone": "0532386754"}, {"name": "ㅡㅡ", "phone": "01079637618"}, {"name": "희숙누나", "phone": "01099858355"}, {"name": "어머니 😍", "phone": "01049189546"}, {"name": "이찬웅사회자님", "phone": "01036910873"}, {"name": "구찌 도유민 😍", "phone": "01079328496"}, {"name": "양도123", "phone": "01048802768"}, {"name": "박정은(사촌)", "phone": "01023001222"}, {"name": "킬러들의 전쟁", "phone": "01064865966"}, {"name": "이주성", "phone": "01074396600"}, {"name": "혜윤이누나", "phone": "01037009558"}, {"name": "박영아 수사관", "phone": "0109603279"}, {"name": "누구", "phone": "01039546514"}, {"name": "넷째누나", "phone": "01075129545"}, {"name": "아버님 😍", "phone": "01046649545"}, {"name": "안근형", "phone": "01057638007"}, {"name": "서재덕선생님", "phone": "01086806427"}, {"name": "병점고 어머니", "phone": "01085281451"}, {"name": "수요일2:00", "phone": "01037091352"}, {"name": "윤수정선생님", "phone": "01090995693"}, {"name": "지원자0226", "phone": "01098913451"}, {"name": "박유민선생님", "phone": "01085485044"}, {"name": "권순범 선생님", "phone": "01079259257"}, {"name": "호수", "phone": "01080052160"}, {"name": "의석님", "phone": "01020669528"}, {"name": "거울광고", "phone": "01035784067"}, {"name": "안서린", "phone": "01027474235"}, {"name": "유진어머님", "phone": "01074867530"}, {"name": "강동초3ㅡ현서어머님", "phone": "01020595872"}, {"name": "법무사님", "phone": "01055144760"}, {"name": "초3성균어머님", "phone": "01038129678"}, {"name": "예비초3 혜령어머님", "phone": "01072562127"}, {"name": "가현어머님 ㅡ1월시작", "phone": "01063977924"}, {"name": "해온어머님(초5)", "phone": "01046606508"}, {"name": "윤아어머님", "phone": "01028096898"}, {"name": "가현 ㅡ중3", "phone": "01071287924"}, {"name": "강윤아 ㅡ고1", "phone": "01027176898"}, {"name": "배윤하 초6어머님", "phone": "01029545124"}, {"name": "이서영 (고2)", "phone": "01036846079"}, {"name": "1/8 초6우현어머님", "phone": "01045287678"}, {"name": "안근형 ㅡ강동고2", "phone": "01057638007"}, {"name": "보민 아버님", "phone": "01095151915"}, {"name": "김보민", "phone": "01071111908"}, {"name": "김소이어머님(우현사촌)", "phone": "01055740718"}, {"name": "혜령", "phone": "01075100510"}, {"name": "은찬어머님", "phone": "01041115678"}, {"name": "배윤하  x최신", "phone": "01031325124"}, {"name": "하율 채율어머님", "phone": "01049378113"}, {"name": "정수현 어머님", "phone": "01025920051"}, {"name": "성균이", "phone": "01092829678"}, {"name": "정수현", "phone": "01063309971"}, {"name": "박서원어머님", "phone": "01086907863"}, {"name": "유나어머님", "phone": "01028056759"}, {"name": "정유나", "phone": "01030026759"}, {"name": "서율어머님", "phone": "01086702888"}, {"name": "이서율", "phone": "01037482776"}, {"name": "채윤어머님", "phone": "01041475805"}, {"name": "중2상담문의 (방문)", "phone": "01055429417"}, {"name": "효원어머님 칠곡국제고", "phone": "01092677807"}, {"name": "최효원 국제고2", "phone": "01089721855"}, {"name": "스쿨존", "phone": "01096344520"}, {"name": "은찬이", "phone": "01020335679"}, {"name": "이지훈 어머님", "phone": "01020443609"}, {"name": "도지은어머님", "phone": "01077993070"}, {"name": "송선화어머님 초6", "phone": "01098705824"}, {"name": "이지훈 ㅡ강동고2", "phone": "01099962985"}, {"name": "단)손우진어머니(강동고2)", "phone": "01047106193"}, {"name": "단 강동중3 이원재 어머님", "phone": "01031294969"}, {"name": "단 강동중3 김정원어머님", "phone": "01091963483"}, {"name": "고2 손우진 강동", "phone": "01020116193"}, {"name": "고2 강준범 정동고2", "phone": "01034887622"}, {"name": "중3이원재 강동중", "phone": "01071784969"}, {"name": "강동중3김정원", "phone": "01085693474"}, {"name": "도지은 중2 안심", "phone": "01076793071"}, {"name": "디딤돌업체", "phone": "01099533442"}, {"name": "수요일 12:30상담 초등", "phone": "01028182553"}, {"name": "교사용총판", "phone": "01037700502"}, {"name": "중3상담문의 안심중", "phone": "01034320410"}, {"name": "단 이수민 중2강동 어머님", "phone": "01096808119"}, {"name": "강동초4   장준서 어머님", "phone": "01088292470"}, {"name": "강동초4   신수진 어머님", "phone": "01022128811"}, {"name": "송정초6   임성현  임성현 어머님", "phone": "01044448018"}, {"name": "송정초6   임성현 수현 어머님", "phone": "01044448018"}, {"name": "강동초3   정예원 어머님", "phone": "01038159708"}, {"name": "동호초6   윤지훈 어머님", "phone": "01038178145"}, {"name": "조성윤어머님 ㅡ중1", "phone": "01045135354"}, {"name": "더단단 건물주님", "phone": "01041789008"}, {"name": "소윤어머니 초5", "phone": "01025204437"}, {"name": "삼성프린트긔", "phone": "01035733743"}, {"name": "이서정어머님", "phone": "01042288042"}, {"name": "이서정 ㅡ중3", "phone": "01056658393"}, {"name": "이지아 어머님", "phone": "01083850242"}, {"name": "백수진어머님", "phone": "01085799872"}, {"name": "이현지어머님", "phone": "01091374010"}, {"name": "김재율 ㅡ어머님", "phone": "01026927061"}, {"name": "백수진", "phone": "01028999872"}, {"name": "이서진어머님 -고1", "phone": "01064154539"}, {"name": "이서진아버님", "phone": "01045814836"}, {"name": "전형주 정동고", "phone": "01035581156"}, {"name": "민채어머님", "phone": "01041596666"}, {"name": "이주한", "phone": "01054961016"}, {"name": "김동언", "phone": "01053178165"}, {"name": "김동언 어머님 고1", "phone": "01051718165"}, {"name": "조은서고1 어머님", "phone": "01071090586"}, {"name": "성현이", "phone": "01085668018"}, {"name": "조은서 학생", "phone": "01028940586"}, {"name": "안연우(중1)어머니", "phone": "01046584514"}, {"name": "지호어머님", "phone": "01051191813"}, {"name": "시준어머님", "phone": "01085463893"}, {"name": "수진이 💕", "phone": "01031891793"}, {"name": "김한결", "phone": "01054357832"}, {"name": "현서 ㅡ", "phone": "01066595872"}, {"name": "한결어머님", "phone": "01065247832"}, {"name": "이현지 ㅡ중3", "phone": "01048590331"}, {"name": "조성윤학생", "phone": "01027725354"}, {"name": "소정어머니 중3입석", "phone": "01065193884"}, {"name": "이소정ㅡ중3 입석", "phone": "01038023884"}, {"name": "김민준 ㅡ민채오빠", "phone": "01068876633"}, {"name": "남승현", "phone": "01048881660"}, {"name": "이윤아어머니  새론 중2", "phone": "01089533743"}, {"name": "남승현 어머님", "phone": "01028781660"}, {"name": "김지원ㅡ고1", "phone": "01021968220"}, {"name": "김지원 ㅡ어머님", "phone": "01068588226"}, {"name": "상담문의 효정, 지효", "phone": "01035501388"}, {"name": "최주원어머니 ㅡ중2", "phone": "01063224883"}, {"name": "동호골든 소장님", "phone": "01088503336"}, {"name": "선화", "phone": "01097545824"}, {"name": "규민어머니", "phone": "01052362494"}, {"name": "재희아버님", "phone": "01050617204"}, {"name": "시은 어머니  ㅡ동부", "phone": "01050608031"}, {"name": "상담문의 ㅡㅡ중1~", "phone": "01028144565"}, {"name": "이윤아", "phone": "01087181774"}, {"name": "김시준", "phone": "01084473893"}, {"name": "서형민 ㅡ고2", "phone": "01052852764"}, {"name": "박재희 ㅡ중3", "phone": "01021221637"}, {"name": "김시은 ㅡ고1(3월시작)", "phone": "01031378031"}, {"name": "아섬어머니", "phone": "01065643265"}, {"name": "장준서", "phone": "01022632470"}, {"name": "이수빈 어머님 ㅡ중3", "phone": "01066051591"}, {"name": "홍승윤어머니", "phone": "01095905796"}, {"name": "이승연 중1어머님", "phone": "01031691247"}, {"name": "효정이 ㅡ중2", "phone": "01052732935"}, {"name": "우현", "phone": "01050780589"}, {"name": "김온유 어머니 ㅡ고1", "phone": "01099982222"}, {"name": "조중권어머님", "phone": "01033577314"}, {"name": "다희", "phone": "01054867924"}, {"name": "이수빈ㅡ중3", "phone": "01064201591"}, {"name": "승윤", "phone": "01086805796"}, {"name": "ㅅㄷㅁ의 초5", "phone": "01050298479"}, {"name": "김온유", "phone": "01067010070"}, {"name": "중권", "phone": "01089977314"}, {"name": "주원", "phone": "01091934883"}, {"name": "지호", "phone": "01080716272"}, {"name": "재율", "phone": "01045465960"}, {"name": "신규 ㅡ중1", "phone": "01028834109"}, {"name": "신시온아버님", "phone": "01093872403"}, {"name": "신시온학생", "phone": "01090122403"}, {"name": "부재중0502", "phone": "01023389769"}, {"name": "부재중 0502-2", "phone": "01097555623"}, {"name": "ㅡ수현", "phone": "01045258018"}, {"name": "상담문의 ㅡ고2", "phone": "01038050546"}, {"name": "학생어머니", "phone": "01085653625"}, {"name": "임윤서 어머니", "phone": "01034457353"}, {"name": "김민정 어머님 중3", "phone": "01092696170"}, {"name": "상담문의 초6", "phone": "01064858205"}, {"name": "신가은", "phone": "01074092545"}, {"name": "규현어머니", "phone": "01025346381"}, {"name": "신가은 고1어머니", "phone": "01032991120"}, {"name": "김민서 어머님 ㅡ재희친구", "phone": "01028833614"}, {"name": "해온", "phone": "01089556508"}, {"name": "알바 남", "phone": "01095112948"}, {"name": "도규민어머니", "phone": "01024678524"}, {"name": "도현도윤어머니", "phone": "01064051407"}, {"name": "류도현", "phone": "01089001031"}, {"name": "류도윤", "phone": "01091101031"}, {"name": "김예경 ㅡ고1", "phone": "01086863078"}, {"name": "김예경 어머님", "phone": "01089193078"}, {"name": "재민", "phone": "01093942028"}, {"name": "김민솔 ㅡ", "phone": "01028196170"}, {"name": "임윤서", "phone": "01031637353"}, {"name": "한서준어머님", "phone": "01031319802"}, {"name": "승현동생", "phone": "01048651660"}, {"name": "김민서 ㅡ", "phone": "01058503614"}, {"name": "경도윤", "phone": "01041527424"}, {"name": "김민정", "phone": "01059336170"}, {"name": "백소윤어머님", "phone": "01046325378"}, {"name": "정지율 어머니 초6", "phone": "01031925651"}, {"name": "아섬 ㅡ", "phone": "01075943265"}, {"name": "김수민 중3어머니", "phone": "01027971760"}, {"name": "ㅡ초6 상담문의 토 11:30", "phone": "01075874129"}, {"name": "한서준", "phone": "01039143372"}, {"name": "백소윤 ㅡ초6", "phone": "01047735378"}, {"name": "신혜주", "phone": "01086281625"}, {"name": "델타 지혜", "phone": "01059591282"}, {"name": "안심중 2상담", "phone": "01054410455"}, {"name": "홍서진 초3어머니", "phone": "01057299908"}, {"name": "ㅡ", "phone": "01085750683"}, {"name": "최연우 어머님 (중1)", "phone": "01041776865"}, {"name": "정지율", "phone": "01034925651"}, {"name": "최연우 중1", "phone": "01058146865"}, {"name": "상담문의( 초6)", "phone": "01041161937"}, {"name": "고2상담", "phone": "01065081136"}, {"name": "강동초4 전성현 어머니", "phone": "01040847353"}, {"name": "김수민 초4어머니", "phone": "01051487035"}, {"name": "상담문의 고1", "phone": "01025131393"}, {"name": "고1상담 (동부 ㅡ남)", "phone": "01020105885"}, {"name": "지혜", "phone": "01062564171"}, {"name": "상담문의 ㅡ초44444", "phone": "01050423560"}, {"name": "코오롱하늘채 광고", "phone": "01045904363"}, {"name": "김수민 초4", "phone": "01049191318"}, {"name": "전성현 초4", "phone": "01040547353"}, {"name": "이연희 어머님 새론중2", "phone": "01026728028"}, {"name": "이준혁 고2동부", "phone": "01091387650"}, {"name": "황가율 (중1)어머니", "phone": "01085899581"}, {"name": "황가율", "phone": "01065799581"}, {"name": "김수민 ㅡ중3", "phone": "01072886006"}, {"name": "김지우 (동생) ㅡ동부", "phone": "01091486434"}, {"name": "김시우 (언니) ㅡ동부", "phone": "01091466434"}, {"name": "지원자 @", "phone": "01048773960"}, {"name": "은승민 고2어머니", "phone": "01028132013"}, {"name": "민현서 어머님 고1", "phone": "01058867357"}, {"name": "안심중3상담", "phone": "01035188441"}, {"name": "안심중 상담 중1", "phone": "01055900080"}, {"name": "경찰서", "phone": "0539603279"}, {"name": "민현서(강동고1)", "phone": "01024927357"}, {"name": "채현 어머니", "phone": "01047412639"}, {"name": "윤서희 중2 어머니", "phone": "01072253521"}, {"name": "은승민", "phone": "01049934942"}, {"name": "유순열 중1", "phone": "01045017333"}, {"name": "시우어머니", "phone": "01035307806"}, {"name": "윤서희 중2", "phone": "01099193521"}, {"name": "중2 연희", "phone": "01057098028"}, {"name": "김도연 어머님", "phone": "01031544577"}, {"name": "현서아버님", "phone": "01031615872"}, {"name": "박재형 ㅡ?", "phone": "01052146541"}, {"name": "변주원 어머님", "phone": "01028242825"}, {"name": "권채현", "phone": "01047912639"}, {"name": "성연후어머님", "phone": "01068630898"}, {"name": "상담문의 ㅡ중2(())", "phone": "01065167361"}, {"name": "강동고2 상담-----", "phone": "01082998022"}, {"name": "이민지 어머님", "phone": "01093608777"}, {"name": "양하윤 어머님", "phone": "01056341022"}, {"name": "유순열아버님", "phone": "01088507333"}, {"name": "김태림 고1", "phone": "01074064869"}, {"name": "구민채 중2", "phone": "01094560351"}, {"name": "박정은", "phone": "01023001222"}, {"name": "김소윤 경욱 어머니", "phone": "01093800059"}, {"name": "박수민어머님 월요일시작", "phone": "01085603512"}, {"name": "류다인", "phone": "01082411301"}, {"name": "김소윤 중3", "phone": "01094305090"}, {"name": "민경어머님", "phone": "01045170009"}, {"name": "민경", "phone": "01053092790"}, {"name": "류다인어머님", "phone": "01034451301"}, {"name": "최준성 어머니 중1", "phone": "01088995598"}, {"name": "더단단 (안심)", "phone": "01086240646"}, {"name": "광고", "phone": "01046956078"}, {"name": "고은봄 강동중1", "phone": "01082178624"}, {"name": "고은봄어머니 중1", "phone": "01047641118"}, {"name": "최준성", "phone": "01097325598"}, {"name": "중3김서현 어머님", "phone": "01093618803"}, {"name": "최윤수어머니", "phone": "01085960093"}, {"name": "박경아 어머님", "phone": "01028079176"}, {"name": "황수빈 어머님", "phone": "01049393406"}, {"name": "일요일 10시20분상담", "phone": "01046022696"}, {"name": "황수빈", "phone": "01086973406"}, {"name": "김경욱 ㅡ학생", "phone": "01092315090"}, {"name": "최지수어머님", "phone": "01038843495"}, {"name": "임형서 어머니(고1)", "phone": "01034579524"}, {"name": "보경어머님", "phone": "01094441381"}, {"name": "ㅅㄷ문의 고2고모", "phone": "01025324125"}, {"name": "이보경 (학생)", "phone": "01093881381"}, {"name": "일요일 8시 상담", "phone": "01043871130"}, {"name": "채윤", "phone": "01072002802"}, {"name": "신혜주  학생", "phone": "01053521625"}, {"name": "지형 ㅡ중2", "phone": "01071782747"}, {"name": "조윤서=국제고 어머님", "phone": "01063554459"}, {"name": "원재 친구 어머니", "phone": "01020524640"}, {"name": "박진범 (원재)", "phone": "01085734640"}, {"name": "조윤서(중2)국제고", "phone": "01086242388"}, {"name": "고1 윤하경(동부)", "phone": "01026330749"}, {"name": "박경아 중1", "phone": "01047657837"}, {"name": "김서현 (중3 남)", "phone": "01037689361"}, {"name": "이정윤 어머니", "phone": "01025367927"}, {"name": "양하윤", "phone": "01090361925"}, {"name": "이정윤 (중2)", "phone": "01036296139"}, {"name": "김도연", "phone": "01052094577"}, {"name": "이서현 (새론 중3)", "phone": "01064285300"}, {"name": "박정후 (중2)", "phone": "01082973780"}, {"name": "박정후 어머님", "phone": "01093583789"}, {"name": "2월시작 --초6--중3", "phone": "01042971158"}, {"name": "이서현 어머니", "phone": "01073265300"}, {"name": "구민채 어머님", "phone": "01097870351"}, {"name": "이지형 어머님", "phone": "01050832747"}, {"name": "전윤서 어머님", "phone": "01051564386"}, {"name": "박성은 (고1)", "phone": "01022592098"}, {"name": "서민지(고1)", "phone": "01092165683"}, {"name": "부재중0101", "phone": "01041743935"}, {"name": "손희원아버님 새론중2", "phone": "01074017499"}, {"name": "부재중0104", "phone": "01033254940"}, {"name": "부재중0105", "phone": "01082879123"}, {"name": "김가윤어먼ㅁ", "phone": "01035007105"}, {"name": "석하음어머님", "phone": "01050145196"}, {"name": "최현호 초6어머니", "phone": "01092819811"}, {"name": "강윤우 어머니 초5", "phone": "01030490993"}, {"name": "2:30  금요일상담", "phone": "01058826315"}, {"name": "태림어머니", "phone": "01063628091"}, {"name": "과학고 중3", "phone": "01033359986"}, {"name": "토요일 12:40분상담", "phone": "01050924979"}, {"name": "이현지 어머니", "phone": "01063726655"}, {"name": "오준우 어머니", "phone": "01020397829"}, {"name": "목요일 2:10상담", "phone": "01089691362"}, {"name": "초6ㅡ수요일상담", "phone": "01028074481"}, {"name": "장민경 11", "phone": "01045482709"}, {"name": "김단비어머니", "phone": "01045141496"}, {"name": "윤수", "phone": "01074600093"}, {"name": "노베이스 예비고1", "phone": "01045225124"}, {"name": "내일 2:10 상담", "phone": "01020409884"}, {"name": "이지호 어머님 2학년", "phone": "01093782867"}, {"name": "4시 예비중1", "phone": "01050477931"}, {"name": "임형서", "phone": "01020109524"}, {"name": "혜인", "phone": "01052471301"}, {"name": "오준우", "phone": "01084632945"}, {"name": "최희란 어머니 (초6)내성", "phone": "01072715789"}, {"name": "손예나", "phone": "01080344979"}, {"name": "지수윤어머니", "phone": "01067735432"}, {"name": "박성은 어머니", "phone": "01045282098"}, {"name": "예비초3(전상후어머니", "phone": "01054485975"}, {"name": "현혜 어머니 (고2)", "phone": "01022455914"}, {"name": "지수윤", "phone": "01036845286"}, {"name": "석하음", "phone": "01021155196"}, {"name": "리원어머니", "phone": "01095677525"}, {"name": "이유빈어머니", "phone": "01094248166"}, {"name": "내일 2:30분상담", "phone": "01097658146"}, {"name": "손예성 어머님", "phone": "01038321386"}, {"name": "박현혜", "phone": "01054138603"}, {"name": "이정우 어머니", "phone": "01052254368"}, {"name": "박혜림 ....친구 예비고1", "phone": "01097631365"}, {"name": "김리원 고1", "phone": "01096127525"}, {"name": "이혜림", "phone": "01038792011"}, {"name": "서민지  어머니", "phone": "01093655683"}, {"name": "이정우", "phone": "01063204368"}, {"name": "손예성", "phone": "01086721386"}, {"name": "보민동생ㅡ시은", "phone": "01059611915"}, {"name": "안수빈", "phone": "01062404670"}, {"name": "박혜림어머니", "phone": "01039001365"}, {"name": "손희원", "phone": "01041787499"}, {"name": "중1 가윤", "phone": "01035007108"}, {"name": "초4신규 황지현 어머니", "phone": "01028079789"}, {"name": "이현지 중33333", "phone": "01088575464"}, {"name": "아민어머님", "phone": "01049148587"}, {"name": "이지아", "phone": "01035610242"}, {"name": "이현지아버님", "phone": "01066666835"}, {"name": "이슬 어머니", "phone": "01075521895"}, {"name": "이슬", "phone": "01081311895"}, {"name": "이채율어머니 동부고2", "phone": "01055629730"}, {"name": "이채율", "phone": "01031689730"}, {"name": "박수민", "phone": "01097943512"}, {"name": "수요일3시반상담 줗1", "phone": "01090373330"}, {"name": "아민", "phone": "01087378587"}, {"name": "상담문의 고1ㅡ5월6일", "phone": "01085723885"}, {"name": "유빈", "phone": "+821021328166"}, {"name": "성연후", "phone": "01087390895"}, {"name": "승연", "phone": "01041323169"}, {"name": "희란", "phone": "01057515268"}, {"name": "엄은빈 어머니", "phone": "01037619127"}, {"name": "상담문의 0430-2", "phone": "01045197405"}, {"name": "김려진어머니 ㅡ중3", "phone": "01027000015"}, {"name": "동부고2 김초현어머니", "phone": "01048052305"}, {"name": "윤시우 중3어머니", "phone": "01094704320"}, {"name": "고3확통", "phone": "+821074007874"}, {"name": "내일4시반 고2", "phone": "01086834263"}, {"name": "이다빈 중3어머니", "phone": "01043112239"}, {"name": "문수현 어머니", "phone": "01087902105"}, {"name": "문수현 중3", "phone": "01021352105"}, {"name": "최승은", "phone": "01083569811"}, {"name": "중3 김수현", "phone": "01041710699"}, {"name": "김수현 어머니 중3", "phone": "01084855106"}, {"name": "문설희 고1", "phone": "01027838146"}, {"name": "화요일7시반 상담 중!", "phone": "01081411150"}, {"name": "윤시우", "phone": "01040784320"}, {"name": "서영어머니(재수)", "phone": "01092376079"}, {"name": "과고준비 새론중2", "phone": "01029835859"}, {"name": "박지현 어머니", "phone": "01038168522"}, {"name": "박지현 중3", "phone": "01041198522"}, {"name": "차세현아버님", "phone": "01037452569"}, {"name": "서성윤어머님", "phone": "01077917690"}, {"name": "김한결어머님 새론중2", "phone": "01065085588"}];
+
+const GRADE_TOKENS = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
+const PARENT_MARKERS = ['어머님','어머니','엄마','맘','아버님','아버지','아빠'];
+const NOISE_WORDS = ['상담','문의','예약','방문','온라인','당근','예비','부모님','학생','쌍둥이','국제','신규','재원','퇴원','휴원','확인','안내','가능','불가','대기','완료','취소','문자','전화','카톡','수업','시간','시반'];
+
+function extractCandidates(rawName){
+  let s = rawName;
+  let isParent = false;
+  PARENT_MARKERS.forEach(m => { if(s.includes(m)){ isParent = true; s = s.split(m).join(' '); } });
+  GRADE_TOKENS.forEach(g => { s = s.split(g).join(' '); });
+  s = s.replace(/[()·ㅡ\-\/\d?!.,~♡★☆_=]/g, ' ');
+  const tokens = s.split(/\s+/).filter(Boolean);
+  const candidates = tokens.filter(t => /^[가-힣]{2,4}$/.test(t) && !NOISE_WORDS.includes(t));
+  return { candidates: [...new Set(candidates)], isParent };
+}
+
+function findStudentMatches(candidate, list){
+  return list.filter(s => s.name === candidate || (s.name.length - candidate.length === 1 && s.name.endsWith(candidate)));
+}
+
+let matchedRows = [];   // {contact, student, field, key}
+let ambiguousRows = []; // {contact, candidates:[student,...], field}
+let unmatchedRows = []; // {contact}
+
+function runMatching(){
+  matchedRows = [];
+  ambiguousRows = [];
+  unmatchedRows = [];
+
+  CONTACTS.forEach(contact => {
+    const { candidates, isParent } = extractCandidates(contact.name);
+    const field = isParent ? 'parentPhone' : 'phone';
+    let allMatched = [];
+    candidates.forEach(c => {
+      findStudentMatches(c, students).forEach(s => {
+        if(!allMatched.some(m => m.id === s.id)) allMatched.push(s);
+      });
+    });
+
+    if(allMatched.length === 1){
+      matchedRows.push({ contact, student: allMatched[0], field });
+    }else if(allMatched.length > 1){
+      ambiguousRows.push({ contact, candidates: allMatched, field });
+    }else{
+      unmatchedRows.push({ contact });
+    }
+  });
+
+  renderAll();
+}
+
+function fieldTag(field){
+  return field === 'parentPhone'
+    ? '<span class="tag parent">학부모</span>'
+    : '<span class="tag student">학생</span>';
+}
+
+function renderAll(){
+  document.getElementById('statMatched').textContent = matchedRows.length;
+  document.getElementById('statAmbiguous').textContent = ambiguousRows.length;
+  document.getElementById('statUnmatched').textContent = unmatchedRows.length;
+
+  const matchedBox = document.getElementById('matchedList');
+  matchedBox.innerHTML = matchedRows.length ? matchedRows.map((r, i) => `
+    <div class="row">
+      <input type="checkbox" checked data-kind="matched" data-idx="${i}">
+      <span class="orig">${escapeHtml(r.contact.name)}</span>
+      <span class="arrow">→</span>
+      <span class="stuname">${escapeHtml(r.student.name)}</span>
+      ${fieldTag(r.field)}
+      <span class="phone">${escapeHtml(r.contact.phone)}</span>
+    </div>
+  `).join('') : `<div class="empty-msg">자동 매칭된 항목이 없습니다.</div>`;
+
+  const ambigBox = document.getElementById('ambiguousList');
+  ambigBox.innerHTML = ambiguousRows.length ? ambiguousRows.map((r, i) => `
+    <div class="row">
+      <input type="checkbox" data-kind="ambiguous" data-idx="${i}">
+      <span class="orig">${escapeHtml(r.contact.name)}</span>
+      <span class="arrow">→</span>
+      <select data-kind="ambiguous-select" data-idx="${i}">
+        <option value="">선택 안 함</option>
+        ${r.candidates.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)}, ${escapeHtml(s.school)})</option>`).join('')}
+      </select>
+      ${fieldTag(r.field)}
+      <span class="phone">${escapeHtml(r.contact.phone)}</span>
+    </div>
+  `).join('') : `<div class="empty-msg">확인이 필요한 항목이 없습니다.</div>`;
+
+  const unmatchedCountHint = document.getElementById('unmatchedCountHint');
+  unmatchedCountHint.textContent = `(${unmatchedRows.length}건)`;
+  const unmatchedBox = document.getElementById('unmatchedList');
+  unmatchedBox.innerHTML = unmatchedRows.length ? unmatchedRows.map(r => `
+    <div class="row">
+      <span class="orig" style="flex:1;">${escapeHtml(r.contact.name)}</span>
+      <span class="phone">${escapeHtml(r.contact.phone)}</span>
+    </div>
+  `).join('') : `<div class="empty-msg">없음</div>`;
+}
+
+function toggleUnmatched(){
+  const box = document.getElementById('unmatchedList');
+  const icon = document.getElementById('unmatchedToggleIcon');
+  const isOpen = box.style.display !== 'none';
+  box.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '▸' : '▾';
+}
+
+function applyMatches(){
+  const updates = {}; // studentId -> {phone, parentPhone}
+
+  // 자동 매칭된 것 중 체크된 것
+  document.querySelectorAll('input[data-kind="matched"]:checked').forEach(cb => {
+    const r = matchedRows[parseInt(cb.dataset.idx, 10)];
+    if(!updates[r.student.id]) updates[r.student.id] = {};
+    updates[r.student.id][r.field] = r.contact.phone;
+  });
+
+  // 후보 여러명 중 체크 + 선택된 것
+  document.querySelectorAll('input[data-kind="ambiguous"]:checked').forEach(cb => {
+    const idx = cb.dataset.idx;
+    const sel = document.querySelector(`select[data-idx="${idx}"][data-kind="ambiguous-select"]`);
+    const studentId = sel ? sel.value : '';
+    if(!studentId) return;
+    const r = ambiguousRows[parseInt(idx, 10)];
+    if(!updates[studentId]) updates[studentId] = {};
+    updates[studentId][r.field] = r.contact.phone;
+  });
+
+  const ids = Object.keys(updates);
+  if(!ids.length){ alert('반영할 항목을 선택해 주세요.'); return; }
+  if(!confirm(`${ids.length}명의 학생 정보에 연락처를 반영하시겠습니까?\n(이미 입력되어 있던 연락처는 덮어쓰기 됩니다)`)) return;
+
+  ids.forEach(id => {
+    db.ref('students/' + id).update(updates[id]);
+  });
+
+  const resultEl = document.getElementById('applyResult');
+  resultEl.style.display = 'block';
+  resultEl.textContent = `✓ 학생 ${ids.length}명의 연락처를 반영했습니다. 관리자 페이지에서 확인해보세요.`;
+}
+
+db.ref('students').once('value').then(snap => {
+  const val = snap.val() || {};
+  students = Object.entries(val).map(([id, v]) => ({ id, ...v }));
+  runMatching();
+}).catch(err => {
+  document.getElementById('matchedList').innerHTML = `<div class="empty-msg">학생 목록을 불러오지 못했습니다: ${err.message}</div>`;
+});
+</script>
+</body>
+</html>
