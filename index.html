@@ -334,6 +334,21 @@
     cursor:pointer;transition:opacity .12s ease;
   }
   .teacher-chip.hidden-teacher{opacity:0.35;}
+  .event-type-toggle{cursor:pointer;user-select:none;transition:opacity .12s ease;}
+  .event-type-toggle.hidden-type{opacity:0.35;text-decoration:line-through;}
+  .school-period-band{
+    grid-column:1/-1;display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:2px;
+  }
+  .school-period-band .band-label{
+    border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .school-period-band .band-label.시험기간{background:var(--color-danger-soft);color:var(--color-danger);}
+  .school-period-band .band-label.방학{background:#E6F1FB;color:#0C447C;}
+  .bigcal-cell.period-시험기간{background:var(--color-danger-soft);}
+  .bigcal-cell.period-방학{background:#E6F1FB;}
+  .school-period-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:6px;font-size:12.5px;}
+  .school-period-row .badge.시험기간{background:var(--color-danger-soft);color:var(--color-danger);}
+  .school-period-row .badge.방학{background:#E6F1FB;color:#0C447C;}
   .teacher-chip .t-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
   .bc-teacher-dots{display:flex;gap:3px;flex-wrap:wrap;margin-top:auto;padding-top:2px;}
   .bc-teacher-dots .t-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
@@ -873,10 +888,10 @@
               <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
             </div>
-            <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);">
-              <span><i class="dot event-dot-시험"></i>시험</span>
-              <span><i class="dot event-dot-상담"></i>상담</span>
-              <span><i class="dot event-dot-기타"></i>기타</span>
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);" id="eventTypeLegend">
+              <span class="event-type-toggle" data-type="시험" onclick="toggleEventTypeVisibility('시험')"><i class="dot event-dot-시험"></i>시험</span>
+              <span class="event-type-toggle" data-type="상담" onclick="toggleEventTypeVisibility('상담')"><i class="dot event-dot-상담"></i>상담</span>
+              <span class="event-type-toggle" data-type="기타" onclick="toggleEventTypeVisibility('기타')"><i class="dot event-dot-기타"></i>기타</span>
             </div>
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
@@ -912,6 +927,36 @@
             <p class="cell-muted" style="font-size:11.5px;margin:-6px 0 10px 0;">누군가 휴무이면, 그날 대신 오시는 다른 선생님의 상태도 함께 "출근"으로 눌러 표시해 주세요.</p>
             <div id="teacherDayStatus"></div>
           </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">학교별 방학·시험기간 <span class="hint">달력에 색으로 표시돼요</span></div>
+          <div class="form-row">
+            <div class="field" style="flex:1.2;">
+              <label>학교</label>
+              <select id="schoolPeriodSchool"></select>
+            </div>
+            <div class="field" style="flex:0 0 110px;">
+              <label>종류</label>
+              <select id="schoolPeriodType">
+                <option value="시험기간">시험기간</option>
+                <option value="방학">방학</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>시작일</label>
+              <input type="date" id="schoolPeriodStart">
+            </div>
+            <div class="field">
+              <label>종료일</label>
+              <input type="date" id="schoolPeriodEnd">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-primary" onclick="addSchoolPeriod()">+ 추가</button>
+          </div>
+          <div class="divider"></div>
+          <div id="schoolPeriodList"></div>
         </div>
 
         <div class="card section-gap">
@@ -1148,6 +1193,8 @@ const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 const TEACHER_COLORS = ['#3B82F6','#8B5CF6','#10B981','#F97316','#EC4899','#06B6D4','#84CC16','#F43F5E'];
 let hiddenTeacherIds = JSON.parse(localStorage.getItem('hiddenTeacherIds') || '[]');
+let hiddenEventTypes = JSON.parse(localStorage.getItem('hiddenEventTypes') || '[]');
+let schoolPeriods = []; // {id, school, type('시험기간'|'방학'), startDate, endDate, createdAt}
 
 function snapshotToArray(snapVal){
   if(!snapVal) return [];
@@ -1196,6 +1243,10 @@ db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
+});
+db.ref('schoolPeriods').on('value', snap => {
+  schoolPeriods = snapshotToArray(snap.val());
+  if(currentView === 'calendar'){ renderBigCalendar(); renderSchoolPeriodList(); }
 });
 db.ref('examSubjects').on('value', snap => {
   examSubjects = snap.val() || {};
@@ -1661,7 +1712,7 @@ function switchView(view){
 
   if(view === 'dashboard') renderDashboard();
   if(view === 'attendance') renderAttendance();
-  if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); }
+  if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
@@ -1921,6 +1972,7 @@ function renderBigCalendar(){
   if(!grid || !label) return;
 
   label.textContent = `${dashCalYear}년 ${dashCalMonth + 1}월`;
+  renderEventTypeLegend();
 
   const firstWeekday = new Date(dashCalYear, dashCalMonth, 1).getDay();
   const daysInMonth = new Date(dashCalYear, dashCalMonth + 1, 0).getDate();
@@ -1932,14 +1984,23 @@ function renderBigCalendar(){
   }
   for(let d = 1; d <= daysInMonth; d++){
     const dateStr = `${dashCalYear}-${String(dashCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayEvents = events.filter(e => e.date === dateStr);
+    const dayEvents = events.filter(e => e.date === dateStr && !hiddenEventTypes.includes(e.type));
     let cls = '';
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
+
+    const periodsToday = schoolPeriodsForDate(dateStr);
+    if(periodsToday.length) cls += ' period-' + periodsToday[0].type;
+
+    const periodLabels = periodsToday
+      .filter(p => p.startDate === dateStr || d === 1) // 기간 시작일, 또는 이번 달 첫날에 넘어온 기간도 표시
+      .map(p => `<span class="bc-chip" style="background:${p.type === '시험기간' ? 'var(--color-danger-soft)' : '#E6F1FB'};color:${p.type === '시험기간' ? 'var(--color-danger)' : '#0C447C'};font-weight:700;">${escapeHtml(p.school)} ${escapeHtml(p.type)}</span>`)
+      .join('');
+
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     const teacherChips = workingTeachers.map(t => `<span class="bc-chip-teacher" style="background:${t.color}26;color:${t.color};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`).join('');
-    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${chips}${teacherChips}</div>`;
+    cells += `<div class="bigcal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${periodLabels}${chips}${teacherChips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -2216,6 +2277,73 @@ function toggleAllTeacherVisibility(){
   localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
   renderTeacherLegend();
   renderBigCalendar();
+}
+
+/* ===== 시험/상담/기타 종류별 숨기기 ===== */
+function toggleEventTypeVisibility(type){
+  hiddenEventTypes = hiddenEventTypes.includes(type) ? hiddenEventTypes.filter(x=>x!==type) : [...hiddenEventTypes, type];
+  localStorage.setItem('hiddenEventTypes', JSON.stringify(hiddenEventTypes));
+  renderEventTypeLegend();
+  renderBigCalendar();
+}
+
+function renderEventTypeLegend(){
+  document.querySelectorAll('#eventTypeLegend .event-type-toggle').forEach(el => {
+    el.classList.toggle('hidden-type', hiddenEventTypes.includes(el.dataset.type));
+  });
+}
+
+/* ===== 학교별 방학·시험기간 ===== */
+function populateSchoolPeriodSchoolSelect(){
+  const sel = document.getElementById('schoolPeriodSchool');
+  if(!sel) return;
+  const prev = sel.value;
+  const schools = [...new Set(students.map(s => s.school).filter(Boolean))].sort((a,b)=> a.localeCompare(b,'ko'));
+  sel.innerHTML = schools.length
+    ? schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('')
+    : `<option value="">등록된 학교 없음</option>`;
+  if(schools.includes(prev)) sel.value = prev;
+}
+
+function addSchoolPeriod(){
+  const school = document.getElementById('schoolPeriodSchool').value;
+  const type = document.getElementById('schoolPeriodType').value;
+  const startDate = document.getElementById('schoolPeriodStart').value;
+  const endDate = document.getElementById('schoolPeriodEnd').value;
+  if(!school){ alert('학교를 선택해 주세요.'); return; }
+  if(!startDate || !endDate){ alert('시작일과 종료일을 입력해 주세요.'); return; }
+  if(endDate < startDate){ alert('종료일이 시작일보다 빠를 수 없습니다.'); return; }
+  db.ref('schoolPeriods').push({ school, type, startDate, endDate, createdAt: Date.now() });
+  document.getElementById('schoolPeriodStart').value = '';
+  document.getElementById('schoolPeriodEnd').value = '';
+  showToast('기간이 추가되었습니다.');
+}
+
+function deleteSchoolPeriod(id){
+  if(!confirm('이 기간을 삭제하시겠습니까?')) return;
+  db.ref('schoolPeriods/' + id).remove();
+}
+
+function renderSchoolPeriodList(){
+  const box = document.getElementById('schoolPeriodList');
+  if(!box) return;
+  if(!schoolPeriods.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 방학·시험기간이 없습니다.</div>`;
+    return;
+  }
+  const sorted = [...schoolPeriods].sort((a,b)=> a.startDate.localeCompare(b.startDate));
+  box.innerHTML = sorted.map(p => `
+    <div class="school-period-row">
+      <span class="badge ${p.type}">${escapeHtml(p.type)}</span>
+      <strong>${escapeHtml(p.school)}</strong>
+      <span class="cell-muted">${formatDateKR(p.startDate)} ~ ${formatDateKR(p.endDate)}</span>
+      <button class="btn btn-danger-outline btn-sm" style="margin-left:auto;" onclick="deleteSchoolPeriod('${p.id}')">삭제</button>
+    </div>
+  `).join('');
+}
+
+function schoolPeriodsForDate(dateStr){
+  return schoolPeriods.filter(p => dateStr >= p.startDate && dateStr <= p.endDate);
 }
 
 function renderTeacherDayStatus(){
