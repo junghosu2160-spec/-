@@ -1116,7 +1116,8 @@ const db = firebase.database();
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
-let makeupDismissed = {}; // {attendanceId: true} - "보강 안함" 처리된 결석 기록
+let makeupDismissed = {}; // {"studentId_date": true} - "보강 안함" 처리된 결석
+let autoAbsenceExcluded = {}; // {"studentId_date": true} - 직접 삭제해서 자동 결석 처리 대상에서 뺀 날짜
 let selectedAbsenceIds = new Set(); // 보강 리스트 일괄삭제용 선택 상태
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
 let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
@@ -1149,6 +1150,9 @@ db.ref('makeupSchedules').on('value', snap => {
 db.ref('makeupDismissed').on('value', snap => {
   makeupDismissed = snap.val() || {};
   if(currentView === 'attendance') renderWeeklyAbsentList();
+});
+db.ref('autoAbsenceExcluded').on('value', snap => {
+  autoAbsenceExcluded = snap.val() || {};
 });
 db.ref('scores').on('value', snap => {
   scores = snapshotToArray(snap.val());
@@ -2991,7 +2995,7 @@ function renderWeeklyAbsentList(){
 
   const absences = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
-    .filter(a => !makeupDismissed[a.id]) // "보강 안함" 처리된 건 목록에서 제외
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강 안함" 처리된 건 목록에서 제외
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu)
     .map(a => {
@@ -3025,8 +3029,8 @@ function renderWeeklyAbsentList(){
              <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>`
           : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
              <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>
-             <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.id}')">보강 안함</button>
-             <button class="btn btn-danger-outline btn-sm" onclick="deleteAbsenceRecord('${a.id}')">삭제</button>`}
+             <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강 안함</button>
+             <button class="btn btn-danger-outline btn-sm" onclick="deleteAbsenceRecord('${a.id}','${a.studentId}','${a.date}')">삭제</button>`}
       </div>`;
   };
 
@@ -3090,7 +3094,7 @@ function toggleSelectAllAbsences(checked){
   const start = fmt(lookbackStart);
   const end = todayStr();
   const ids = attendance
-    .filter(a => a.status === '결석' && a.date >= start && a.date <= end && !makeupDismissed[a.id])
+    .filter(a => a.status === '결석' && a.date >= start && a.date <= end && !makeupDismissed[`${a.studentId}_${a.date}`])
     .map(a => a.id);
   if(checked) ids.forEach(id => selectedAbsenceIds.add(id));
   else ids.forEach(id => selectedAbsenceIds.delete(id));
@@ -3100,8 +3104,12 @@ function toggleSelectAllAbsences(checked){
 function bulkDeleteSelectedAbsences(){
   const ids = [...selectedAbsenceIds];
   if(!ids.length) return;
-  if(!confirm(`선택한 결석 기록 ${ids.length}건을 삭제하시겠습니까?\n출결 이력에서도 사라지고, 되돌릴 수 없습니다.`)) return;
-  ids.forEach(id => db.ref('attendance/' + id).remove());
+  if(!confirm(`선택한 결석 기록 ${ids.length}건을 삭제하시겠습니까?\n출결 이력에서도 사라지고, 되돌릴 수 없습니다.\n(이 날짜들은 앞으로 자동 결석 처리 대상에서도 제외돼요)`)) return;
+  ids.forEach(id => {
+    const rec = attendance.find(a => a.id === id);
+    db.ref('attendance/' + id).remove();
+    if(rec) db.ref(`autoAbsenceExcluded/${rec.studentId}_${rec.date}`).set(true);
+  });
   selectedAbsenceIds.clear();
   showToast(`결석 기록 ${ids.length}건을 삭제했습니다.`);
 }
@@ -3113,14 +3121,15 @@ function scheduleMakeup(studentId, inputId, absenceDate){
   showToast('보강 일정이 등록되었습니다. 그 날짜 출결 화면에 자동으로 나타나요.');
 }
 
-function dismissMakeup(attendanceId){
-  db.ref('makeupDismissed/' + attendanceId).set(true);
+function dismissMakeup(studentId, date){
+  db.ref(`makeupDismissed/${studentId}_${date}`).set(true);
   showToast('이 결석은 보강 목록에서 제외했습니다.');
 }
 
-function deleteAbsenceRecord(attendanceId){
-  if(!confirm('이 결석 기록을 삭제하시겠습니까? 출결 이력에서도 사라지고, 되돌릴 수 없습니다.')) return;
+function deleteAbsenceRecord(attendanceId, studentId, date){
+  if(!confirm('이 결석 기록을 삭제하시겠습니까? 출결 이력에서도 사라지고, 되돌릴 수 없습니다.\n(이 날짜는 앞으로 자동 결석 처리 대상에서도 제외돼요)')) return;
   db.ref('attendance/' + attendanceId).remove();
+  db.ref(`autoAbsenceExcluded/${studentId}_${date}`).set(true); // 다음날 자동 결석 처리로 다시 살아나지 않도록 표시
   showToast('결석 기록이 삭제되었습니다.');
 }
 
@@ -3650,6 +3659,7 @@ function autoMarkPastAbsences(){
       if(!scheduledTime) return;
       if(s.createdAt && new Date(s.createdAt) > new Date(dateStr + 'T23:59:59')) return; // 등록 전 날짜는 제외
       if(getAttendanceRecord(s.id, dateStr)) return; // 이미 기록이 있으면 건드리지 않음
+      if(autoAbsenceExcluded[`${s.id}_${dateStr}`]) return; // 직접 삭제해서 "이 날은 자동 결석 처리하지 마" 표시된 경우 제외
       db.ref('attendance').push({ studentId: s.id, date: dateStr, status:'결석', memo:'자동 결석 처리', createdAt: Date.now() });
     });
   }
