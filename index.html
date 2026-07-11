@@ -256,11 +256,15 @@
   .timetable-headcount .tc-total-btn:hover{background:var(--color-border);}
   .timetable-student-popup{
     padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface-alt);
-    min-width:220px;max-width:280px;
+    min-width:260px;max-width:320px;
   }
   .timetable-student-popup .tp-title{font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;}
-  .timetable-student-popup .tp-names{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
-  .timetable-student-popup .tp-name{background:var(--color-surface);border-radius:4px;padding:2px 6px;font-size:10.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .timetable-student-popup .tp-names{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .timetable-student-popup .tp-name{
+    background:var(--color-surface);border-radius:6px;padding:5px 4px;font-size:11px;text-align:center;
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+  }
+  .timetable-student-popup .tp-name .badge{font-size:9.5px;padding:1px 6px;}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .legend-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;padding-left:14px;}
 
@@ -1974,7 +1978,7 @@ function showTimetableStudents(day, time){
         <span class="link-btn" onclick="document.getElementById('timetableStudentPopup').innerHTML='';">닫기</span>
       </div>
       <div class="tp-names">
-        ${list.map(s => `<span class="tp-name">${escapeHtml(s.name)} ${gradeBadge(s.grade)}</span>`).join('') || '<span class="cell-muted">학생이 없습니다.</span>'}
+        ${list.map(s => `<span class="tp-name"><span>${escapeHtml(s.name)}</span>${gradeBadge(s.grade)}</span>`).join('') || '<span class="cell-muted">학생이 없습니다.</span>'}
       </div>
     </div>`;
 }
