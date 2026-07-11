@@ -233,30 +233,34 @@
   .donut-center-sub{font-size:10.5px;fill:var(--color-text-muted);}
   .legend{display:flex;flex-direction:column;gap:8px;font-size:13px;}
   .legend-item{display:flex;align-items:center;gap:8px;}
-  .donut-wrap-compact{gap:14px;}
-  .donut-wrap-compact svg{width:112px;height:112px;}
-  .donut-wrap-compact .legend{font-size:12.5px;gap:5px;}
-  .timetable-headcount{width:100%;border-collapse:collapse;font-size:10px;}
-  .timetable-headcount th{padding:2px;color:var(--color-text-muted);font-weight:600;text-align:center;}
+  .donut-wrap-compact{gap:16px;}
+  .donut-wrap-compact svg{width:132px;height:132px;}
+  .donut-wrap-compact .legend{font-size:13.5px;gap:6px;}
+  .timetable-headcount{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .timetable-headcount th{padding:4px;color:var(--color-text-muted);font-weight:600;text-align:center;}
   .timetable-headcount th:first-child{text-align:left;}
-  .timetable-headcount td{text-align:center;padding:2px;}
+  .timetable-headcount td{text-align:center;padding:4px;}
   .timetable-headcount td:first-child{text-align:left;font-weight:700;}
   .timetable-headcount tr{border-top:1px solid var(--color-border);}
   .timetable-headcount tr.tt-total{border-top:2px solid var(--color-text-muted);font-weight:800;}
+  .timetable-headcount tr.tt-grand{color:var(--color-primary);}
   .timetable-headcount .tc-count{
-    background:#E6F1FB;color:#0C447C;border-radius:4px;font-weight:700;padding:1px 5px;display:inline-block;
-    cursor:pointer;border:none;font-size:10px;font-family:inherit;
+    background:#E6F1FB;color:#0C447C;border-radius:4px;font-weight:700;padding:2px 7px;display:inline-block;
+    cursor:pointer;border:none;font-size:12.5px;font-family:inherit;
   }
   .timetable-headcount .tc-count:hover{background:#CFE4F7;}
   .timetable-headcount .tc-count.tc-elem{background:#DFF7E9;color:#1B6B4A;cursor:default;}
   .timetable-headcount .tt-elem-label{color:#1B6B4A;}
   .timetable-headcount .tc-empty{color:var(--color-border);}
+  .timetable-headcount .tc-total-btn{background:var(--color-surface-alt);color:var(--color-text);}
+  .timetable-headcount .tc-total-btn:hover{background:var(--color-border);}
   .timetable-student-popup{
-    margin-top:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface-alt);
+    padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface-alt);
+    min-width:220px;max-width:280px;
   }
-  .timetable-student-popup .tp-title{font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;display:flex;justify-content:space-between;}
-  .timetable-student-popup .tp-names{display:flex;flex-wrap:wrap;gap:5px;}
-  .timetable-student-popup .tp-name{background:var(--color-surface);border-radius:4px;padding:2px 8px;font-size:11px;}
+  .timetable-student-popup .tp-title{font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px;}
+  .timetable-student-popup .tp-names{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;}
+  .timetable-student-popup .tp-name{background:var(--color-surface);border-radius:4px;padding:2px 6px;font-size:10.5px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .legend-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;padding-left:14px;}
 
@@ -653,10 +657,12 @@
                 <div class="donut-wrap donut-wrap-compact" id="gradeDonut"></div>
               </div>
               <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
-              <div style="flex:0 0 auto;max-width:260px;">
+              <div style="flex:0 0 auto;">
                 <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">타임별 등원 인원</div>
-                <div id="timetableHeadcount"></div>
-                <div id="timetableStudentPopup"></div>
+                <div style="display:flex;gap:12px;align-items:flex-start;">
+                  <div id="timetableHeadcount" style="flex:0 0 280px;"></div>
+                  <div id="timetableStudentPopup"></div>
+                </div>
               </div>
             </div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
@@ -1852,6 +1858,8 @@ function renderTimetableHeadcount(){
   const allDays = ['월','화','수','목','금','토'];
   const secondary = students.filter(s => !(s.grade || '').startsWith('초')); // 중·고
   const elementary = students.filter(s => (s.grade || '').startsWith('초'));
+  const middleSchool = students.filter(s => (s.grade || '').startsWith('중'));
+  const highSchool = students.filter(s => (s.grade || '').startsWith('고') || s.grade === 'N수/기타');
 
   // 중·고 학생들의 요일별 등원 시간 중 실제 등장하는 시간만 표 행으로 사용
   const timesSet = new Set();
@@ -1887,10 +1895,31 @@ function renderTimetableHeadcount(){
       }).join('')}
     </tr>`).join('');
 
-  const totalRow = `
+  const middleTotalRow = `
     <tr class="tt-total">
-      <td>총원(중·고)</td>
-      ${allDays.map(d => `<td>${countDay(secondary, d) || '-'}</td>`).join('')}
+      <td>중학생</td>
+      ${allDays.map(d => {
+        const n = countDay(middleSchool, d);
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID')">${n}</button>` : '-'}</td>`;
+      }).join('')}
+    </tr>`;
+
+  const highTotalRow = `
+    <tr class="tt-total">
+      <td>고등학생</td>
+      ${allDays.map(d => {
+        const n = countDay(highSchool, d);
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH')">${n}</button>` : '-'}</td>`;
+      }).join('')}
+    </tr>`;
+
+  const combinedTotalRow = `
+    <tr class="tt-total tt-grand">
+      <td>합계</td>
+      ${allDays.map(d => {
+        const n = countDay(secondary, d);
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY')">${n}</button>` : '-'}</td>`;
+      }).join('')}
     </tr>`;
 
   box.innerHTML = `
@@ -1901,7 +1930,9 @@ function renderTimetableHeadcount(){
       <tbody>
         ${elemRow}
         ${timeRows}
-        ${totalRow}
+        ${middleTotalRow}
+        ${highTotalRow}
+        ${combinedTotalRow}
       </tbody>
     </table>`;
 
@@ -1912,13 +1943,30 @@ function showTimetableStudents(day, time){
   const box = document.getElementById('timetableStudentPopup');
   if(!box) return;
   const isElem = time === 'ELEM';
+  const isMid = time === 'MID';
+  const isHigh = time === 'HIGH';
+  const isAllDay = time === 'ALLDAY';
+
   const list = students
     .filter(s => {
-      const elem = (s.grade || '').startsWith('초');
-      return isElem ? (elem && getDayTime(s, day)) : (!elem && getDayTime(s, day) === time);
+      const grade = s.grade || '';
+      const elem = grade.startsWith('초');
+      const mid = grade.startsWith('중');
+      const high = grade.startsWith('고') || grade === 'N수/기타';
+      if(isElem) return elem && getDayTime(s, day);
+      if(isMid) return mid && getDayTime(s, day);
+      if(isHigh) return high && getDayTime(s, day);
+      if(isAllDay) return !elem && getDayTime(s, day);
+      return !elem && getDayTime(s, day) === time;
     })
     .sort(compareByGradeThenName);
-  const title = isElem ? `${day}요일 초등부` : `${day}요일 ${time}`;
+
+  const title = isElem ? `${day}요일 초등부`
+    : isMid ? `${day}요일 중학생`
+    : isHigh ? `${day}요일 고등학생`
+    : isAllDay ? `${day}요일 합계`
+    : `${day}요일 ${time}`;
+
   box.innerHTML = `
     <div class="timetable-student-popup">
       <div class="tp-title">
