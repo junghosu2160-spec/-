@@ -236,6 +236,14 @@
   .donut-wrap-compact{gap:14px;}
   .donut-wrap-compact svg{width:92px;height:92px;}
   .donut-wrap-compact .legend{font-size:11.5px;gap:4px;}
+  .timetable-headcount{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .timetable-headcount th{padding:5px;color:var(--color-text-muted);font-weight:600;text-align:center;}
+  .timetable-headcount th:first-child{text-align:left;}
+  .timetable-headcount td{text-align:center;padding:5px;}
+  .timetable-headcount td:first-child{text-align:left;font-weight:700;}
+  .timetable-headcount tr{border-top:1px solid var(--color-border);}
+  .timetable-headcount .tc-count{background:var(--color-accent);color:#161616;border-radius:4px;font-weight:700;padding:3px 0;display:block;}
+  .timetable-headcount .tc-empty{color:var(--color-border);}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .legend-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;padding-left:14px;}
 
@@ -633,6 +641,9 @@
               </div>
             </div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
+            <div class="divider"></div>
+            <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">타임별 등원 인원 (중·고) <span class="hint" id="timetableSatSummary"></span></div>
+            <div id="timetableHeadcount"></div>
             <div class="divider"></div>
             <div class="toolbar" style="margin:0 0 8px 0;">
               <div class="card-title" style="margin:0;">이번 주 상담일정</div>
@@ -1792,6 +1803,7 @@ function renderDashboard(){
     </div>`;
 
   renderGradeDonut();
+  renderTimetableHeadcount();
   renderWeeklyCounselList();
   renderTeacherDailyNotes();
   loadDirectorNote();
@@ -1815,6 +1827,50 @@ function renderGradeDonut(){
     { label:'고3', value: countOf('고3'), color:'#FF7FAE' },
     { label:'N수/기타', value: countOf('N수/기타'), color:'#D1D1D1' },
   ], '전체 학생');
+}
+
+function renderTimetableHeadcount(){
+  const box = document.getElementById('timetableHeadcount');
+  const satSummaryEl = document.getElementById('timetableSatSummary');
+  if(!box) return;
+
+  const secondary = students.filter(s => !(s.grade || '').startsWith('초')); // 중·고만 (초등부는 별도 관리)
+  const weekdays = ['월','화','수','목','금']; // 토요일은 한 타임이라 아래에 총원으로 따로 표시
+
+  // 월~금 사이에 등장하는 시간들만 모아서 표 행으로 사용
+  const timesSet = new Set();
+  secondary.forEach(s => {
+    weekdays.forEach(day => { const t = getDayTime(s, day); if(t) timesSet.add(t); });
+  });
+  const times = [...timesSet].sort();
+
+  const countAt = (day, time) => secondary.filter(s => getDayTime(s, day) === time).length;
+  const satCount = secondary.filter(s => getDayTime(s, '토')).length;
+
+  if(satSummaryEl) satSummaryEl.textContent = satCount ? `(토요일 ${satCount}명 한 타임)` : '';
+
+  if(!times.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 시간표가 없습니다.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <table class="timetable-headcount">
+      <thead>
+        <tr><th>시간</th>${weekdays.map(d => `<th>${d}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${times.map(t => `
+          <tr>
+            <td>${t}</td>
+            ${weekdays.map(d => {
+              const n = countAt(d, t);
+              return `<td>${n ? `<span class="tc-count">${n}</span>` : `<span class="tc-empty">-</span>`}</td>`;
+            }).join('')}
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
 }
 
 function sendDirectorNote(){
