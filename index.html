@@ -342,7 +342,8 @@
   .bigcal-cell:hover{border-color:var(--color-primary-light);}
   .bigcal-cell.selected{border-color:var(--color-primary);border-width:2px;}
   .bigcal-cell.today .bc-num{color:var(--color-primary);}
-  .bc-num{font-size:13px;font-weight:800;color:var(--color-text);}
+  .bc-dateline{display:flex;align-items:center;flex-wrap:wrap;gap:4px;row-gap:3px;}
+  .bc-num{font-size:13px;font-weight:800;color:var(--color-text);flex-shrink:0;}
   .bc-chip{
     font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
@@ -350,9 +351,9 @@
   .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   .bc-chip.기타{background:#E7EBEF;color:#475569;}
-  .bc-chip-teacher{
-    font-size:9px;font-weight:700;padding:1px 5px;border-radius:5px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  .bc-teacher-name{
+    font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:5px;color:#161616;
+    white-space:nowrap;
   }
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
 
@@ -2226,8 +2227,19 @@ function renderBigCalendar(){
 
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
-    const teacherChips = workingTeachers.map(t => `<span class="bc-chip-teacher" style="background:${t.color}26;color:${t.color};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`).join('');
-    cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><span class="bc-num">${d}</span>${periodLabelsHtml}${chips}${teacherChips}</div>`;
+    let teacherNamesHtml = '';
+    if(workingTeachers.length <= 4){
+      teacherNamesHtml = workingTeachers.map(t =>
+        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+      ).join('');
+    }else{
+      const shown = workingTeachers.slice(0, 3);
+      const restCount = workingTeachers.length - 3;
+      teacherNamesHtml = shown.map(t =>
+        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+      ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
+    }
+    cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -4292,6 +4304,9 @@ function toggleStaffWorkDate(teacherId, dateStr){
   }else{
     db.ref('teacherExceptions').push({ teacherId, date: dateStr, status: newStatus });
   }
+  if(typeof showToast === 'function'){
+    showToast(`${teacher.name} 선생님 ${formatDateKR(dateStr)} · ${newStatus === 'on' ? '출근' : '휴무'}으로 변경됐어요.`);
+  }
 }
 
 function deleteStaff(id){
@@ -4384,22 +4399,21 @@ function renderStaffCal(){
 
     let cellContent = '';
     if(selectedStaffFilter){
-      // 특정 선생님만 — 출근이면 색상 배경으로 강조
+      // 특정 선생님만 — 출근이면 색상 배경으로 강조. 클릭하면 바로 출근/휴무 토글
       const t = visibleTeachers[0];
       const working = workingTeachers.length > 0;
       const bgStyle = working ? `background:${t.color}22;` : '';
-      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="staffCalClickDate('${dateStr}')">
+      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="toggleStaffWorkDate('${t.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}">
         <span class="bc-num" style="color:${working ? t.color : numColor};font-weight:${working ? 800 : 400};">${d}</span>
         ${working ? `<div style="font-size:10px;color:${t.color};margin-top:2px;font-weight:700;">출근</div>` : ''}
       </div>`;
     }else{
-      // 전체 — 점으로 표시
-      const dots = workingTeachers.map(t =>
-        `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0;"></span>`
+      // 전체 — 이름 배지로 표시 (날짜와 같은 줄, 배경색+검정 글씨), 클릭하면 날짜별 출근현황 칸으로 이동
+      const names = workingTeachers.map(t =>
+        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
       ).join('');
       cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
-        <span class="bc-num" style="color:${numColor};">${d}</span>
-        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;padding:0 2px;">${dots}</div>
+        <div class="bc-dateline"><span class="bc-num" style="color:${numColor};">${d}</span>${names}</div>
       </div>`;
     }
   }
