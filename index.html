@@ -327,9 +327,10 @@
   .cal-legend .dot.status-지각{background:var(--color-warning);}
   .cal-legend .dot.status-결석{background:var(--color-danger);}
   .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
-  .cal-legend .dot.event-dot-시험{background:var(--color-danger);}
-  .cal-legend .dot.event-dot-상담{background:var(--color-accent-dark);}
-  .cal-legend .dot.event-dot-기타{background:#64748B;}
+  .cal-legend .dot.event-dot-시험{background:#D4537E;}
+  .cal-legend .dot.event-dot-상담{background:#1D9E75;}
+  .cal-legend .dot.event-dot-기타{background:#7F77DD;}
+  .cal-legend .dot.event-dot-기작팀{background:#EF9F27;}
 
   /* ===== 캘린더 탭: 큰 달력 ===== */
   .bigcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px;}
@@ -348,11 +349,12 @@
     font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .bc-chip.시험{background:var(--color-danger-soft);color:var(--color-danger);}
-  .bc-chip.상담{background:#FFF6DC;color:var(--color-accent-dark);}
-  .bc-chip.기타{background:#E7EBEF;color:#475569;}
+  .bc-chip.시험{background:#FBEAF0;color:#993556;}
+  .bc-chip.상담{background:#E1F5EE;color:#0F6E56;}
+  .bc-chip.기타{background:#EEEDFE;color:#534AB7;}
+  .bc-chip.기작팀{background:#FAEEDA;color:#854F0B;}
   .bc-teacher-name{
-    font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:5px;color:#161616;
+    font-size:9.5px;font-weight:500;padding:1px 5px;border-radius:5px;
     white-space:nowrap;
   }
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
@@ -455,13 +457,15 @@
   .cal-num{position:relative;}
   .cal-cell.has-event-시험 .cal-num::after,
   .cal-cell.has-event-상담 .cal-num::after,
-  .cal-cell.has-event-기타 .cal-num::after{
+  .cal-cell.has-event-기타 .cal-num::after,
+  .cal-cell.has-event-기작팀 .cal-num::after{
     content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
     width:5px;height:5px;border-radius:50%;
   }
-  .cal-cell.has-event-시험 .cal-num::after{background:var(--color-danger);}
-  .cal-cell.has-event-상담 .cal-num::after{background:var(--color-accent-dark);}
-  .cal-cell.has-event-기타 .cal-num::after{background:#64748B;}
+  .cal-cell.has-event-시험 .cal-num::after{background:#D4537E;}
+  .cal-cell.has-event-상담 .cal-num::after{background:#1D9E75;}
+  .cal-cell.has-event-기타 .cal-num::after{background:#7F77DD;}
+  .cal-cell.has-event-기작팀 .cal-num::after{background:#EF9F27;}
   .cal-cell.selected .cal-num{outline:2px solid var(--color-primary-light);outline-offset:1px;}
   .cal-cell{cursor:default;}
   .cal-cell:not(.empty){cursor:pointer;}
@@ -717,6 +721,7 @@
               <span><i class="dot event-dot-시험"></i>시험</span>
               <span><i class="dot event-dot-상담"></i>상담</span>
               <span><i class="dot event-dot-기타"></i>기타</span>
+              <span><i class="dot event-dot-기작팀"></i>기작팀</span>
             </div>
 
             <div class="event-day-panel">
@@ -727,6 +732,7 @@
                   <option value="상담">상담</option>
                   <option value="시험">시험</option>
                   <option value="기타">기타</option>
+                  <option value="기작팀">기작팀</option>
                 </select>
                 <input type="text" id="eventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:8px 10px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
                 <button class="btn btn-primary btn-sm" onclick="addEvent(false)">추가</button>
@@ -939,6 +945,7 @@
               <span class="event-type-toggle" data-type="시험" onclick="toggleEventTypeVisibility('시험')"><i class="dot event-dot-시험"></i>시험</span>
               <span class="event-type-toggle" data-type="상담" onclick="toggleEventTypeVisibility('상담')"><i class="dot event-dot-상담"></i>상담</span>
               <span class="event-type-toggle" data-type="기타" onclick="toggleEventTypeVisibility('기타')"><i class="dot event-dot-기타"></i>기타</span>
+              <span class="event-type-toggle" data-type="기작팀" onclick="toggleEventTypeVisibility('기작팀')"><i class="dot event-dot-기작팀"></i>기작팀</span>
             </div>
           </div>
           <div class="toolbar" style="margin-top:0;margin-bottom:10px;">
@@ -963,6 +970,7 @@
                 <option value="상담">상담</option>
                 <option value="시험">시험</option>
                 <option value="기타">기타</option>
+                <option value="기작팀">기작팀</option>
               </select>
               <input type="text" id="bigEventTitle" placeholder="제목 (예: 중간고사, OO 학부모 상담)" style="flex:1;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
               <button class="btn btn-primary" onclick="addEvent(true)">일정 추가</button>
@@ -1272,7 +1280,63 @@ let teachers   = [];   // {id, name, color, days:[...]}
 let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
-const TEACHER_COLORS = ['#7FB0E0','#B3A3E0','#7FC49A','#E8B27A','#E399B8','#7ECBCB','#B8CE7A','#E39696'];
+const TEACHER_COLORS = ['#3B82F6','#8B5CF6','#10B981','#F97316','#EC4899','#06B6D4','#84CC16','#F43F5E'];
+// 선생님 이름 배지용: 원래 색상(dot·테두리용)에서 HSL로 연한 배경 + 진한 글자를 자동 계산
+function hexToRgbArr(hex){
+  const n = parseInt(hex.replace('#',''), 16);
+  return [(n >> 16) & 0xFF, (n >> 8) & 0xFF, n & 0xFF];
+}
+function rgbToHsl(r,g,b){
+  r/=255; g/=255; b/=255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if(max === min){ h = s = 0; }
+  else{
+    const d = max-min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = (g-b)/d + (g<b?6:0); break;
+      case g: h = (b-r)/d + 2; break;
+      default: h = (r-g)/d + 4;
+    }
+    h /= 6;
+  }
+  return [h,s,l];
+}
+function hslToRgb(h,s,l){
+  let r,g,b;
+  if(s === 0){ r=g=b=l; }
+  else{
+    const hue2rgb = (p,q,t) => {
+      if(t<0) t+=1; if(t>1) t-=1;
+      if(t<1/6) return p+(q-p)*6*t;
+      if(t<1/2) return q;
+      if(t<2/3) return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l-q;
+    r = hue2rgb(p,q,h+1/3);
+    g = hue2rgb(p,q,h);
+    b = hue2rgb(p,q,h-1/3);
+  }
+  return [Math.round(r*255), Math.round(g*255), Math.round(b*255)];
+}
+function rgbArrToHex(arr){
+  return '#' + arr.map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+// 캐시해서 매번 재계산하지 않도록
+const _teacherPastelCache = {};
+function teacherPastel(hex){
+  if(_teacherPastelCache[hex]) return _teacherPastelCache[hex];
+  const [r,g,b] = hexToRgbArr(hex);
+  const [h,s] = rgbToHsl(r,g,b);
+  const bg = rgbArrToHex(hslToRgb(h, Math.min(s, 0.5), 0.91));
+  const text = rgbArrToHex(hslToRgb(h, Math.min(s+0.15, 0.7), 0.32));
+  const result = { bg, text };
+  _teacherPastelCache[hex] = result;
+  return result;
+}
 let hiddenTeacherIds = JSON.parse(localStorage.getItem('hiddenTeacherIds') || '[]');
 let hiddenEventTypes = JSON.parse(localStorage.getItem('hiddenEventTypes') || '[]');
 let schoolPeriods = []; // {id, school, type('시험기간'|'방학'), startDate, endDate, createdAt}
@@ -2176,9 +2240,11 @@ function renderDashCalendar(){
     const hasExam = dayEvents.some(e => e.type === '시험');
     const hasCounsel = dayEvents.some(e => e.type === '상담');
     const hasOther = dayEvents.some(e => e.type === '기타');
+    const hasGijak = dayEvents.some(e => e.type === '기작팀');
     let cls = '';
     if(hasExam) cls += ' has-event-시험';
     else if(hasCounsel) cls += ' has-event-상담';
+    else if(hasGijak) cls += ' has-event-기작팀';
     else if(hasOther) cls += ' has-event-기타';
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
@@ -2225,19 +2291,24 @@ function renderBigCalendar(){
         return `<span class="bc-chip" style="background:${pc}22;color:${pc};font-weight:700;">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
+    // 기작팀 일정이 있는 날은 앰버색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
+    const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
+    if(hasGijakTeam){
+      borderStyle = `style="border:2.5px solid #EF9F27;"`;
+    }
 
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
       teacherNamesHtml = workingTeachers.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('');
     }else{
       const shown = workingTeachers.slice(0, 3);
       const restCount = workingTeachers.length - 3;
       teacherNamesHtml = shown.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
     cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
@@ -4392,7 +4463,7 @@ function renderStaffCal(){
     const isActive = selectedStaffFilter === null || selectedStaffFilter === t.id;
     return `<span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
       background:${isActive ? t.color+'22' : 'var(--color-surface-alt)'};
-      color:${isActive ? t.color : 'var(--color-text-muted)'};
+      color:${isActive ? teacherPastel(t.color).text : 'var(--color-text-muted)'};
       font-weight:700;opacity:${isActive ? 1 : 0.4};
       border:1.5px solid ${selectedStaffFilter === t.id ? t.color : 'transparent'};">
       <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
@@ -4423,15 +4494,16 @@ function renderStaffCal(){
       // 특정 선생님만 — 출근이면 색상 배경으로 강조. 클릭하면 바로 출근/휴무 토글
       const t = visibleTeachers[0];
       const working = workingTeachers.length > 0;
+      const darkT = teacherPastel(t.color).text;
       const bgStyle = working ? `background:${t.color}22;` : '';
       cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="toggleStaffWorkDate('${t.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}">
-        <span class="bc-num" style="color:${working ? t.color : numColor};font-weight:${working ? 800 : 400};">${d}</span>
-        ${working ? `<div style="font-size:10px;color:${t.color};margin-top:2px;font-weight:700;">출근</div>` : ''}
+        <span class="bc-num" style="color:${working ? darkT : numColor};font-weight:${working ? 800 : 400};">${d}</span>
+        ${working ? `<div style="font-size:10px;color:${darkT};margin-top:2px;font-weight:700;">출근</div>` : ''}
       </div>`;
     }else{
       // 전체 — 이름 배지로 표시 (날짜와 같은 줄, 배경색+검정 글씨), 클릭하면 날짜별 출근현황 칸으로 이동
       const names = workingTeachers.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('');
       cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
         <div class="bc-dateline"><span class="bc-num" style="color:${numColor};">${d}</span>${names}</div>
