@@ -258,13 +258,19 @@ function setStatus(studentId, status){
 }
 
 /* ===== 목록 렌더 ===== */
+const GRADE_ORDER = ['중1','중2','중3','고1','고2','고3','N수/기타'];
+function gradeSort(g){ const i = GRADE_ORDER.indexOf(g); return i === -1 ? 99 : i; }
+
 function todaysMidHighStudents(){
   const lbl = todayLabel();
   return students
     .filter(s => isMidHigh(s) && getDayTime(s, lbl))
     .sort((a,b) => {
       const t = (getDayTime(a, lbl) || '').localeCompare(getDayTime(b, lbl) || '');
-      return t !== 0 ? t : (a.name || '').localeCompare(b.name || '', 'ko');
+      if(t !== 0) return t;
+      const g = gradeSort(a.grade) - gradeSort(b.grade);
+      if(g !== 0) return g;
+      return (a.name || '').localeCompare(b.name || '', 'ko');
     });
 }
 
