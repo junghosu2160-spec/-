@@ -235,9 +235,9 @@ function shiftWorkCal(delta){
   renderWorkCal();
 }
 
-// 초등부 선생님(장자업 선생님 — teachers 컬렉션에서 name에 '장자업' 포함된 첫 번째)
+// 초등부 선생님(장자엽 선생님 — teachers 컬렉션에서 name에 '장자엽' 포함된 첫 번째)
 function getElementaryTeacher(){
-  return wcTeachers.find(t => (t.name||'').includes('장자업')) || null;
+  return wcTeachers.find(t => (t.name||'').includes('장자엽')) || null;
 }
 
 function isWcTeacherWorking(teacher, dateStr){
@@ -251,11 +251,28 @@ function isWcTeacherWorking(teacher, dateStr){
 function renderWorkCal(){
   const label = document.getElementById('workCalMonthLabel');
   const grid = document.getElementById('workCalGrid');
+  const cardEl = document.querySelector('.work-cal-card');
   if(!label || !grid) return;
 
   label.textContent = `${workCalYear}년 ${workCalMonth + 1}월`;
 
   const teacher = getElementaryTeacher();
+
+  // 안내 메시지 표시/숨김
+  let noticeEl = document.getElementById('workCalNotice');
+  if(!noticeEl){
+    noticeEl = document.createElement('div');
+    noticeEl.id = 'workCalNotice';
+    noticeEl.style.cssText = 'font-size:12px;color:var(--color-warning);background:var(--color-warning-soft);border-radius:8px;padding:8px 11px;margin-bottom:10px;';
+    grid.parentNode.insertBefore(noticeEl, grid);
+  }
+  if(!teacher){
+    noticeEl.style.display = 'block';
+    noticeEl.textContent = '⚠️ "장자엽" 이름의 선생님을 찾을 수 없어요. 원장님 프로그램의 [직원 관리] 탭에서 선생님을 등록해 주세요 (이름에 "장자엽"이 포함되어야 자동으로 연결돼요).';
+  }else{
+    noticeEl.style.display = 'none';
+  }
+
   const todayStr2 = (() => {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -265,12 +282,14 @@ function renderWorkCal(){
   const daysInMonth = new Date(workCalYear, workCalMonth + 1, 0).getDate();
 
   let html = '';
+  let workCount = 0;
   for(let i = 0; i < firstDay; i++) html += `<div class="wc-day"></div>`;
   for(let d = 1; d <= daysInMonth; d++){
     const dateStr = `${workCalYear}-${String(workCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow = new Date(dateStr + 'T00:00:00').getDay();
     const isToday = dateStr === todayStr2;
     const working = teacher ? isWcTeacherWorking(teacher, dateStr) : false;
+    if(working) workCount++;
     let cls = 'wc-day';
     if(working) cls += ' work';
     else if(dow === 0) cls += ' sun-num';
@@ -279,6 +298,12 @@ function renderWorkCal(){
     html += `<div class="${cls}">${d}</div>`;
   }
   grid.innerHTML = html;
+
+  // 선생님은 찾았는데 이번 달 출근일이 0일인 경우 안내
+  if(teacher && workCount === 0){
+    noticeEl.style.display = 'block';
+    noticeEl.textContent = `⚠️ ${teacher.name} 선생님의 ${workCalMonth+1}월 출근일이 아직 설정되지 않았어요. 원장님 프로그램 [직원 관리] 탭에서 기본 출근 요일을 체크해 주세요.`;
+  }
 }
 
 // 초등부 선생님 달력은 현재 달로 초기화
