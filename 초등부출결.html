@@ -235,10 +235,9 @@ function shiftWorkCal(delta){
   renderWorkCal();
 }
 
-// 초등부 선생님(장예지선생님 — teachers 컬렉션에서 name에 '장예지' 포함된 첫 번째)
+// 초등부 선생님(장자업 선생님 — teachers 컬렉션에서 name에 '장자업' 포함된 첫 번째)
 function getElementaryTeacher(){
-  // 이름으로 찾되 없으면 첫 번째 선생님 사용
-  return wcTeachers.find(t => (t.name||'').includes('장예지')) || wcTeachers[0] || null;
+  return wcTeachers.find(t => (t.name||'').includes('장자업')) || null;
 }
 
 function isWcTeacherWorking(teacher, dateStr){

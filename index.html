@@ -4329,10 +4329,17 @@ function renderStaffList(){
 }
 
 /* ===== 선생님 출근 달력 ===== */
+let selectedStaffFilter = null; // null = 전체, teacherId = 해당 선생님만
+
 function shiftStaffCal(delta){
   staffCalMonth += delta;
   if(staffCalMonth < 0){ staffCalMonth = 11; staffCalYear--; }
   if(staffCalMonth > 11){ staffCalMonth = 0; staffCalYear++; }
+  renderStaffCal();
+}
+
+function toggleStaffFilter(id){
+  selectedStaffFilter = selectedStaffFilter === id ? null : id;
   renderStaffCal();
 }
 
@@ -4344,11 +4351,21 @@ function renderStaffCal(){
 
   label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월`;
 
-  legend.innerHTML = teachers.map(t =>
-    `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;background:${t.color}22;color:${t.color};font-weight:700;">
+  // 범례 — 클릭하면 해당 선생님만 필터, 다시 클릭하면 전체
+  legend.innerHTML = teachers.map(t => {
+    const isActive = selectedStaffFilter === null || selectedStaffFilter === t.id;
+    return `<span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
+      background:${isActive ? t.color+'22' : 'var(--color-surface-alt)'};
+      color:${isActive ? t.color : 'var(--color-text-muted)'};
+      font-weight:700;opacity:${isActive ? 1 : 0.4};
+      border:1.5px solid ${selectedStaffFilter === t.id ? t.color : 'transparent'};">
       <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
-    </span>`
-  ).join('');
+    </span>`;
+  }).join('');
+
+  const visibleTeachers = selectedStaffFilter
+    ? teachers.filter(t => t.id === selectedStaffFilter)
+    : teachers;
 
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
@@ -4361,16 +4378,30 @@ function renderStaffCal(){
     const dateStr = `${staffCalYear}-${String(staffCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dow = new Date(dateStr + 'T00:00:00').getDay();
     const isToday = dateStr === todayStr;
-    const workingTeachers = teachers.filter(t => isTeacherWorking(t, dateStr));
+    const workingTeachers = visibleTeachers.filter(t => isTeacherWorking(t, dateStr));
     const numColor = dow === 0 ? '#D64550' : dow === 6 ? '#378ADD' : 'inherit';
     const todayStyle = isToday ? 'outline:2px solid var(--color-primary);outline-offset:-2px;' : '';
-    const dots = workingTeachers.map(t =>
-      `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0;"></span>`
-    ).join('');
-    cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
-      <span class="bc-num" style="color:${numColor};">${d}</span>
-      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;padding:0 2px;">${dots}</div>
-    </div>`;
+
+    let cellContent = '';
+    if(selectedStaffFilter){
+      // 특정 선생님만 — 출근이면 색상 배경으로 강조
+      const t = visibleTeachers[0];
+      const working = workingTeachers.length > 0;
+      const bgStyle = working ? `background:${t.color}22;` : '';
+      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="staffCalClickDate('${dateStr}')">
+        <span class="bc-num" style="color:${working ? t.color : numColor};font-weight:${working ? 800 : 400};">${d}</span>
+        ${working ? `<div style="font-size:10px;color:${t.color};margin-top:2px;font-weight:700;">출근</div>` : ''}
+      </div>`;
+    }else{
+      // 전체 — 점으로 표시
+      const dots = workingTeachers.map(t =>
+        `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0;"></span>`
+      ).join('');
+      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
+        <span class="bc-num" style="color:${numColor};">${d}</span>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;padding:0 2px;">${dots}</div>
+      </div>`;
+    }
   }
   grid.innerHTML = cells;
 }
@@ -4402,25 +4433,39 @@ function saveStaffCalImage(){
 }
 
 function doStaffCapture(calWrap, legendEl, monthLabelEl){
+  const filteredTeacher = selectedStaffFilter ? teachers.find(t => t.id === selectedStaffFilter) : null;
+  const teacherName = filteredTeacher ? filteredTeacher.name : '전체';
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:24px;border-radius:12px;width:720px;font-family:-apple-system,BlinkMacSystemFont,Pretendard,sans-serif;';
   const title = document.createElement('div');
   title.style.cssText = 'font-size:18px;font-weight:800;margin-bottom:12px;color:#161616;';
-  title.textContent = `델타수학 전문학원 · ${monthLabelEl.textContent} 선생님 출근 일정`;
+  title.textContent = filteredTeacher
+    ? `델타수학 전문학원 · ${monthLabelEl.textContent} ${filteredTeacher.name} 출근 일정`
+    : `델타수학 전문학원 · ${monthLabelEl.textContent} 선생님 출근 일정`;
   container.appendChild(title);
-  const leg = legendEl.cloneNode(true);
-  leg.style.marginBottom = '14px';
-  container.appendChild(leg);
+  if(filteredTeacher){
+    // 필터 상태일 때 범례는 해당 선생님 배지만
+    const badge = document.createElement('div');
+    badge.style.cssText = 'margin-bottom:14px;';
+    badge.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:4px 12px;border-radius:20px;background:${filteredTeacher.color}22;color:${filteredTeacher.color};font-weight:700;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${filteredTeacher.color};display:inline-block;"></span>${escapeHtml(filteredTeacher.name)} 선생님
+    </span>`;
+    container.appendChild(badge);
+  }else{
+    const leg = legendEl.cloneNode(true);
+    leg.style.marginBottom = '14px';
+    container.appendChild(leg);
+  }
   const cal = calWrap.cloneNode(true);
   container.appendChild(cal);
   document.body.appendChild(container);
   html2canvas(container, { scale:2, backgroundColor:'#ffffff', useCORS:true }).then(canvas => {
     document.body.removeChild(container);
     const link = document.createElement('a');
-    link.download = `선생님출근_${monthLabelEl.textContent.replace(/\s/g,'')}.png`;
+    link.download = `출근일정_${monthLabelEl.textContent.replace(/\s/g,'')}_${teacherName}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    showToast('이미지가 저장되었습니다. 카톡으로 공유해 보세요!');
+    showToast(`${teacherName} 이미지가 저장됐어요. 카톡으로 공유해 보세요!`);
   }).catch(() => { document.body.removeChild(container); showToast('이미지 저장에 실패했습니다.'); });
 }
 
