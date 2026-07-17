@@ -77,8 +77,7 @@
   .g-badge{
     font-size:12px; font-weight:700; padding:2px 9px; border-radius:11px; white-space:nowrap;
   }
-  .g-badge.mid{background:var(--blue-bg); color:var(--blue-tx);}
-  .g-badge.high{background:var(--pink-bg); color:var(--pink-tx);}
+
   .stu-name{font-size:15px; font-weight:700;}
   .stu-time{font-size:12px; color:var(--text-muted);}
   .stu-checkin{font-size:11.5px; color:var(--text-sub); margin-left:auto; white-space:nowrap;}
@@ -213,9 +212,22 @@ function todayLabel(){
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// 원장님 관리자 프로그램(index.html)과 동일한 학년별 색상
+const GRADE_COLORS = {
+  '중1': { bg:'#DCEEFF', text:'#1F5FA8' },
+  '중2': { bg:'#BFE0FB', text:'#1B4D8C' },
+  '중3': { bg:'#9ECFFA', text:'#123D73' },
+  '고1': { bg:'#FFE1EC', text:'#8A2456' },
+  '고2': { bg:'#FFC2D9', text:'#7A1642' },
+  '고3': { bg:'#FFA3C4', text:'#6B1238' },
+  'N수/기타': { bg:'#ECECEC', text:'#666666' },
+};
+function gradeColorOf(grade){
+  return GRADE_COLORS[grade] || { bg:'#ECECEC', text:'#666666' };
+}
 function isMidHigh(stu){
   const g = stu.grade || '';
-  return g.startsWith('중') || g.startsWith('고');
+  return g.startsWith('중') || g.startsWith('고') || g === 'N수/기타';
 }
 function getDayTime(stu, dayLbl){
   return (stu.schedule && stu.schedule[dayLbl]) || null;
@@ -274,13 +286,13 @@ function cardHtml(stu, timeStr){
   const rec = getTodayRecord(stu.id);
   const status = rec ? rec.status : null;
   const g = stu.grade || '';
-  const gClass = g.startsWith('중') ? 'mid' : 'high';
+  const gc = gradeColorOf(g);
   const checkin = (rec && rec.checkInTime && status !== '결석')
     ? `<span class="stu-checkin">등원 ${escapeHtml(rec.checkInTime)}</span>` : '';
   return `
     <div class="stu-card">
       <div class="stu-top">
-        <span class="g-badge ${gClass}">${escapeHtml(g)}</span>
+        <span class="g-badge" style="background:${gc.bg};color:${gc.text};">${escapeHtml(g)}</span>
         <span class="stu-name">${escapeHtml(stu.name)}</span>
         <span class="stu-time">${timeStr ? escapeHtml(timeStr) : '오늘 수업 없음'}</span>
         ${checkin}
