@@ -1143,7 +1143,7 @@
 
         <div class="card">
           <div class="card-title">
-            <span id="staffFormTitleText" style="font-weight:800;">조교 선생님 등록</span>
+            <span id="staffFormTitleText" style="font-weight:800;">선생님 등록</span>
             <span class="link-btn" id="staffFormToggleLabel" onclick="toggleStaffFormCollapse()">보이기</span>
           </div>
           <div id="staffFormBody" style="display:none;">
@@ -1176,7 +1176,7 @@
               </div>
             </div>
             <div class="form-actions">
-              <button class="btn btn-primary" id="staffSubmitBtn" onclick="submitStaff()">조교 등록</button>
+              <button class="btn btn-primary" id="staffSubmitBtn" onclick="submitStaff()">선생님 등록</button>
               <button class="btn btn-ghost" id="staffCancelBtn" style="display:none;" onclick="cancelStaffEdit()">취소</button>
             </div>
             <div class="divider"></div>
@@ -1185,7 +1185,27 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">이 날짜 조교 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
+          <div class="toolbar" style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffCal(-1)">‹</button>
+              <span id="staffCalMonthLabel" style="font-size:15px;font-weight:800;">-</span>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffCal(1)">›</button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="saveStaffCalImage()">📷 이미지 저장</button>
+            </div>
+          </div>
+          <div id="staffCalLegend" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;"></div>
+          <div id="staffCalWrap">
+            <div class="cal-weekdays" style="margin-bottom:4px;">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div class="bigcal-grid" id="staffCalGrid" style="gap:3px;"></div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">이 날짜 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
           <p class="cell-muted" style="font-size:11.5px;margin:-6px 0 10px 0;">누군가 휴무이면, 그날 대신 오시는 다른 선생님의 상태도 함께 "출근"으로 눌러 표시해 주세요.</p>
           <div class="form-row" style="margin-bottom:10px;">
             <div class="field">
@@ -1297,13 +1317,13 @@ db.ref('teachers').on('value', snap => {
   teachers = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
-  if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); }
+  if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); renderStaffCal(); }
 });
 db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
-  if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); }
+  if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); renderStaffCal(); }
 });
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
@@ -1787,7 +1807,7 @@ function switchView(view){
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
-  if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); }
+  if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
 }
 
 /* =========================================================
@@ -4147,8 +4167,9 @@ document.addEventListener('wheel', function(e){
   }
 }, { passive:true });
 
+
 /* =========================================================
-   직원 관리 탭 — 조교 등록·수정·삭제 + 날짜별 출근 조정
+   직원 관리 탭 — 선생님 등록·수정·삭제 + 달력 + 날짜별 출근 조정
    (teachers / teacherExceptions Firebase 컬렉션 그대로 사용)
 ========================================================= */
 let staffFormCollapsed = true;
@@ -4156,6 +4177,8 @@ let editingStaffId = null;
 let selectedStaffDays = [];
 let staffEditCalYear = new Date().getFullYear();
 let staffEditCalMonth = new Date().getMonth();
+let staffCalYear = new Date().getFullYear();
+let staffCalMonth = new Date().getMonth();
 
 function toggleStaffFormCollapse(){
   staffFormCollapsed = !staffFormCollapsed;
@@ -4182,11 +4205,11 @@ function submitStaff(){
   const days = [...selectedStaffDays];
   if(editingStaffId){
     db.ref('teachers/' + editingStaffId).update({ name, phone, days });
-    showToast('조교 정보가 수정되었습니다.');
+    showToast('선생님 정보가 수정되었습니다.');
   }else{
     const color = TEACHER_COLORS[teachers.length % TEACHER_COLORS.length];
     db.ref('teachers').push({ name, phone, color, days, createdAt: Date.now() });
-    showToast('조교 선생님이 등록되었습니다.');
+    showToast('선생님이 등록되었습니다.');
   }
   cancelStaffEdit();
 }
@@ -4199,7 +4222,7 @@ function editStaff(id){
   document.getElementById('staffPhone').value = t.phone || '';
   selectedStaffDays = [...(t.days || [])];
   renderStaffDaysPicker();
-  document.getElementById('staffFormTitleText').textContent = '조교 정보 수정';
+  document.getElementById('staffFormTitleText').textContent = '선생님 정보 수정';
   document.getElementById('staffSubmitBtn').textContent = '수정 완료';
   document.getElementById('staffCancelBtn').style.display = 'inline-flex';
   staffFormCollapsed = false;
@@ -4217,8 +4240,8 @@ function cancelStaffEdit(){
   document.getElementById('staffPhone').value = '';
   selectedStaffDays = [];
   renderStaffDaysPicker();
-  document.getElementById('staffFormTitleText').textContent = '조교 선생님 등록';
-  document.getElementById('staffSubmitBtn').textContent = '조교 등록';
+  document.getElementById('staffFormTitleText').textContent = '선생님 등록';
+  document.getElementById('staffSubmitBtn').textContent = '선생님 등록';
   document.getElementById('staffCancelBtn').style.display = 'none';
   document.getElementById('staffMonthCalWrap').style.display = 'none';
 }
@@ -4248,7 +4271,7 @@ function renderStaffEditCalendar(){
     const isException = teacherExceptions.some(e => e.teacherId === teacher.id && e.date === dateStr);
     let cls = working ? 'teacher-cal-work' : '';
     if(isException) cls += ' teacher-cal-exception';
-    cells += `<div class="cal-cell ${cls}" onclick="toggleStaffWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근일 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
+    cells += `<div class="cal-cell ${cls}" onclick="toggleStaffWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
   }
   document.getElementById('staffEditCalGrid').innerHTML = cells;
 }
@@ -4278,14 +4301,14 @@ function deleteStaff(id){
   db.ref('teachers/' + id).remove();
   teacherExceptions.filter(e => e.teacherId === id).forEach(e => db.ref('teacherExceptions/' + e.id).remove());
   if(editingStaffId === id) cancelStaffEdit();
-  showToast('조교 선생님이 삭제되었습니다.');
+  showToast('선생님이 삭제되었습니다.');
 }
 
 function renderStaffList(){
   const box = document.getElementById('staffList');
   if(!box) return;
   if(!teachers.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 조교 선생님이 없습니다.</div>`;
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 선생님이 없습니다.</div>`;
     return;
   }
   box.innerHTML = teachers.map(t => `
@@ -4305,6 +4328,102 @@ function renderStaffList(){
   `).join('');
 }
 
+/* ===== 선생님 출근 달력 ===== */
+function shiftStaffCal(delta){
+  staffCalMonth += delta;
+  if(staffCalMonth < 0){ staffCalMonth = 11; staffCalYear--; }
+  if(staffCalMonth > 11){ staffCalMonth = 0; staffCalYear++; }
+  renderStaffCal();
+}
+
+function renderStaffCal(){
+  const label = document.getElementById('staffCalMonthLabel');
+  const grid = document.getElementById('staffCalGrid');
+  const legend = document.getElementById('staffCalLegend');
+  if(!label || !grid || !legend) return;
+
+  label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월`;
+
+  legend.innerHTML = teachers.map(t =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;background:${t.color}22;color:${t.color};font-weight:700;">
+      <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
+    </span>`
+  ).join('');
+
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  const firstDay = new Date(staffCalYear, staffCalMonth, 1).getDay();
+  const daysInMonth = new Date(staffCalYear, staffCalMonth + 1, 0).getDate();
+
+  let cells = '';
+  for(let i = 0; i < firstDay; i++) cells += `<div class="bigcal-cell" style="min-height:52px;"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${staffCalYear}-${String(staffCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    const isToday = dateStr === todayStr;
+    const workingTeachers = teachers.filter(t => isTeacherWorking(t, dateStr));
+    const numColor = dow === 0 ? '#D64550' : dow === 6 ? '#378ADD' : 'inherit';
+    const todayStyle = isToday ? 'outline:2px solid var(--color-primary);outline-offset:-2px;' : '';
+    const dots = workingTeachers.map(t =>
+      `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${t.color};flex-shrink:0;"></span>`
+    ).join('');
+    cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
+      <span class="bc-num" style="color:${numColor};">${d}</span>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;padding:0 2px;">${dots}</div>
+    </div>`;
+  }
+  grid.innerHTML = cells;
+}
+
+function staffCalClickDate(dateStr){
+  const picker = document.getElementById('staffDayPicker');
+  if(picker){
+    picker.value = dateStr;
+    renderStaffDayStatus();
+    const card = picker.closest('.card');
+    if(card) card.scrollIntoView({ behavior:'smooth' });
+  }
+}
+
+/* ===== 이미지 저장 ===== */
+function saveStaffCalImage(){
+  const calWrap = document.getElementById('staffCalWrap');
+  const legendEl = document.getElementById('staffCalLegend');
+  const monthLabelEl = document.getElementById('staffCalMonthLabel');
+  if(!calWrap){ showToast('달력을 먼저 불러와 주세요.'); return; }
+  if(typeof html2canvas === 'undefined'){
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload = () => doStaffCapture(calWrap, legendEl, monthLabelEl);
+    document.head.appendChild(s);
+  }else{
+    doStaffCapture(calWrap, legendEl, monthLabelEl);
+  }
+}
+
+function doStaffCapture(calWrap, legendEl, monthLabelEl){
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:24px;border-radius:12px;width:720px;font-family:-apple-system,BlinkMacSystemFont,Pretendard,sans-serif;';
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:18px;font-weight:800;margin-bottom:12px;color:#161616;';
+  title.textContent = `델타수학 전문학원 · ${monthLabelEl.textContent} 선생님 출근 일정`;
+  container.appendChild(title);
+  const leg = legendEl.cloneNode(true);
+  leg.style.marginBottom = '14px';
+  container.appendChild(leg);
+  const cal = calWrap.cloneNode(true);
+  container.appendChild(cal);
+  document.body.appendChild(container);
+  html2canvas(container, { scale:2, backgroundColor:'#ffffff', useCORS:true }).then(canvas => {
+    document.body.removeChild(container);
+    const link = document.createElement('a');
+    link.download = `선생님출근_${monthLabelEl.textContent.replace(/\s/g,'')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    showToast('이미지가 저장되었습니다. 카톡으로 공유해 보세요!');
+  }).catch(() => { document.body.removeChild(container); showToast('이미지 저장에 실패했습니다.'); });
+}
+
 function initStaffDayPicker(){
   const el = document.getElementById('staffDayPicker');
   if(!el) return;
@@ -4320,15 +4439,14 @@ function renderStaffDayStatus(){
   if(!box) return;
   const dateVal = document.getElementById('staffDayPicker').value;
   if(!dateVal){ box.innerHTML = `<div class="cell-muted">날짜를 선택해 주세요.</div>`; return; }
-  if(!teachers.length){ box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 조교 선생님이 없습니다.</div>`; return; }
+  if(!teachers.length){ box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 선생님이 없습니다.</div>`; return; }
   box.innerHTML = teachers.map(t => {
     const working = isTeacherWorking(t, dateVal);
-    return `
-      <div class="teacher-day-row">
-        <span class="t-dot" style="background:${t.color};"></span>
-        <span>${escapeHtml(t.name)}</span>
-        <span class="t-status ${working ? 'on' : 'off'}" style="cursor:pointer;" onclick="toggleStaffExceptionForDate('${t.id}')">${working ? '출근' : '휴무'}</span>
-      </div>`;
+    return `<div class="teacher-day-row">
+      <span class="t-dot" style="background:${t.color};"></span>
+      <span>${escapeHtml(t.name)}</span>
+      <span class="t-status ${working ? 'on' : 'off'}" style="cursor:pointer;" onclick="toggleStaffExceptionForDate('${t.id}')">${working ? '출근' : '휴무'}</span>
+    </div>`;
   }).join('');
 }
 
