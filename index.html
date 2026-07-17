@@ -349,12 +349,12 @@
     font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .bc-chip.시험{background:#FBEAF0;color:#993556;}
-  .bc-chip.상담{background:#E1F5EE;color:#0F6E56;}
-  .bc-chip.기타{background:#EEEDFE;color:#534AB7;}
-  .bc-chip.기작팀{background:#FAEEDA;color:#854F0B;}
+  .bc-chip.시험{background:#C2447A;color:#fff;}
+  .bc-chip.상담{background:#16805E;color:#fff;}
+  .bc-chip.기타{background:#6B5FD1;color:#fff;}
+  .bc-chip.기작팀{background:#B0740F;color:#fff;}
   .bc-teacher-name{
-    font-size:9.5px;font-weight:500;padding:1px 5px;border-radius:5px;
+    font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:6px;
     white-space:nowrap;
   }
   @media(max-width:700px){ .bigcal-cell{min-height:64px;} .bc-chip{display:none;} }
@@ -1280,7 +1280,7 @@ let teachers   = [];   // {id, name, color, days:[...]}
 let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
-const TEACHER_COLORS = ['#3B82F6','#8B5CF6','#10B981','#F97316','#EC4899','#06B6D4','#84CC16','#F43F5E'];
+const TEACHER_COLORS = ['#E4483A','#D9A404','#2E9E58','#0E9AAE','#3568D4','#7A4FE0','#D81B72','#57707F','#B85C00','#178A6B'];
 // 선생님 이름 배지용: 원래 색상(dot·테두리용)에서 HSL로 연한 배경 + 진한 글자를 자동 계산
 function hexToRgbArr(hex){
   const n = parseInt(hex.replace('#',''), 16);
@@ -1331,8 +1331,8 @@ function teacherPastel(hex){
   if(_teacherPastelCache[hex]) return _teacherPastelCache[hex];
   const [r,g,b] = hexToRgbArr(hex);
   const [h,s] = rgbToHsl(r,g,b);
-  const bg = rgbArrToHex(hslToRgb(h, Math.min(s, 0.5), 0.91));
-  const text = rgbArrToHex(hslToRgb(h, Math.min(s+0.15, 0.7), 0.32));
+  const bg = rgbArrToHex(hslToRgb(h, Math.min(s, 0.55), 0.90));
+  const text = rgbArrToHex(hslToRgb(h, Math.min(s+0.1, 0.75), 0.30));
   const result = { bg, text };
   _teacherPastelCache[hex] = result;
   return result;
@@ -2288,7 +2288,7 @@ function renderBigCalendar(){
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
-        return `<span class="bc-chip" style="background:${pc}22;color:${pc};font-weight:700;">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip" style="background:${pc};color:#fff;">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     // 기작팀 일정이 있는 날은 앰버색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
