@@ -1193,6 +1193,7 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffCal(1)">›</button>
             </div>
             <div style="display:flex;gap:8px;">
+              <button class="btn btn-ghost btn-sm" onclick="reassignTeacherColors()">🎨 색상 재배정</button>
               <button class="btn btn-ghost btn-sm" onclick="saveStaffCalImage()">📷 이미지 저장</button>
             </div>
           </div>
@@ -1271,7 +1272,7 @@ let teachers   = [];   // {id, name, color, days:[...]}
 let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
-const TEACHER_COLORS = ['#3B82F6','#8B5CF6','#10B981','#F97316','#EC4899','#06B6D4','#84CC16','#F43F5E'];
+const TEACHER_COLORS = ['#7FB0E0','#B3A3E0','#7FC49A','#E8B27A','#E399B8','#7ECBCB','#B8CE7A','#E39696'];
 let hiddenTeacherIds = JSON.parse(localStorage.getItem('hiddenTeacherIds') || '[]');
 let hiddenEventTypes = JSON.parse(localStorage.getItem('hiddenEventTypes') || '[]');
 let schoolPeriods = []; // {id, school, type('시험기간'|'방학'), startDate, endDate, createdAt}
@@ -2230,13 +2231,13 @@ function renderBigCalendar(){
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
       teacherNamesHtml = workingTeachers.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
       ).join('');
     }else{
       const shown = workingTeachers.slice(0, 3);
       const restCount = workingTeachers.length - 3;
       teacherNamesHtml = shown.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
     cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
@@ -4358,6 +4359,21 @@ function toggleStaffFilter(id){
   renderStaffCal();
 }
 
+function reassignTeacherColors(){
+  if(!teachers.length){ showToast('등록된 선생님이 없어요.'); return; }
+  if(!confirm('모든 선생님의 색상을 파스텔톤으로 새로 배정할까요?')) return;
+  const sorted = [...teachers].sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  sorted.forEach((t, i) => {
+    db.ref('teachers/' + t.id).update({ color: TEACHER_COLORS[i % TEACHER_COLORS.length] });
+  });
+  showToast('선생님 색상을 새로 배정했어요.');
+}
+
+function clearStaffFilter(){
+  selectedStaffFilter = null;
+  renderStaffCal();
+}
+
 function renderStaffCal(){
   const label = document.getElementById('staffCalMonthLabel');
   const grid = document.getElementById('staffCalGrid');
@@ -4366,8 +4382,13 @@ function renderStaffCal(){
 
   label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월`;
 
-  // 범례 — 클릭하면 해당 선생님만 필터, 다시 클릭하면 전체
-  legend.innerHTML = teachers.map(t => {
+  // 범례 — 맨 앞 "전체보기" + 선생님별 필터 칩 (다시 누르면 해제)
+  const allBtn = `<span onclick="clearStaffFilter()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
+      background:${selectedStaffFilter === null ? 'var(--color-primary)' : 'var(--color-surface-alt)'};
+      color:${selectedStaffFilter === null ? '#fff' : 'var(--color-text-muted)'};
+      font-weight:700;
+      border:1.5px solid ${selectedStaffFilter === null ? 'var(--color-primary)' : 'transparent'};">전체보기</span>`;
+  legend.innerHTML = allBtn + teachers.map(t => {
     const isActive = selectedStaffFilter === null || selectedStaffFilter === t.id;
     return `<span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
       background:${isActive ? t.color+'22' : 'var(--color-surface-alt)'};
@@ -4410,7 +4431,7 @@ function renderStaffCal(){
     }else{
       // 전체 — 이름 배지로 표시 (날짜와 같은 줄, 배경색+검정 글씨), 클릭하면 날짜별 출근현황 칸으로 이동
       const names = workingTeachers.map(t =>
-        `<span class="bc-teacher-name" style="background:${t.color}55;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
+        `<span class="bc-teacher-name" style="background:${t.color}40;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`
       ).join('');
       cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
         <div class="bc-dateline"><span class="bc-num" style="color:${numColor};">${d}</span>${names}</div>
