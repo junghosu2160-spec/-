@@ -189,6 +189,7 @@ const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
 
 let students = [];
 let attendance = [];
+let makeupSchedules = [];
 let selectedTime = '전체';
 
 function snapshotToArray(val){
@@ -261,12 +262,20 @@ function setStatus(studentId, status){
 const GRADE_ORDER = ['중1','중2','중3','고1','고2','고3','N수/기타'];
 function gradeSort(g){ const i = GRADE_ORDER.indexOf(g); return i === -1 ? 99 : i; }
 
+function hasTodayMakeup(studentId){
+  return makeupSchedules.some(m => m.studentId === studentId && m.date === todayStr());
+}
+function getEffectiveTime(s, lbl){
+  return getDayTime(s, lbl) || (hasTodayMakeup(s.id) ? '보강' : null);
+}
 function todaysMidHighStudents(){
   const lbl = todayLabel();
   return students
-    .filter(s => isMidHigh(s) && getDayTime(s, lbl))
+    .filter(s => isMidHigh(s) && getEffectiveTime(s, lbl))
     .sort((a,b) => {
-      const t = (getDayTime(a, lbl) || '').localeCompare(getDayTime(b, lbl) || '');
+      const tA = getDayTime(a, lbl) || '99:99';
+      const tB = getDayTime(b, lbl) || '99:99';
+      const t = tA.localeCompare(tB);
       if(t !== 0) return t;
       const g = gradeSort(a.grade) - gradeSort(b.grade);
       if(g !== 0) return g;
@@ -276,7 +285,12 @@ function todaysMidHighStudents(){
 
 function renderTimeChips(){
   const lbl = todayLabel();
-  const times = [...new Set(todaysMidHighStudents().map(s => getDayTime(s, lbl)))].sort();
+  const all = todaysMidHighStudents();
+  const times = [...new Set(all.map(s => getEffectiveTime(s, lbl)))].sort((a,b) => {
+    if(a === '보강') return 1;
+    if(b === '보강') return -1;
+    return a.localeCompare(b);
+  });
   const el = document.getElementById('timeChips');
   if(!times.includes(selectedTime) && selectedTime !== '전체') selectedTime = '전체';
   el.innerHTML = ['전체'].concat(times).map(t =>
@@ -324,9 +338,9 @@ function renderList(){
       : `<div class="empty">'${escapeHtml(q)}' 검색 결과가 없어요.</div>`;
   }else{
     list = todaysMidHighStudents();
-    if(selectedTime !== '전체') list = list.filter(s => getDayTime(s, lbl) === selectedTime);
+    if(selectedTime !== '전체') list = list.filter(s => getEffectiveTime(s, lbl) === selectedTime);
     listEl.innerHTML = list.length
-      ? list.map(s => cardHtml(s, getDayTime(s, lbl))).join('')
+      ? list.map(s => cardHtml(s, getEffectiveTime(s, lbl))).join('')
       : `<div class="empty">오늘(${lbl}) 수업 예정인 중·고등부 학생이 없어요.</div>`;
   }
   renderStats();
@@ -354,6 +368,10 @@ db.ref('students').on('value', snap => {
 });
 db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
+  renderList();
+});
+db.ref('makeupSchedules').on('value', snap => {
+  makeupSchedules = snapshotToArray(snap.val());
   renderList();
 });
 db.ref('.info/connected').on('value', snap => {
