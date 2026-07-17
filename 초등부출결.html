@@ -104,6 +104,26 @@
     font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;
   }
   .daily-note-saved{font-size:11px;color:var(--color-success);margin-top:6px;display:none;}
+  /* ===== 출근 달력 ===== */
+  .work-cal-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:16px;margin-bottom:14px;}
+  .work-cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .work-cal-title{font-size:14px;font-weight:800;display:flex;align-items:center;gap:7px;}
+  .work-cal-nav{display:flex;align-items:center;gap:6px;}
+  .work-cal-nav button{background:none;border:1px solid var(--color-border);border-radius:6px;padding:3px 9px;font-size:14px;cursor:pointer;color:var(--color-text);}
+  .work-cal-month{font-size:13px;font-weight:700;min-width:60px;text-align:center;color:var(--color-text-muted);}
+  .work-cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:3px;}
+  .work-cal-weekdays span{text-align:center;font-size:10px;font-weight:700;padding:2px 0;color:var(--color-text-muted);}
+  .work-cal-weekdays span.sun{color:#D64550;}
+  .work-cal-weekdays span.sat{color:#378ADD;}
+  .work-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+  .wc-day{min-height:34px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--color-text-muted);}
+  .wc-day.work{background:#EAF3DE;color:#27500A;font-weight:800;}
+  .wc-day.today-ring{outline:2px solid #2E9E6C;outline-offset:-2px;}
+  .wc-day.sun-num{color:#D64550;}
+  .wc-day.sat-num{color:#378ADD;}
+  .work-cal-legend{display:flex;align-items:center;gap:6px;margin-top:10px;}
+  .work-cal-legend .dot{width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:1px solid #C0DD97;flex-shrink:0;}
+  .work-cal-legend span{font-size:11px;color:var(--color-text-muted);}
 </style>
 </head>
 <body>
@@ -146,6 +166,25 @@
 
   <div id="directorNoteBanner" style="display:none;"></div>
 
+  <div class="work-cal-card">
+    <div class="work-cal-header">
+      <div class="work-cal-title">📅 이번 달 출근 일정</div>
+      <div class="work-cal-nav">
+        <button onclick="shiftWorkCal(-1)">‹</button>
+        <span class="work-cal-month" id="workCalMonthLabel">-</span>
+        <button onclick="shiftWorkCal(1)">›</button>
+      </div>
+    </div>
+    <div class="work-cal-weekdays">
+      <span class="sun">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="sat">토</span>
+    </div>
+    <div class="work-cal-grid" id="workCalGrid"></div>
+    <div class="work-cal-legend">
+      <div class="dot"></div>
+      <span>초록색 날이 출근일이에요</span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">오늘 수업 특이사항 <span style="font-size:11px;color:var(--color-text-muted);font-weight:400;">원장님 대시보드에 전달돼요</span></div>
     <textarea id="dailyNoteTextarea" class="daily-note-textarea" placeholder="예: 오늘 OO 학생이 컨디션이 안 좋아 보였어요."></textarea>
@@ -180,12 +219,85 @@ const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
 
 let students = [];
 let attendance = [];
+let wcTeachers = [];
+let wcExceptions = [];
+
+/* ===== 출근 달력 ===== */
+let workCalYear = new Date().getFullYear();
+let workCalMonth = new Date().getMonth();
+const WC_WEEKDAYS_LABEL = ['일','월','화','수','목','금','토'];
+const WC_DAY_NAMES = ['일','월','화','수','목','금','토'];
+
+function shiftWorkCal(delta){
+  workCalMonth += delta;
+  if(workCalMonth < 0){ workCalMonth = 11; workCalYear--; }
+  if(workCalMonth > 11){ workCalMonth = 0; workCalYear++; }
+  renderWorkCal();
+}
+
+// 초등부 선생님(장예지선생님 — teachers 컬렉션에서 name에 '장예지' 포함된 첫 번째)
+function getElementaryTeacher(){
+  // 이름으로 찾되 없으면 첫 번째 선생님 사용
+  return wcTeachers.find(t => (t.name||'').includes('장예지')) || wcTeachers[0] || null;
+}
+
+function isWcTeacherWorking(teacher, dateStr){
+  const exc = wcExceptions.find(e => e.teacherId === teacher.id && e.date === dateStr);
+  if(exc) return exc.status === 'on';
+  const d = new Date(dateStr + 'T00:00:00');
+  const label = WC_DAY_NAMES[d.getDay()];
+  return (teacher.days || []).includes(label);
+}
+
+function renderWorkCal(){
+  const label = document.getElementById('workCalMonthLabel');
+  const grid = document.getElementById('workCalGrid');
+  if(!label || !grid) return;
+
+  label.textContent = `${workCalYear}년 ${workCalMonth + 1}월`;
+
+  const teacher = getElementaryTeacher();
+  const todayStr2 = (() => {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  })();
+
+  const firstDay = new Date(workCalYear, workCalMonth, 1).getDay();
+  const daysInMonth = new Date(workCalYear, workCalMonth + 1, 0).getDate();
+
+  let html = '';
+  for(let i = 0; i < firstDay; i++) html += `<div class="wc-day"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${workCalYear}-${String(workCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    const isToday = dateStr === todayStr2;
+    const working = teacher ? isWcTeacherWorking(teacher, dateStr) : false;
+    let cls = 'wc-day';
+    if(working) cls += ' work';
+    else if(dow === 0) cls += ' sun-num';
+    else if(dow === 6) cls += ' sat-num';
+    if(isToday) cls += ' today-ring';
+    html += `<div class="${cls}">${d}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// 초등부 선생님 달력은 현재 달로 초기화
+renderWorkCal();
 
 function snapshotToArray(snapVal){
   if(!snapVal) return [];
   return Object.entries(snapVal).map(([id, v]) => ({ id, ...v }));
 }
 
+db.ref('teachers').on('value', snap => {
+  wcTeachers = snapshotToArray(snap.val());
+  renderWorkCal();
+});
+db.ref('teacherExceptions').on('value', snap => {
+  wcExceptions = snapshotToArray(snap.val());
+  renderWorkCal();
+});
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val()).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
   renderList();

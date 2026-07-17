@@ -618,6 +618,9 @@
       <button class="nav-item" data-view="scores" onclick="switchView('scores')">
         <span class="nav-icon">📝</span><span>성적 관리</span>
       </button>
+      <button class="nav-item" data-view="staff" onclick="switchView('staff')">
+        <span class="nav-icon">👩‍🏫</span><span>직원 관리</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
@@ -965,11 +968,6 @@
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-title">이 날짜 조교 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
-            <p class="cell-muted" style="font-size:11.5px;margin:-6px 0 10px 0;">누군가 휴무이면, 그날 대신 오시는 다른 선생님의 상태도 함께 "출근"으로 눌러 표시해 주세요.</p>
-            <div id="teacherDayStatus"></div>
-          </div>
         </div>
 
         <div class="card section-gap">
@@ -1002,48 +1000,6 @@
           <div id="schoolPeriodList"></div>
         </div>
 
-        <div class="card section-gap">
-          <div class="card-title">
-            <span id="teacherFormTitleText" style="font-weight:800;">조교 선생님 등록</span>
-            <span class="link-btn" id="teacherFormToggleLabel" onclick="toggleTeacherFormCollapse()">보이기</span>
-          </div>
-          <div id="teacherFormBody" style="display:none;">
-            <div class="form-row">
-              <div class="field" style="flex:1.2;">
-                <label>이름</label>
-                <input type="text" id="teacherName" placeholder="예: 김민지 선생님">
-              </div>
-              <div class="field" style="flex:1;">
-                <label>연락처 (선택)</label>
-                <input type="text" id="teacherPhone" placeholder="예: 010-1234-5678">
-              </div>
-              <div class="field" style="flex:2;">
-                <label>기본 출근 요일</label>
-                <div class="weekday-picker" id="teacherDaysPicker"></div>
-              </div>
-            </div>
-            <div class="field" id="teacherMonthCalWrap" style="display:none;margin-bottom:14px;">
-              <label>이번 달 출근일 조정 <span class="hint">클릭해서 그 날만 켜고 끄기</span></label>
-              <div style="max-width:260px;">
-                <div class="cal-header">
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(-1)">‹</button>
-                  <div class="cal-month-label" id="teacherEditCalMonthLabel">-</div>
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftTeacherEditCalMonth(1)">›</button>
-                </div>
-                <div class="cal-weekdays">
-                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                </div>
-                <div class="cal-grid" id="teacherEditCalGrid"></div>
-              </div>
-            </div>
-            <div class="form-actions">
-              <button class="btn btn-primary" id="teacherSubmitBtn" onclick="submitTeacher()">조교 등록</button>
-              <button class="btn btn-ghost" id="teacherCancelBtn" style="display:none;" onclick="cancelTeacherEdit()">취소</button>
-            </div>
-            <div class="divider"></div>
-            <div id="teacherList"></div>
-          </div>
-        </div>
       </section>
 
       <!-- ================= 문자 발송 ================= -->
@@ -1182,6 +1138,66 @@
         </div>
       </section>
 
+      <!-- ================= 직원 관리 ================= -->
+      <section class="view" id="view-staff">
+
+        <div class="card">
+          <div class="card-title">
+            <span id="staffFormTitleText" style="font-weight:800;">조교 선생님 등록</span>
+            <span class="link-btn" id="staffFormToggleLabel" onclick="toggleStaffFormCollapse()">보이기</span>
+          </div>
+          <div id="staffFormBody" style="display:none;">
+            <div class="form-row">
+              <div class="field" style="flex:1.2;">
+                <label>이름</label>
+                <input type="text" id="staffName" placeholder="예: 김민지 선생님">
+              </div>
+              <div class="field" style="flex:1;">
+                <label>연락처 (선택)</label>
+                <input type="text" id="staffPhone" placeholder="예: 010-1234-5678">
+              </div>
+              <div class="field" style="flex:2;">
+                <label>기본 출근 요일</label>
+                <div class="weekday-picker" id="staffDaysPicker"></div>
+              </div>
+            </div>
+            <div class="field" id="staffMonthCalWrap" style="display:none;margin-bottom:14px;">
+              <label>이번 달 출근일 조정 <span class="hint">클릭해서 그 날만 켜고 끄기</span></label>
+              <div style="max-width:260px;">
+                <div class="cal-header">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffEditCalMonth(-1)">‹</button>
+                  <div class="cal-month-label" id="staffEditCalMonthLabel">-</div>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffEditCalMonth(1)">›</button>
+                </div>
+                <div class="cal-weekdays">
+                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                <div class="cal-grid" id="staffEditCalGrid"></div>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" id="staffSubmitBtn" onclick="submitStaff()">조교 등록</button>
+              <button class="btn btn-ghost" id="staffCancelBtn" style="display:none;" onclick="cancelStaffEdit()">취소</button>
+            </div>
+            <div class="divider"></div>
+            <div id="staffList"></div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">이 날짜 조교 출근 현황 <span class="hint">눌러서 이 날짜만 조정</span></div>
+          <p class="cell-muted" style="font-size:11.5px;margin:-6px 0 10px 0;">누군가 휴무이면, 그날 대신 오시는 다른 선생님의 상태도 함께 "출근"으로 눌러 표시해 주세요.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="field">
+              <label>날짜 선택</label>
+              <input type="date" id="staffDayPicker" onchange="renderStaffDayStatus()">
+            </div>
+          </div>
+          <div id="staffDayStatus"></div>
+        </div>
+
+      </section>
+
     </div>
   </div>
 </div>
@@ -1281,11 +1297,13 @@ db.ref('teachers').on('value', snap => {
   teachers = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
+  if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); }
 });
 db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
+  if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); }
 });
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
@@ -1754,7 +1772,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리' };
 
 function switchView(view){
   currentView = view;
@@ -1769,6 +1787,7 @@ function switchView(view){
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
+  if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); }
 }
 
 /* =========================================================
@@ -4127,6 +4146,212 @@ document.addEventListener('wheel', function(e){
     document.activeElement.blur();
   }
 }, { passive:true });
+
+/* =========================================================
+   직원 관리 탭 — 조교 등록·수정·삭제 + 날짜별 출근 조정
+   (teachers / teacherExceptions Firebase 컬렉션 그대로 사용)
+========================================================= */
+let staffFormCollapsed = true;
+let editingStaffId = null;
+let selectedStaffDays = [];
+let staffEditCalYear = new Date().getFullYear();
+let staffEditCalMonth = new Date().getMonth();
+
+function toggleStaffFormCollapse(){
+  staffFormCollapsed = !staffFormCollapsed;
+  document.getElementById('staffFormBody').style.display = staffFormCollapsed ? 'none' : 'block';
+  document.getElementById('staffFormToggleLabel').textContent = staffFormCollapsed ? '보이기' : '숨기기';
+}
+
+function renderStaffDaysPicker(){
+  const el = document.getElementById('staffDaysPicker');
+  if(!el) return;
+  el.innerHTML = WEEKDAYS.map(d =>
+    `<button type="button" class="weekday-chip ${selectedStaffDays.includes(d) ? 'active' : ''}" onclick="toggleStaffDay('${d}')">${d}</button>`
+  ).join('');
+}
+function toggleStaffDay(day){
+  selectedStaffDays = selectedStaffDays.includes(day) ? selectedStaffDays.filter(d=>d!==day) : [...selectedStaffDays, day];
+  renderStaffDaysPicker();
+}
+
+function submitStaff(){
+  const name = document.getElementById('staffName').value.trim();
+  const phone = document.getElementById('staffPhone').value.trim();
+  if(!name){ alert('이름을 입력해 주세요.'); return; }
+  const days = [...selectedStaffDays];
+  if(editingStaffId){
+    db.ref('teachers/' + editingStaffId).update({ name, phone, days });
+    showToast('조교 정보가 수정되었습니다.');
+  }else{
+    const color = TEACHER_COLORS[teachers.length % TEACHER_COLORS.length];
+    db.ref('teachers').push({ name, phone, color, days, createdAt: Date.now() });
+    showToast('조교 선생님이 등록되었습니다.');
+  }
+  cancelStaffEdit();
+}
+
+function editStaff(id){
+  const t = teacherById(id);
+  if(!t) return;
+  editingStaffId = id;
+  document.getElementById('staffName').value = t.name;
+  document.getElementById('staffPhone').value = t.phone || '';
+  selectedStaffDays = [...(t.days || [])];
+  renderStaffDaysPicker();
+  document.getElementById('staffFormTitleText').textContent = '조교 정보 수정';
+  document.getElementById('staffSubmitBtn').textContent = '수정 완료';
+  document.getElementById('staffCancelBtn').style.display = 'inline-flex';
+  staffFormCollapsed = false;
+  document.getElementById('staffFormBody').style.display = 'block';
+  document.getElementById('staffFormToggleLabel').textContent = '숨기기';
+  staffEditCalYear = new Date().getFullYear();
+  staffEditCalMonth = new Date().getMonth();
+  renderStaffEditCalendar();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function cancelStaffEdit(){
+  editingStaffId = null;
+  document.getElementById('staffName').value = '';
+  document.getElementById('staffPhone').value = '';
+  selectedStaffDays = [];
+  renderStaffDaysPicker();
+  document.getElementById('staffFormTitleText').textContent = '조교 선생님 등록';
+  document.getElementById('staffSubmitBtn').textContent = '조교 등록';
+  document.getElementById('staffCancelBtn').style.display = 'none';
+  document.getElementById('staffMonthCalWrap').style.display = 'none';
+}
+
+function shiftStaffEditCalMonth(delta){
+  staffEditCalMonth += delta;
+  if(staffEditCalMonth < 0){ staffEditCalMonth = 11; staffEditCalYear--; }
+  if(staffEditCalMonth > 11){ staffEditCalMonth = 0; staffEditCalYear++; }
+  renderStaffEditCalendar();
+}
+
+function renderStaffEditCalendar(){
+  const wrap = document.getElementById('staffMonthCalWrap');
+  if(!wrap) return;
+  if(!editingStaffId){ wrap.style.display = 'none'; return; }
+  const teacher = teacherById(editingStaffId);
+  if(!teacher){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  document.getElementById('staffEditCalMonthLabel').textContent = `${staffEditCalYear}년 ${staffEditCalMonth + 1}월`;
+  const firstWeekday = new Date(staffEditCalYear, staffEditCalMonth, 1).getDay();
+  const daysInMonth = new Date(staffEditCalYear, staffEditCalMonth + 1, 0).getDate();
+  let cells = '';
+  for(let i = 0; i < firstWeekday; i++) cells += `<div class="cal-cell empty"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${staffEditCalYear}-${String(staffEditCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const working = isTeacherWorking(teacher, dateStr);
+    const isException = teacherExceptions.some(e => e.teacherId === teacher.id && e.date === dateStr);
+    let cls = working ? 'teacher-cal-work' : '';
+    if(isException) cls += ' teacher-cal-exception';
+    cells += `<div class="cal-cell ${cls}" onclick="toggleStaffWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근일 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
+  }
+  document.getElementById('staffEditCalGrid').innerHTML = cells;
+}
+
+function toggleStaffWorkDate(teacherId, dateStr){
+  const teacher = teacherById(teacherId);
+  if(!teacher) return;
+  const currentlyWorking = isTeacherWorking(teacher, dateStr);
+  const newStatus = currentlyWorking ? 'off' : 'on';
+  const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === dateStr);
+  const defaultWorking = (teacher.days || []).includes(weekdayLabelOf(dateStr));
+  if(existing){
+    if(newStatus === (defaultWorking ? 'on' : 'off')){
+      db.ref('teacherExceptions/' + existing.id).remove();
+    }else{
+      db.ref('teacherExceptions/' + existing.id).update({ status: newStatus });
+    }
+  }else{
+    db.ref('teacherExceptions').push({ teacherId, date: dateStr, status: newStatus });
+  }
+}
+
+function deleteStaff(id){
+  const t = teacherById(id);
+  if(!t) return;
+  if(!confirm(`'${t.name}' 선생님을 삭제하시겠습니까?`)) return;
+  db.ref('teachers/' + id).remove();
+  teacherExceptions.filter(e => e.teacherId === id).forEach(e => db.ref('teacherExceptions/' + e.id).remove());
+  if(editingStaffId === id) cancelStaffEdit();
+  showToast('조교 선생님이 삭제되었습니다.');
+}
+
+function renderStaffList(){
+  const box = document.getElementById('staffList');
+  if(!box) return;
+  if(!teachers.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 조교 선생님이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = teachers.map(t => `
+    <div class="teacher-item">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;"></span>
+        <div>
+          <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
+          <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? t.days.join('·') : '기본 출근 요일 없음'}${t.phone ? ' · ' + escapeHtml(t.phone) : ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="editStaff('${t.id}')">수정</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="deleteStaff('${t.id}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function initStaffDayPicker(){
+  const el = document.getElementById('staffDayPicker');
+  if(!el) return;
+  if(!el.value){
+    const today = new Date();
+    el.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+  }
+  renderStaffDayStatus();
+}
+
+function renderStaffDayStatus(){
+  const box = document.getElementById('staffDayStatus');
+  if(!box) return;
+  const dateVal = document.getElementById('staffDayPicker').value;
+  if(!dateVal){ box.innerHTML = `<div class="cell-muted">날짜를 선택해 주세요.</div>`; return; }
+  if(!teachers.length){ box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 조교 선생님이 없습니다.</div>`; return; }
+  box.innerHTML = teachers.map(t => {
+    const working = isTeacherWorking(t, dateVal);
+    return `
+      <div class="teacher-day-row">
+        <span class="t-dot" style="background:${t.color};"></span>
+        <span>${escapeHtml(t.name)}</span>
+        <span class="t-status ${working ? 'on' : 'off'}" style="cursor:pointer;" onclick="toggleStaffExceptionForDate('${t.id}')">${working ? '출근' : '휴무'}</span>
+      </div>`;
+  }).join('');
+}
+
+function toggleStaffExceptionForDate(teacherId){
+  const t = teacherById(teacherId);
+  if(!t) return;
+  const dateVal = document.getElementById('staffDayPicker').value;
+  if(!dateVal) return;
+  const currentlyWorking = isTeacherWorking(t, dateVal);
+  const newStatus = currentlyWorking ? 'off' : 'on';
+  const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === dateVal);
+  const defaultWorking = (t.days || []).includes(weekdayLabelOf(dateVal));
+  if(existing){
+    if(newStatus === (defaultWorking ? 'on' : 'off')){
+      db.ref('teacherExceptions/' + existing.id).remove();
+    }else{
+      db.ref('teacherExceptions/' + existing.id).update({ status: newStatus });
+    }
+  }else{
+    db.ref('teacherExceptions').push({ teacherId, date: dateVal, status: newStatus });
+  }
+  showToast(`${t.name} 선생님의 근무가 조정되었습니다.`);
+}
 </script>
 </body>
 </html>
