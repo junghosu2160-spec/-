@@ -327,10 +327,10 @@
   .cal-legend .dot.status-지각{background:var(--color-warning);}
   .cal-legend .dot.status-결석{background:var(--color-danger);}
   .cal-legend .dot.ring{background:transparent;border:2px solid var(--color-text-muted);}
-  .cal-legend .dot.event-dot-시험{background:#D4537E;}
-  .cal-legend .dot.event-dot-상담{background:#1D9E75;}
-  .cal-legend .dot.event-dot-기타{background:#7F77DD;}
-  .cal-legend .dot.event-dot-기작팀{background:#EF9F27;}
+  .cal-legend .dot.event-dot-시험{background:#722F45;}
+  .cal-legend .dot.event-dot-상담{background:#7A4FE0;}
+  .cal-legend .dot.event-dot-기타{background:#3E3E3E;}
+  .cal-legend .dot.event-dot-기작팀{background:#B4308F;}
 
   /* ===== 캘린더 탭: 큰 달력 ===== */
   .bigcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:8px;}
@@ -346,13 +346,13 @@
   .bc-dateline{display:flex;align-items:center;flex-wrap:wrap;gap:4px;row-gap:3px;}
   .bc-num{font-size:13px;font-weight:800;color:var(--color-text);flex-shrink:0;}
   .bc-chip{
-    font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:10.5px;font-weight:500;padding:2px 6px 2px 7px;border-radius:0;border-left:3px solid;
+    background:var(--color-surface-alt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .bc-chip.시험{background:#C2447A;color:#fff;}
-  .bc-chip.상담{background:#16805E;color:#fff;}
-  .bc-chip.기타{background:#6B5FD1;color:#fff;}
-  .bc-chip.기작팀{background:#B0740F;color:#fff;}
+  .bc-chip.시험{border-color:#722F45;color:#4E1F30;}
+  .bc-chip.상담{border-color:#7A4FE0;color:#4E2FA0;}
+  .bc-chip.기타{border-color:#3E3E3E;color:#242424;}
+  .bc-chip.기작팀{border-color:#B4308F;color:#7A2062;}
   .bc-teacher-name{
     font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:6px;
     white-space:nowrap;
@@ -462,10 +462,10 @@
     content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);
     width:5px;height:5px;border-radius:50%;
   }
-  .cal-cell.has-event-시험 .cal-num::after{background:#D4537E;}
-  .cal-cell.has-event-상담 .cal-num::after{background:#1D9E75;}
-  .cal-cell.has-event-기타 .cal-num::after{background:#7F77DD;}
-  .cal-cell.has-event-기작팀 .cal-num::after{background:#EF9F27;}
+  .cal-cell.has-event-시험 .cal-num::after{background:#722F45;}
+  .cal-cell.has-event-상담 .cal-num::after{background:#7A4FE0;}
+  .cal-cell.has-event-기타 .cal-num::after{background:#3E3E3E;}
+  .cal-cell.has-event-기작팀 .cal-num::after{background:#B4308F;}
   .cal-cell.selected .cal-num{outline:2px solid var(--color-primary-light);outline-offset:1px;}
   .cal-cell{cursor:default;}
   .cal-cell:not(.empty){cursor:pointer;}
@@ -2288,13 +2288,13 @@ function renderBigCalendar(){
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
-        return `<span class="bc-chip" style="background:${pc};color:#fff;">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip" style="background:${pc}18;border-color:${pc};color:${pc};">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
-    // 기작팀 일정이 있는 날은 앰버색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
+    // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
     const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
     if(hasGijakTeam){
-      borderStyle = `style="border:2.5px solid #EF9F27;"`;
+      borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
     const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
