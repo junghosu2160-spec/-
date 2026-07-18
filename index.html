@@ -194,6 +194,10 @@
 
   /* ===== Table ===== */
   .table-wrap{overflow-x:auto;}
+  .student-list-table{min-width:1000px;}
+  .student-list-table td:nth-child(1),
+  .student-list-table td:nth-child(2),
+  .student-list-table td:nth-child(3){white-space:nowrap;}
   table{width:100%;border-collapse:collapse;font-size:13.5px;}
   thead th{
     text-align:left;font-size:11.5px;color:var(--color-text-muted);
@@ -817,7 +821,7 @@
           </div>
           <div id="studentListBody">
             <div class="table-wrap">
-              <table>
+              <table class="student-list-table">
                 <thead>
                   <tr>
                     <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th>
@@ -4416,7 +4420,7 @@ function renderStaffList(){
 }
 
 /* ===== 선생님 출근 달력 ===== */
-let selectedStaffFilter = null; // null = 전체, teacherId = 해당 선생님만
+let selectedStaffFilters = []; // 빈 배열 = 전체보기, 1개 = 단독보기, 2개 이상 = 여러 명 겹쳐보기
 
 function shiftStaffCal(delta){
   staffCalMonth += delta;
@@ -4426,7 +4430,16 @@ function shiftStaffCal(delta){
 }
 
 function toggleStaffFilter(id){
-  selectedStaffFilter = selectedStaffFilter === id ? null : id;
+  if(selectedStaffFilters.length === 0){
+    // 아무도 선택 안 된 상태(=전체보기)에서 누르면 그 사람만 필터링
+    selectedStaffFilters = [id];
+  }else if(selectedStaffFilters.includes(id)){
+    // 이미 선택된 사람을 다시 누르면 제외 (전부 빠지면 자동으로 전체보기로)
+    selectedStaffFilters = selectedStaffFilters.filter(x => x !== id);
+  }else{
+    // 다른 사람이 이미 선택된 상태에서 추가로 누르면 같이 겹쳐서 보기
+    selectedStaffFilters = [...selectedStaffFilters, id];
+  }
   renderStaffCal();
 }
 
@@ -4441,7 +4454,7 @@ function reassignTeacherColors(){
 }
 
 function clearStaffFilter(){
-  selectedStaffFilter = null;
+  selectedStaffFilters = [];
   renderStaffCal();
 }
 
@@ -4453,26 +4466,29 @@ function renderStaffCal(){
 
   label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월`;
 
-  // 범례 — 맨 앞 "전체보기" + 선생님별 필터 칩 (다시 누르면 해제)
+  const showingAll = selectedStaffFilters.length === 0;
+
+  // 범례 — 맨 앞 "전체보기" + 선생님별 필터 칩 (여러 개 동시 선택 가능, 다시 누르면 그 사람만 해제)
   const allBtn = `<span onclick="clearStaffFilter()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
-      background:${selectedStaffFilter === null ? 'var(--color-primary)' : 'var(--color-surface-alt)'};
-      color:${selectedStaffFilter === null ? '#fff' : 'var(--color-text-muted)'};
+      background:${showingAll ? 'var(--color-primary)' : 'var(--color-surface-alt)'};
+      color:${showingAll ? '#fff' : 'var(--color-text-muted)'};
       font-weight:700;
-      border:1.5px solid ${selectedStaffFilter === null ? 'var(--color-primary)' : 'transparent'};">전체보기</span>`;
+      border:1.5px solid ${showingAll ? 'var(--color-primary)' : 'transparent'};">전체보기</span>`;
   legend.innerHTML = allBtn + teachers.map(t => {
-    const isActive = selectedStaffFilter === null || selectedStaffFilter === t.id;
+    const isSelected = selectedStaffFilters.includes(t.id);
+    const isActive = showingAll || isSelected;
     return `<span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
       background:${isActive ? t.color+'22' : 'var(--color-surface-alt)'};
       color:${isActive ? teacherPastel(t.color).text : 'var(--color-text-muted)'};
       font-weight:700;opacity:${isActive ? 1 : 0.4};
-      border:1.5px solid ${selectedStaffFilter === t.id ? t.color : 'transparent'};">
+      border:1.5px solid ${isSelected ? t.color : 'transparent'};">
       <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
     </span>`;
   }).join('');
 
-  const visibleTeachers = selectedStaffFilter
-    ? teachers.filter(t => t.id === selectedStaffFilter)
-    : teachers;
+  const visibleTeachers = showingAll
+    ? teachers
+    : teachers.filter(t => selectedStaffFilters.includes(t.id));
 
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
@@ -4489,9 +4505,8 @@ function renderStaffCal(){
     const numColor = dow === 0 ? '#D64550' : dow === 6 ? '#378ADD' : 'inherit';
     const todayStyle = isToday ? 'outline:2px solid var(--color-primary);outline-offset:-2px;' : '';
 
-    let cellContent = '';
-    if(selectedStaffFilter){
-      // 특정 선생님만 — 출근이면 색상 배경으로 강조. 클릭하면 바로 출근/휴무 토글
+    if(visibleTeachers.length === 1){
+      // 딱 한 명만 선택 — 출근이면 색상 배경으로 강조. 클릭하면 바로 출근/휴무 토글
       const t = visibleTeachers[0];
       const working = workingTeachers.length > 0;
       const darkT = teacherPastel(t.color).text;
@@ -4501,7 +4516,7 @@ function renderStaffCal(){
         ${working ? `<div style="font-size:10px;color:${darkT};margin-top:2px;font-weight:700;">출근</div>` : ''}
       </div>`;
     }else{
-      // 전체 — 이름 배지로 표시 (날짜와 같은 줄, 배경색+검정 글씨), 클릭하면 날짜별 출근현황 칸으로 이동
+      // 전체 또는 여러 명 선택 — 이름 배지로 겹쳐서 표시, 클릭하면 날짜별 출근현황 칸으로 이동
       const names = workingTeachers.map(t =>
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('');
@@ -4540,23 +4555,25 @@ function saveStaffCalImage(){
 }
 
 function doStaffCapture(calWrap, legendEl, monthLabelEl){
-  const filteredTeacher = selectedStaffFilter ? teachers.find(t => t.id === selectedStaffFilter) : null;
-  const teacherName = filteredTeacher ? filteredTeacher.name : '전체';
+  const filteredTeachers = selectedStaffFilters.map(id => teachers.find(t => t.id === id)).filter(Boolean);
+  const teacherName = filteredTeachers.length === 1 ? filteredTeachers[0].name
+    : filteredTeachers.length > 1 ? filteredTeachers.map(t => t.name).join('_')
+    : '전체';
   const container = document.createElement('div');
   container.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;padding:24px;border-radius:12px;width:720px;font-family:-apple-system,BlinkMacSystemFont,Pretendard,sans-serif;';
   const title = document.createElement('div');
   title.style.cssText = 'font-size:18px;font-weight:800;margin-bottom:12px;color:#161616;';
-  title.textContent = filteredTeacher
-    ? `델타수학 전문학원 · ${monthLabelEl.textContent} ${filteredTeacher.name} 출근 일정`
+  title.textContent = filteredTeachers.length
+    ? `델타수학 전문학원 · ${monthLabelEl.textContent} ${filteredTeachers.map(t=>t.name).join('·')} 출근 일정`
     : `델타수학 전문학원 · ${monthLabelEl.textContent} 선생님 출근 일정`;
   container.appendChild(title);
-  if(filteredTeacher){
-    // 필터 상태일 때 범례는 해당 선생님 배지만
+  if(filteredTeachers.length){
+    // 필터 상태일 때 범례는 선택된 선생님 배지만
     const badge = document.createElement('div');
-    badge.style.cssText = 'margin-bottom:14px;';
-    badge.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:4px 12px;border-radius:20px;background:${filteredTeacher.color}22;color:${filteredTeacher.color};font-weight:700;">
-      <span style="width:9px;height:9px;border-radius:50%;background:${filteredTeacher.color};display:inline-block;"></span>${escapeHtml(filteredTeacher.name)} 선생님
-    </span>`;
+    badge.style.cssText = 'margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;';
+    badge.innerHTML = filteredTeachers.map(t => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:13px;padding:4px 12px;border-radius:20px;background:${t.color}22;color:${t.color};font-weight:700;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)} 선생님
+    </span>`).join('');
     container.appendChild(badge);
   }else{
     const leg = legendEl.cloneNode(true);
