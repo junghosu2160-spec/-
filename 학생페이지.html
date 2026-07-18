@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>내 페이지 · 델타수학 전문학원</title>
+<style>
+  :root{
+    --color-bg:#F5F6FA;
+    --color-surface:#FFFFFF;
+    --color-surface-alt:#EEF1F7;
+    --color-border:#E3E6ED;
+    --color-primary:#161616;
+    --color-accent:#FFC531;
+    --color-accent-dark:#E6A800;
+    --color-text:#1F2937;
+    --color-text-muted:#6B7280;
+    --color-success:#2E9E6C;
+    --color-success-soft:#E4F5EC;
+    --color-warning:#C98A2E;
+    --color-warning-soft:#FBF0DE;
+    --color-danger:#D64550;
+    --color-danger-soft:#FBE7E9;
+    --radius-md:12px;
+    --radius-sm:8px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--color-bg); color:var(--color-text); padding:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:520px; margin:0 auto;}
+  input, select, textarea{
+    font-family:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--color-border);
+    border-radius:var(--radius-sm); background:var(--color-surface); width:100%; outline:none;
+  }
+  input:focus, select:focus, textarea:focus{border-color:var(--color-primary);}
+  button{
+    font-family:inherit; font-size:14px; font-weight:700; padding:11px 16px; border-radius:var(--radius-sm);
+    border:none; background:var(--color-primary); color:#fff; cursor:pointer;
+  }
+  button:disabled{background:var(--color-border); color:var(--color-text-muted); cursor:not-allowed;}
+  button.ghost{background:var(--color-surface); color:var(--color-text); border:1px solid var(--color-border);}
+  .card{
+    background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md);
+    padding:16px; margin-bottom:12px;
+  }
+  .hint{font-size:11.5px; color:var(--color-text-muted); margin-top:8px; line-height:1.5;}
+
+  /* ===== 로그인 ===== */
+  #loginScreen{display:flex; flex-direction:column; min-height:80vh; justify-content:center;}
+  .login-logo{width:52px; height:52px; border-radius:14px; background:var(--color-primary); color:var(--color-accent);
+    font-size:26px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;}
+  .login-title{text-align:center; font-size:17px; font-weight:800; margin-bottom:4px;}
+  .login-sub{text-align:center; font-size:12.5px; color:var(--color-text-muted); margin-bottom:22px;}
+  .login-field{margin-bottom:12px;}
+  .login-field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px; color:var(--color-text-muted);}
+  #loginError{display:none; font-size:12.5px; color:var(--color-danger); margin-top:8px; text-align:center;}
+
+  /* ===== 홈 ===== */
+  #appScreen{display:none;}
+  .top-greeting{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .top-greeting h1{font-size:17px; font-weight:800;}
+  .top-greeting .sub{font-size:12px; color:var(--color-text-muted); margin-top:2px;}
+  .logout-btn{font-size:12px; color:var(--color-text-muted); background:none; border:none; padding:4px 8px; font-weight:500;}
+
+  .card-title{font-size:14.5px; font-weight:800; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;}
+  .card-title .action{font-size:12px; font-weight:600; color:var(--color-primary); cursor:pointer;}
+
+  .schedule-row{display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--color-border);}
+  .schedule-row:last-child{border-bottom:none;}
+  .schedule-day{font-size:12.5px; font-weight:800; width:26px; flex-shrink:0;}
+  .schedule-time{font-size:12.5px; color:var(--color-text-muted);}
+  .schedule-today{background:var(--color-warning-soft); border-radius:var(--radius-sm); margin:0 -6px; padding:8px 6px;}
+
+  /* ===== 숙제 ===== */
+  .hw-item{display:flex; align-items:flex-start; gap:9px; padding:9px 0; border-bottom:1px solid var(--color-border);}
+  .hw-item:last-child{border-bottom:none;}
+  .hw-checkbox{width:19px; height:19px; margin-top:1px; flex-shrink:0; cursor:pointer;}
+  .hw-text{font-size:13.5px; flex:1; line-height:1.4; word-break:break-word;}
+  .hw-text.done{text-decoration:line-through; color:var(--color-text-muted);}
+  .hw-badge{font-size:10px; font-weight:700; padding:2px 7px; border-radius:5px; white-space:nowrap; margin-top:1px;}
+  .hw-badge.wait{background:var(--color-warning-soft); color:var(--color-warning);}
+  .hw-del{font-size:11px; color:var(--color-text-muted); background:none; border:none; padding:2px 4px; cursor:pointer;}
+  .hw-add-row{display:flex; gap:6px; margin-top:10px;}
+  .hw-add-row input{flex:1;}
+  .hw-add-row button{padding:10px 14px; flex-shrink:0;}
+  .hw-empty{font-size:12.5px; color:var(--color-text-muted); text-align:center; padding:14px 0;}
+
+  /* ===== 결석/보강 ===== */
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px;}
+  .slot-option{
+    display:flex; align-items:center; gap:8px; background:var(--color-surface-alt); border-radius:var(--radius-sm);
+    padding:9px 11px; margin-bottom:6px; cursor:pointer;
+  }
+  .slot-option.disabled{opacity:0.5; cursor:not-allowed;}
+  .slot-option input{width:auto; padding:0;}
+  .slot-label{font-size:13px;}
+  .slot-seat{font-size:11px; color:var(--color-text-muted); margin-left:4px;}
+  .slot-seat.full{color:var(--color-danger);}
+
+  .status-banner{
+    border-radius:var(--radius-sm); padding:10px 12px; font-size:12.5px; margin-bottom:12px; display:none;
+  }
+  .status-banner.info{background:#EEF1F7; color:var(--color-text-muted);}
+  .status-banner.wait{background:var(--color-warning-soft); color:var(--color-warning);}
+  .status-banner.ok{background:var(--color-success-soft); color:var(--color-success);}
+
+  .req-history-item{padding:9px 0; border-bottom:1px solid var(--color-border); font-size:12.5px;}
+  .req-history-item:last-child{border-bottom:none;}
+  .req-status{font-size:10.5px; font-weight:700; padding:1px 7px; border-radius:5px; margin-left:6px;}
+  .req-status.confirmed{background:var(--color-success-soft); color:var(--color-success);}
+  .req-status.pending{background:var(--color-warning-soft); color:var(--color-warning);}
+  .req-status.rejected{background:var(--color-danger-soft); color:var(--color-danger);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 로그인 화면 ===== -->
+  <div id="loginScreen">
+    <div class="login-logo">δ</div>
+    <div class="login-title">델타수학 전문학원</div>
+    <div class="login-sub">내 페이지 로그인</div>
+    <div class="card">
+      <div class="login-field">
+        <label>이름</label>
+        <input type="text" id="loginName" placeholder="이름을 입력하세요" autocomplete="off">
+      </div>
+      <div class="login-field">
+        <label>연락처 뒷자리 4자리</label>
+        <input type="text" id="loginPhone" placeholder="예: 1234" maxlength="4" inputmode="numeric" autocomplete="off">
+      </div>
+      <button style="width:100%;" onclick="tryLogin()">확인</button>
+      <div id="loginError">이름 또는 연락처가 일치하지 않아요. 다시 확인해주세요.</div>
+    </div>
+    <p class="hint" style="text-align:center;">본인 확인용이에요. 다른 학생 정보는 조회할 수 없어요.<br>연락처가 등록 안 되어 있다면 원장님께 문의해주세요.</p>
+  </div>
+
+  <!-- ===== 메인 화면 ===== -->
+  <div id="appScreen">
+    <div class="top-greeting">
+      <div>
+        <h1 id="greetName">-</h1>
+        <div class="sub" id="greetSub">-</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">이번 주 시간표</div>
+      <div id="scheduleList"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        내 숙제
+        <span class="action" onclick="scrollToAdd()">+ 추가</span>
+      </div>
+      <div id="hwList"></div>
+      <div class="hw-add-row">
+        <input type="text" id="hwInput" placeholder="예: 쎈 87~90p">
+        <button onclick="addHomework()">추가</button>
+      </div>
+      <p class="hint">완료 체크해도 다음 출석 확인 전까지는 목록에 남아있어요.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">결석·보강 신청</div>
+      <div id="absenceStatusBanner" class="status-banner"></div>
+      <div class="field">
+        <label>결석일 <span class="hint" style="display:inline;">(하루 전까지만 신청 가능)</span></label>
+        <input type="date" id="absenceDate" onchange="renderMakeupSlots()">
+      </div>
+      <div class="field">
+        <label>결석 사유 <span style="color:var(--color-danger);">*</span></label>
+        <textarea id="absenceReason" rows="2" placeholder="예: 학교 시험기간이라 못 갑니다"></textarea>
+      </div>
+      <div class="field" id="makeupSlotWrap" style="display:none;">
+        <label>보강 받을 시간대 선택</label>
+        <div id="makeupSlotList"></div>
+      </div>
+      <button style="width:100%;" id="absenceSubmitBtn" onclick="submitAbsence()">신청하기</button>
+      <p class="hint" id="monthlyCountHint"></p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">신청 내역</div>
+      <div id="reqHistoryList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
+  authDomain: "checkkkk-e5774.firebaseapp.com",
+  databaseURL: "https://checkkkk-e5774-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "checkkkk-e5774",
+  storageBucket: "checkkkk-e5774.firebasestorage.app",
+  messagingSenderId: "378303125830",
+  appId: "1:378303125830:web:d6ef8f50b79d83de1d2d47"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const WEEKDAYS = ['월','화','수','목','금','토','일'];
+const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
+const MONTHLY_FREE_LIMIT = 2; // 월 2회까지 자동 확정, 이후 승인 필요
+
+let currentStudent = null;
+let students = [];
+let attendance = [];
+let homeworkItems = [];
+let makeupSlots = [];
+let absenceRequests = [];
+
+function snapshotToArray(v){
+  if(!v) return [];
+  return Object.entries(v).map(([id, val]) => Object.assign({ id }, val));
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normalizePhone(p){
+  return String(p || '').replace(/[^0-9]/g, '').slice(-4);
+}
+
+/* ===== 로그인 ===== */
+function tryLogin(){
+  const name = document.getElementById('loginName').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  const errEl = document.getElementById('loginError');
+  if(!name || phone.length < 4){
+    errEl.textContent = '이름과 연락처 뒷자리 4자리를 모두 입력해주세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+  db.ref('students').once('value').then(snap => {
+    const all = snapshotToArray(snap.val());
+    const match = all.find(s => (s.name || '').trim() === name && normalizePhone(s.phone) === phone);
+    if(!match){
+      errEl.textContent = '이름 또는 연락처가 일치하지 않아요. 다시 확인해주세요.';
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    currentStudent = match;
+    localStorage.setItem('studentPageAuth', JSON.stringify({ id: match.id, name: match.name, phone: phone }));
+    startApp();
+  });
+}
+
+function logout(){
+  localStorage.removeItem('studentPageAuth');
+  currentStudent = null;
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginPhone').value = '';
+}
+
+function tryAutoLogin(){
+  const saved = localStorage.getItem('studentPageAuth');
+  if(!saved) return;
+  try{
+    const auth = JSON.parse(saved);
+    db.ref('students/' + auth.id).once('value').then(snap => {
+      const s = snap.val();
+      if(s && (s.name || '').trim() === auth.name && normalizePhone(s.phone) === auth.phone){
+        currentStudent = Object.assign({ id: auth.id }, s);
+        startApp();
+      }
+    });
+  }catch(e){}
+}
+
+function startApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('greetName').textContent = '안녕, ' + currentStudent.name + ' 학생';
+  const today = new Date();
+  const todayLbl = JS_DAY_TO_LABEL[today.getDay()];
+  const todayTime = currentStudent.schedule && currentStudent.schedule[todayLbl];
+  document.getElementById('greetSub').textContent = todayTime
+    ? `오늘은 ${todayLbl}요일, ${todayTime} 수업이에요`
+    : `오늘은 ${todayLbl}요일, 수업 없는 날이에요`;
+
+  const dateInput = document.getElementById('absenceDate');
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  dateInput.min = tomorrow.getFullYear() + '-' + String(tomorrow.getMonth()+1).padStart(2,'0') + '-' + String(tomorrow.getDate()).padStart(2,'0');
+
+  attachListeners();
+}
+
+function attachListeners(){
+  db.ref('attendance').on('value', snap => {
+    attendance = snapshotToArray(snap.val());
+    renderAll();
+  });
+  db.ref('homework').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    homeworkItems = snapshotToArray(snap.val());
+    renderHomework();
+  });
+  db.ref('makeupSlots').on('value', snap => {
+    makeupSlots = snapshotToArray(snap.val());
+    renderMakeupSlots();
+  });
+  db.ref('absenceRequests').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    absenceRequests = snapshotToArray(snap.val());
+    renderRequestHistory();
+    updateMonthlyHint();
+  });
+}
+
+function renderAll(){
+  renderSchedule();
+  renderHomework();
+}
+
+/* ===== 시간표 ===== */
+function renderSchedule(){
+  const box = document.getElementById('scheduleList');
+  const schedule = currentStudent.schedule || {};
+  const todayLbl = JS_DAY_TO_LABEL[new Date().getDay()];
+  const rows = WEEKDAYS.filter(d => schedule[d]);
+  if(!rows.length){
+    box.innerHTML = `<p class="hint">등록된 시간표가 없어요. 원장님께 문의해주세요.</p>`;
+    return;
+  }
+  box.innerHTML = rows.map(d => `
+    <div class="schedule-row ${d === todayLbl ? 'schedule-today' : ''}">
+      <span class="schedule-day">${d}</span>
+      <span class="schedule-time">${escapeHtml(schedule[d])}</span>
+      ${d === todayLbl ? '<span style="margin-left:auto;font-size:11px;color:var(--color-warning);font-weight:700;">오늘</span>' : ''}
+    </div>
+  `).join('');
+}
+
+/* ===== 숙제 플래너 =====
+   완료 체크해도 "다음 출석"까지는 화면에 남아있고, 결석하면 계속 남는다.
+   완료 기록(completedAt)은 절대 지우지 않아 월별 통계에 사용된다. */
+function isHomeworkCleared(item){
+  if(!item.completed) return false;
+  const completedDate = (item.completedAt || '').slice(0, 10);
+  if(!completedDate) return false;
+  return attendance.some(a =>
+    a.studentId === currentStudent.id &&
+    a.date > completedDate &&
+    (a.status === '출석' || a.status === '지각')
+  );
+}
+
+function renderHomework(){
+  const box = document.getElementById('hwList');
+  const visible = homeworkItems.filter(h => !isHomeworkCleared(h))
+    .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+  if(!visible.length){
+    box.innerHTML = `<div class="hw-empty">등록된 숙제가 없어요. 아래에서 추가해보세요.</div>`;
+    return;
+  }
+  box.innerHTML = visible.map(h => {
+    const wasAbsentSinceComplete = h.completed && !isHomeworkCleared(h) &&
+      attendance.some(a => a.studentId === currentStudent.id && a.date > (h.completedAt||'').slice(0,10) && a.status === '결석');
+    return `
+    <div class="hw-item">
+      <input type="checkbox" class="hw-checkbox" ${h.completed ? 'checked' : ''} onchange="toggleHomework('${h.id}', this.checked)">
+      <span class="hw-text ${h.completed ? 'done' : ''}">${escapeHtml(h.text)}</span>
+      ${wasAbsentSinceComplete ? '<span class="hw-badge wait">결석으로 대기중</span>' : ''}
+      <button class="hw-del" onclick="deleteHomework('${h.id}')">삭제</button>
+    </div>`;
+  }).join('');
+}
+
+function addHomework(){
+  const input = document.getElementById('hwInput');
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('homework').push({
+    studentId: currentStudent.id,
+    text,
+    completed: false,
+    completedAt: '',
+    createdAt: Date.now()
+  });
+  input.value = '';
+}
+function toggleHomework(id, checked){
+  db.ref('homework/' + id).update({
+    completed: checked,
+    completedAt: checked ? new Date().toISOString() : ''
+  });
+}
+function deleteHomework(id){
+  db.ref('homework/' + id).remove();
+}
+function scrollToAdd(){
+  document.getElementById('hwInput').focus();
+  document.getElementById('hwInput').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+
+/* ===== 결석·보강 신청 ===== */
+function slotBookedCount(slotId){
+  return absenceRequests.filter(r => r.makeupSlotId === slotId && r.status !== 'rejected').length;
+}
+
+function renderMakeupSlots(){
+  const wrap = document.getElementById('makeupSlotWrap');
+  const listEl = document.getElementById('makeupSlotList');
+  const dateVal = document.getElementById('absenceDate').value;
+  if(!dateVal){ wrap.style.display = 'none'; return; }
+
+  const upcoming = makeupSlots
+    .filter(s => s.date >= dateVal)
+    .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+
+  if(!upcoming.length){
+    wrap.style.display = 'block';
+    listEl.innerHTML = `<p class="hint">현재 등록된 보강 가능 시간대가 없어요. 원장님께 문의해주세요.</p>`;
+    return;
+  }
+  wrap.style.display = 'block';
+  listEl.innerHTML = upcoming.map(s => {
+    const booked = slotBookedCount(s.id);
+    const cap = s.capacity || 0;
+    const full = booked >= cap;
+    return `
+      <label class="slot-option ${full ? 'disabled' : ''}">
+        <input type="radio" name="makeupSlot" value="${s.id}" ${full ? 'disabled' : ''}>
+        <span class="slot-label">${escapeHtml(s.date)} · ${escapeHtml(s.time)}</span>
+        <span class="slot-seat ${full ? 'full' : ''}">${full ? '(마감)' : `(자리 ${cap - booked}개)`}</span>
+      </label>`;
+  }).join('');
+}
+
+function monthlyConfirmedCount(){
+  const ym = todayStr().slice(0,7);
+  return absenceRequests.filter(r =>
+    r.studentId === currentStudent.id &&
+    r.status === 'confirmed' &&
+    (r.createdAt || '').slice(0,7) === ym
+  ).length;
+}
+
+function updateMonthlyHint(){
+  const count = monthlyConfirmedCount();
+  const hintEl = document.getElementById('monthlyCountHint');
+  if(count >= MONTHLY_FREE_LIMIT){
+    hintEl.textContent = `이번 달 보강 ${count}회 사용 — 이번 신청은 원장님 승인이 필요해요.`;
+  }else{
+    hintEl.textContent = `이번 달 보강 ${count}/${MONTHLY_FREE_LIMIT}회 사용 (${MONTHLY_FREE_LIMIT}회까지는 바로 확정돼요)`;
+  }
+}
+
+function submitAbsence(){
+  const dateVal = document.getElementById('absenceDate').value;
+  const reason = document.getElementById('absenceReason').value.trim();
+  const banner = document.getElementById('absenceStatusBanner');
+  banner.style.display = 'none';
+
+  if(!dateVal){ showBanner('결석일을 선택해주세요.', 'wait'); return; }
+  if(!reason){ showBanner('결석 사유를 입력해야 신청할 수 있어요.', 'wait'); return; }
+
+  const selectedSlot = document.querySelector('input[name="makeupSlot"]:checked');
+  if(!selectedSlot){ showBanner('보강 받을 시간대를 선택해주세요.', 'wait'); return; }
+
+  const slotId = selectedSlot.value;
+  const slot = makeupSlots.find(s => s.id === slotId);
+  const booked = slotBookedCount(slotId);
+  if(booked >= (slot.capacity || 0)){ showBanner('방금 자리가 찼어요. 다른 시간대를 선택해주세요.', 'wait'); renderMakeupSlots(); return; }
+
+  const needsApproval = monthlyConfirmedCount() >= MONTHLY_FREE_LIMIT;
+
+  db.ref('absenceRequests').push({
+    studentId: currentStudent.id,
+    studentName: currentStudent.name,
+    absenceDate: dateVal,
+    reason,
+    makeupSlotId: slotId,
+    makeupSlotLabel: `${slot.date} · ${slot.time}`,
+    status: needsApproval ? 'pending' : 'confirmed',
+    createdAt: new Date().toISOString()
+  });
+
+  document.getElementById('absenceReason').value = '';
+  document.getElementById('absenceDate').value = '';
+  document.getElementById('makeupSlotWrap').style.display = 'none';
+
+  showBanner(
+    needsApproval
+      ? '신청 접수됐어요. 이번 달 보강 횟수를 넘어서 원장님 승인 후 확정돼요.'
+      : `보강이 바로 확정됐어요! ${slot.date} · ${slot.time}`,
+    needsApproval ? 'wait' : 'ok'
+  );
+}
+
+function showBanner(text, type){
+  const banner = document.getElementById('absenceStatusBanner');
+  banner.textContent = text;
+  banner.className = 'status-banner ' + type;
+  banner.style.display = 'block';
+}
+
+function renderRequestHistory(){
+  const box = document.getElementById('reqHistoryList');
+  const sorted = [...absenceRequests].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  if(!sorted.length){
+    box.innerHTML = `<p class="hint">신청 내역이 없어요.</p>`;
+    return;
+  }
+  const statusLabel = { confirmed: '확정', pending: '승인 대기', rejected: '거절됨' };
+  box.innerHTML = sorted.slice(0, 10).map(r => `
+    <div class="req-history-item">
+      <div>${escapeHtml(r.absenceDate)} 결석 → ${escapeHtml(r.makeupSlotLabel || '-')}
+        <span class="req-status ${r.status}">${statusLabel[r.status] || r.status}</span>
+      </div>
+      <div class="hint" style="margin-top:2px;">${escapeHtml(r.reason)}</div>
+    </div>
+  `).join('');
+}
+
+tryAutoLogin();
+</script>
+</body>
+</html>

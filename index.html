@@ -630,6 +630,9 @@
       <button class="nav-item" data-view="staff" onclick="switchView('staff')">
         <span class="nav-icon">👩‍🏫</span><span>직원 관리</span>
       </button>
+      <button class="nav-item" data-view="studentapp" onclick="switchView('studentapp')">
+        <span class="nav-icon">📱</span><span>학생 페이지 관리</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
@@ -1232,6 +1235,54 @@
 
       </section>
 
+      <!-- ================= 학생 페이지 관리 ================= -->
+      <section class="view" id="view-studentapp">
+
+        <div class="card">
+          <div class="card-title">
+            보강 가능 시간대 <span class="hint">학생이 결석 신청할 때 이 목록에서 골라요</span>
+          </div>
+          <div class="form-row">
+            <div class="field" style="flex:1;">
+              <label>날짜</label>
+              <input type="date" id="makeupSlotDate">
+            </div>
+            <div class="field" style="flex:1;">
+              <label>시간</label>
+              <input type="text" id="makeupSlotTime" placeholder="예: 저녁 7시">
+            </div>
+            <div class="field" style="flex:0 0 90px;">
+              <label>정원</label>
+              <input type="number" id="makeupSlotCapacity" placeholder="3" min="1">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="addMakeupSlot()">시간대 추가</button>
+          <div class="divider"></div>
+          <div id="makeupSlotList"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">
+            보강 승인 대기 <span class="hint" id="pendingCountHint"></span>
+          </div>
+          <div id="pendingApprovalList"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">확정된 보강 명단</div>
+          <div id="confirmedMakeupList"></div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">
+            학생별 이번 달 숙제 완료 현황
+            <select id="hwStatMonthSelect" style="font-size:12.5px;padding:5px 9px;" onchange="renderHomeworkStats()"></select>
+          </div>
+          <div id="homeworkStatsList"></div>
+        </div>
+
+      </section>
+
     </div>
   </div>
 </div>
@@ -1282,6 +1333,9 @@ let events     = [];   // {id, date, type('시험'|'상담'), title, createdAt}
 let dailyNotes = [];   // {id, date, note, updatedAt} - 초등부 선생님이 남기는 하루 특이사항
 let teachers   = [];   // {id, name, color, days:[...]}
 let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
+let studentMakeupSlots = []; // {id, date, time, capacity} - 학생페이지에서 결석/보강 신청할 때 고르는 시간대
+let absenceRequests = []; // {id, studentId, studentName, absenceDate, reason, makeupSlotId, makeupSlotLabel, status:('confirmed'|'pending'|'rejected'), createdAt}
+let homeworkItems = []; // {id, studentId, text, completed, completedAt, createdAt} - 학생페이지 숙제 플래너
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 const TEACHER_COLORS = ['#E4483A','#D9A404','#2E9E58','#0E9AAE','#3568D4','#7A4FE0','#D81B72','#57707F','#B85C00','#178A6B'];
@@ -1394,6 +1448,18 @@ db.ref('teacherExceptions').on('value', snap => {
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
   if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); renderStaffCal(); }
+});
+db.ref('makeupSlots').on('value', snap => {
+  studentMakeupSlots = snapshotToArray(snap.val());
+  if(currentView === 'studentapp') renderMakeupSlotList();
+});
+db.ref('absenceRequests').on('value', snap => {
+  absenceRequests = snapshotToArray(snap.val());
+  if(currentView === 'studentapp'){ renderMakeupSlotList(); renderPendingApprovals(); renderConfirmedMakeupList(); }
+});
+db.ref('homework').on('value', snap => {
+  homeworkItems = snapshotToArray(snap.val());
+  if(currentView === 'studentapp') renderHomeworkStats();
 });
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
@@ -1862,7 +1928,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리', studentapp:'학생 페이지 관리' };
 
 function switchView(view){
   currentView = view;
@@ -1878,6 +1944,7 @@ function switchView(view){
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
+  if(view === 'studentapp'){ renderMakeupSlotList(); renderPendingApprovals(); renderConfirmedMakeupList(); initHwStatMonthSelect(); renderHomeworkStats(); }
 }
 
 /* =========================================================
@@ -4638,6 +4705,165 @@ function toggleStaffExceptionForDate(teacherId){
     db.ref('teacherExceptions').push({ teacherId, date: dateVal, status: newStatus });
   }
   showToast(`${t.name} 선생님의 근무가 조정되었습니다.`);
+}
+
+/* =========================================================
+   학생 페이지 관리 — 보강 시간대, 승인 대기, 숙제 완료 현황
+   (makeupSlots / absenceRequests / homework Firebase 컬렉션)
+========================================================= */
+
+/* ===== 보강 가능 시간대 ===== */
+function addMakeupSlot(){
+  const date = document.getElementById('makeupSlotDate').value;
+  const time = document.getElementById('makeupSlotTime').value.trim();
+  const capacity = parseInt(document.getElementById('makeupSlotCapacity').value, 10);
+  if(!date || !time || !capacity || capacity < 1){
+    alert('날짜, 시간, 정원을 모두 입력해 주세요.');
+    return;
+  }
+  db.ref('makeupSlots').push({ date, time, capacity, createdAt: Date.now() });
+  document.getElementById('makeupSlotDate').value = '';
+  document.getElementById('makeupSlotTime').value = '';
+  document.getElementById('makeupSlotCapacity').value = '';
+  showToast('보강 시간대가 추가되었습니다.');
+}
+
+function deleteMakeupSlot(id){
+  if(!confirm('이 시간대를 삭제하시겠습니까? 이미 신청한 학생이 있다면 별도로 안내해 주세요.')) return;
+  db.ref('makeupSlots/' + id).remove();
+}
+
+function slotBookedCountAdmin(slotId){
+  return absenceRequests.filter(r => r.makeupSlotId === slotId && r.status !== 'rejected').length;
+}
+
+function renderMakeupSlotList(){
+  const box = document.getElementById('makeupSlotList');
+  if(!box) return;
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = studentMakeupSlots
+    .filter(s => s.date >= today)
+    .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+  if(!upcoming.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 보강 시간대가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = upcoming.map(s => {
+    const booked = slotBookedCountAdmin(s.id);
+    const full = booked >= s.capacity;
+    return `
+      <div class="teacher-item">
+        <div>
+          <div style="font-weight:800;font-size:13.5px;">${escapeHtml(s.date)} · ${escapeHtml(s.time)}</div>
+          <div class="cell-muted" style="font-size:12px;${full ? 'color:var(--color-danger);' : ''}">신청 ${booked}/${s.capacity}명 ${full ? '(마감)' : ''}</div>
+        </div>
+        <button class="btn btn-danger-outline btn-sm" onclick="deleteMakeupSlot('${s.id}')">삭제</button>
+      </div>`;
+  }).join('');
+}
+
+/* ===== 보강 승인 대기 / 확정 명단 ===== */
+function renderPendingApprovals(){
+  const box = document.getElementById('pendingApprovalList');
+  const hintEl = document.getElementById('pendingCountHint');
+  if(!box) return;
+  const pending = absenceRequests.filter(r => r.status === 'pending')
+    .sort((a,b) => (a.createdAt||'').localeCompare(b.createdAt||''));
+  if(hintEl) hintEl.textContent = pending.length ? `${pending.length}건 대기 중` : '';
+  if(!pending.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">승인 대기 중인 요청이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = pending.map(r => `
+    <div class="teacher-item" style="align-items:flex-start;">
+      <div>
+        <div style="font-weight:800;font-size:13.5px;">${escapeHtml(r.studentName)} <span class="cell-muted" style="font-weight:500;">· 이번 달 3회째 보강</span></div>
+        <div class="cell-muted" style="font-size:12px;margin-top:2px;">결석일 ${escapeHtml(r.absenceDate)} → 보강 ${escapeHtml(r.makeupSlotLabel || '-')}</div>
+        <div class="cell-muted" style="font-size:12px;margin-top:2px;">사유: ${escapeHtml(r.reason)}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button class="btn btn-primary btn-sm" onclick="approveAbsenceRequest('${r.id}')">승인</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="rejectAbsenceRequest('${r.id}')">거절</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function approveAbsenceRequest(id){
+  db.ref('absenceRequests/' + id).update({ status: 'confirmed' });
+  showToast('보강이 승인되었습니다.');
+}
+function rejectAbsenceRequest(id){
+  if(!confirm('이 보강 신청을 거절하시겠습니까?')) return;
+  db.ref('absenceRequests/' + id).update({ status: 'rejected' });
+  showToast('보강 신청이 거절되었습니다.');
+}
+
+function renderConfirmedMakeupList(){
+  const box = document.getElementById('confirmedMakeupList');
+  if(!box) return;
+  const today = new Date().toISOString().slice(0,10);
+  const confirmed = absenceRequests.filter(r => r.status === 'confirmed' && r.absenceDate >= today)
+    .sort((a,b) => (a.makeupSlotLabel||'').localeCompare(b.makeupSlotLabel||''));
+  if(!confirmed.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">예정된 확정 보강이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = confirmed.map(r => `
+    <div class="teacher-item">
+      <div>
+        <div style="font-weight:800;font-size:13.5px;">${escapeHtml(r.studentName)}</div>
+        <div class="cell-muted" style="font-size:12px;">결석 ${escapeHtml(r.absenceDate)} → 보강 ${escapeHtml(r.makeupSlotLabel || '-')}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ===== 숙제 완료 월별 통계 ===== */
+function initHwStatMonthSelect(){
+  const sel = document.getElementById('hwStatMonthSelect');
+  if(!sel || sel.options.length) return;
+  const now = new Date();
+  const opts = [];
+  for(let i = 0; i < 6; i++){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const ym = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    opts.push(`<option value="${ym}">${d.getFullYear()}년 ${d.getMonth()+1}월</option>`);
+  }
+  sel.innerHTML = opts.join('');
+}
+
+function renderHomeworkStats(){
+  const box = document.getElementById('homeworkStatsList');
+  const sel = document.getElementById('hwStatMonthSelect');
+  if(!box || !sel) return;
+  const ym = sel.value || new Date().toISOString().slice(0,7);
+
+  const countByStudent = {};
+  homeworkItems.forEach(h => {
+    if(!h.completed || !h.completedAt) return;
+    if(h.completedAt.slice(0,7) !== ym) return;
+    countByStudent[h.studentId] = (countByStudent[h.studentId] || 0) + 1;
+  });
+
+  const midHighStudents = students.filter(s => {
+    const g = s.grade || '';
+    return g.startsWith('중') || g.startsWith('고');
+  });
+
+  const rows = midHighStudents.map(s => ({ name: s.name, count: countByStudent[s.id] || 0 }))
+    .sort((a,b) => b.count - a.count);
+
+  if(!rows.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">중·고등부 학생이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = rows.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--color-border);">
+      <span style="font-size:13.5px;">${escapeHtml(r.name)}</span>
+      <span style="font-size:12.5px;font-weight:700;color:${r.count === 0 ? 'var(--color-danger)' : 'var(--color-success)'};">이번 달 ${r.count}개 완료</span>
+    </div>
+  `).join('');
 }
 </script>
 </body>
