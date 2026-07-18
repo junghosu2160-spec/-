@@ -3300,7 +3300,7 @@ function renderStudents(){
     const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
-      <td><strong>${escapeHtml(s.name)}</strong></td>
+      <td><strong style="cursor:pointer;text-decoration:underline dotted;" onclick="goToStudentAttendance('${s.id}')" title="눌러서 출결 캘린더 보기">${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
@@ -3816,6 +3816,18 @@ let calMonth = nowD.getMonth(); // 0-indexed
 function onHistoryStudentChange(){
   renderAttendanceHistory();
   renderAttCalendar();
+}
+
+function goToStudentAttendance(studentId){
+  switchView('attendance');
+  setTimeout(() => {
+    const sel = document.getElementById('attHistoryStudent');
+    if(sel){
+      sel.value = studentId;
+      onHistoryStudentChange();
+      sel.closest('.card').scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+  }, 50);
 }
 
 function calShiftMonth(delta){
