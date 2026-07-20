@@ -166,6 +166,11 @@
 
   <div id="directorNoteBanner" style="display:none;"></div>
 
+  <div class="card" id="elemAbsenceCard" style="display:none;">
+    <div class="card-title">결석 학생 · 학부모님 전달사항</div>
+    <div id="elemAbsenceList"></div>
+  </div>
+
   <div class="work-cal-card">
     <div class="work-cal-header">
       <div class="work-cal-title">📅 이번 달 출근 일정</div>
@@ -221,6 +226,9 @@ let students = [];
 let attendance = [];
 let wcTeachers = [];
 let wcExceptions = [];
+let elemMakeupProgress = [];
+let parentMessages = [];
+let elemPendingAdjust = {};
 
 /* ===== 출근 달력 ===== */
 let workCalYear = new Date().getFullYear();
@@ -325,10 +333,20 @@ db.ref('teacherExceptions').on('value', snap => {
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val()).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
   renderList();
+  renderElemAbsenceList();
 });
 db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
   renderList();
+  renderElemAbsenceList();
+});
+db.ref('elemMakeupProgress').on('value', snap => {
+  elemMakeupProgress = snapshotToArray(snap.val());
+  renderElemAbsenceList();
+});
+db.ref('parentMessages').on('value', snap => {
+  parentMessages = snapshotToArray(snap.val());
+  renderElemAbsenceList();
 });
 db.ref('.info/connected').on('value', snap => {
   const el = document.getElementById('syncStatus');
@@ -383,6 +401,9 @@ function weekdayLabelOf(dateStr){
 }
 function getDayTime(student, dayLabel){
   return (student.schedule && student.schedule[dayLabel]) || null;
+}
+function getDayDuration(student, dayLabel){
+  return (student.scheduleDuration && student.scheduleDuration[dayLabel]) || 60;
 }
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
@@ -520,6 +541,110 @@ function renderList(){
   }
 
   box.innerHTML = list.map(rowHtml).join('');
+}
+
+/* ===== 결석 학생 · 학부모님 전달사항 · 보강 진행(5분 단위) ===== */
+function elemAbsenceKey(studentId, date){ return studentId + '_' + date; }
+
+function getElemProgress(studentId, date){
+  return elemMakeupProgress.find(p => p.studentId === studentId && p.date === date);
+}
+
+function fmtDateKR3(dateStr){
+  const [y,m,d] = dateStr.split('-');
+  return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
+}
+
+function renderElemAbsenceList(){
+  const card = document.getElementById('elemAbsenceCard');
+  const box = document.getElementById('elemAbsenceList');
+  if(!card || !box) return;
+
+  const d14 = new Date(); d14.setDate(d14.getDate() - 14);
+  const start = `${d14.getFullYear()}-${String(d14.getMonth()+1).padStart(2,'0')}-${String(d14.getDate()).padStart(2,'0')}`;
+  const end = todayStr();
+
+  const list = attendance
+    .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .map(a => ({ ...a, stu: students.find(s => s.id === a.studentId) }))
+    .filter(a => a.stu && isElementary(a.stu))
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  if(!list.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  box.innerHTML = list.map(a => {
+    const weekday = weekdayLabelOf(a.date);
+    const target = getDayDuration(a.stu, weekday);
+    const progress = getElemProgress(a.studentId, a.date);
+    const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+    const key = elemAbsenceKey(a.studentId, a.date);
+    const step = elemPendingAdjust[key] || 5;
+    const done = logged >= target;
+
+    const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
+    const lastParentMsg = [...msgs].reverse().find(m => m.from === 'parent');
+
+    return `
+      <div style="background:#FFF6DC;border:1px solid var(--color-accent);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px;">${escapeHtml(a.stu.name)} · ${fmtDateKR3(a.date)} 결석</div>
+        ${a.memo ? `<div style="font-size:12.5px;color:#4A3A00;margin-bottom:8px;">${escapeHtml(a.memo)}</div>` : ''}
+
+        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:8px;padding:9px 12px;margin-bottom:8px;">
+          <span style="font-size:12.5px;color:var(--color-text);">보강 목표 ${target}분 중 ${logged}분 적립${done ? ' (완료)' : ''}</span>
+          ${!done ? `
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button onclick="adjustElemStep('${key}',-5)" style="background:var(--color-surface-alt);border:1px solid var(--color-border);color:var(--color-text);width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;">-</button>
+            <span style="font-size:13px;font-weight:800;width:32px;text-align:center;">${step}분</span>
+            <button onclick="adjustElemStep('${key}',5)" style="background:var(--color-surface-alt);border:1px solid var(--color-border);color:var(--color-text);width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;">+</button>
+            <button class="btn btn-primary" style="padding:6px 10px;font-size:11.5px;" onclick="saveElemMakeup('${a.studentId}','${a.date}',${target})">반영</button>
+          </div>` : ''}
+        </div>
+
+        ${msgs.length ? `
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+          ${msgs.map(m => `
+            <div style="font-size:12px;padding:7px 10px;border-radius:8px;background:${m.from === 'staff' ? '#fff' : '#FFFFFF'};border:1px solid var(--color-border);">
+              <b>${m.from === 'staff' ? '선생님' : '학부모'}</b> · ${escapeHtml(m.text)}
+            </div>`).join('')}
+        </div>` : ''}
+
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." style="flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+          <button class="btn btn-primary" style="padding:7px 12px;font-size:12px;" onclick="sendElemReply('${a.studentId}')">답장</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function adjustElemStep(key, delta){
+  const cur = elemPendingAdjust[key] || 5;
+  elemPendingAdjust[key] = Math.max(5, cur + delta);
+  renderElemAbsenceList();
+}
+
+function saveElemMakeup(studentId, date, target){
+  const key = elemAbsenceKey(studentId, date);
+  const step = elemPendingAdjust[key] || 5;
+  const existing = getElemProgress(studentId, date);
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + step, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes: step, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  }else{
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+  delete elemPendingAdjust[key];
+}
+
+function sendElemReply(studentId){
+  const input = document.getElementById('reply-' + studentId);
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('parentMessages').push({ studentId, from: 'staff', text, createdAt: Date.now(), read: true });
+  input.value = '';
 }
 </script>
 </body>

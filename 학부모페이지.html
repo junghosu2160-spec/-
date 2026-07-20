@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>학부모 페이지 · 델타수학 전문학원</title>
+<style>
+  :root{
+    --color-bg:#F5F6FA;
+    --color-surface:#FFFFFF;
+    --color-surface-alt:#EEF1F7;
+    --color-border:#E3E6ED;
+    --color-primary:#161616;
+    --color-accent:#FFC531;
+    --color-accent-dark:#E6A800;
+    --color-text:#1F2937;
+    --color-text-muted:#6B7280;
+    --color-success:#2E9E6C;
+    --color-success-soft:#E4F5EC;
+    --color-warning:#C98A2E;
+    --color-warning-soft:#FBF0DE;
+    --color-danger:#D64550;
+    --color-danger-soft:#FBE7E9;
+    --color-extra:#7A4FE0;
+    --color-extra-soft:#EEEAFB;
+    --radius-md:12px;
+    --radius-sm:8px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--color-bg); color:var(--color-text); padding:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:520px; margin:0 auto;}
+  input, select, textarea{
+    font-family:inherit; font-size:14px; padding:10px 12px; border:1px solid var(--color-border);
+    border-radius:var(--radius-sm); background:var(--color-surface); width:100%; outline:none;
+  }
+  input:focus, select:focus, textarea:focus{border-color:var(--color-primary);}
+  button{
+    font-family:inherit; font-size:14px; font-weight:700; padding:11px 16px; border-radius:var(--radius-sm);
+    border:none; background:var(--color-primary); color:#fff; cursor:pointer;
+  }
+  button:disabled{background:var(--color-border); color:var(--color-text-muted); cursor:not-allowed;}
+  button.ghost{background:var(--color-surface); color:var(--color-text); border:1px solid var(--color-border);}
+  .card{
+    background:var(--color-surface); border:1px solid var(--color-border); border-radius:var(--radius-md);
+    padding:16px; margin-bottom:12px;
+  }
+  .hint{font-size:11.5px; color:var(--color-text-muted); margin-top:8px; line-height:1.5;}
+
+  /* ===== 로그인 ===== */
+  #loginScreen{display:flex; flex-direction:column; min-height:80vh; justify-content:center;}
+  .login-logo{width:52px; height:52px; border-radius:14px; background:var(--color-primary); color:var(--color-accent);
+    font-size:26px; font-weight:800; display:flex; align-items:center; justify-content:center; margin:0 auto 14px;}
+  .login-title{text-align:center; font-size:17px; font-weight:800; margin-bottom:4px;}
+  .login-sub{text-align:center; font-size:12.5px; color:var(--color-text-muted); margin-bottom:22px;}
+  .login-field{margin-bottom:12px;}
+  .login-field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px; color:var(--color-text-muted);}
+  #loginError{display:none; font-size:12.5px; color:var(--color-danger); margin-top:8px; text-align:center;}
+
+  /* ===== 홈 ===== */
+  #appScreen{display:none;}
+  .top-greeting{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .top-greeting h1{font-size:17px; font-weight:800;}
+  .top-greeting .sub{font-size:12px; color:var(--color-text-muted); margin-top:2px;}
+  .logout-btn{font-size:12px; color:var(--color-text-muted); background:none; border:none; padding:4px 8px; font-weight:500;}
+
+  .card-title{font-size:14.5px; font-weight:800; margin-bottom:2px;}
+  .card-sub{font-size:12px; color:var(--color-text-muted); margin-bottom:12px;}
+
+  /* ===== 출결 달력 ===== */
+  .cal-nav{display:flex; align-items:center; gap:8px; margin-bottom:2px;}
+  .cal-nav button{background:none; border:1px solid var(--color-border); color:var(--color-text);
+    padding:3px 9px; font-size:14px; border-radius:6px; font-weight:400;}
+  .cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:3px;}
+  .cal-weekdays span{text-align:center; font-size:10.5px; color:var(--color-text-muted); padding:2px 0;}
+  .cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+  .cal-day{min-height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:12px; color:var(--color-text-muted);}
+  .cal-day.att{background:var(--color-success-soft); color:var(--color-success); font-weight:700;}
+  .cal-day.absent{background:var(--color-danger-soft); color:var(--color-danger); font-weight:700;}
+  .cal-day.extra{background:var(--color-extra-soft); color:var(--color-extra); font-weight:700;}
+  .cal-day.upcoming{border:1.5px solid var(--color-primary); color:var(--color-primary); font-weight:700; cursor:pointer;}
+  .cal-day.upcoming:active{opacity:0.6;}
+
+  .legend{display:flex; gap:10px; margin-top:8px; font-size:11px; color:var(--color-text-muted); flex-wrap:wrap;}
+  .legend span{display:flex; align-items:center; gap:4px;}
+  .legend i{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+  /* ===== 결석/보강 신청 패널 ===== */
+  #absencePanel{display:none; background:var(--color-surface-alt); border-radius:var(--radius-sm); padding:14px; margin-top:12px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px;}
+  .panel-actions{display:flex; gap:8px;}
+  .panel-actions button{flex:1;}
+
+  /* ===== 보강 적립 게이지 ===== */
+  .gauge-row{display:flex; align-items:center; gap:12px; margin-bottom:10px;}
+  .gauge-text{font-size:12.5px; color:var(--color-text-muted); line-height:1.5;}
+  .gauge-text b{color:var(--color-text);}
+  .makeup-log-item{display:flex; justify-content:space-between; font-size:12px; padding:6px 10px; border-radius:8px; margin-top:4px;}
+  .makeup-log-item.done{background:var(--color-success-soft); color:var(--color-success);}
+  .makeup-log-item.pending{background:var(--color-surface-alt); color:var(--color-text-muted);}
+
+  /* ===== 메시지 ===== */
+  .msg-item{background:var(--color-surface-alt); border-radius:10px; padding:10px 12px; margin-top:10px;}
+  .msg-mine{font-size:12.5px; color:var(--color-text); margin-bottom:6px;}
+  .msg-time{font-size:10.5px; color:var(--color-text-muted); margin-bottom:8px;}
+  .msg-reply{background:#FFF6DC; border-radius:8px; padding:8px 10px; font-size:12.5px; color:#4A3A00;}
+
+  /* ===== 리포트 ===== */
+  .report-row{display:flex; align-items:center; justify-content:space-between; background:var(--color-surface-alt);
+    border-radius:var(--radius-sm); padding:10px 12px;}
+  .report-row a{color:var(--color-primary); font-weight:700; font-size:12.5px; text-decoration:none;
+    border:1px solid var(--color-border); padding:6px 12px; border-radius:8px; background:#fff;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== 로그인 화면 ===== -->
+  <div id="loginScreen">
+    <div class="login-logo">δ</div>
+    <div class="login-title">델타수학 전문학원</div>
+    <div class="login-sub">학부모 페이지 로그인</div>
+    <div class="card">
+      <div class="login-field">
+        <label>자녀 이름</label>
+        <input type="text" id="loginName" placeholder="자녀 이름을 입력하세요" autocomplete="off">
+      </div>
+      <div class="login-field">
+        <label>학부모 연락처 뒷자리 4자리</label>
+        <input type="text" id="loginPhone" placeholder="예: 1234 (연락처 없으면 0000)" maxlength="4" inputmode="numeric" autocomplete="off">
+      </div>
+      <button style="width:100%;" onclick="tryLogin()">확인</button>
+      <div id="loginError">자녀 이름 또는 연락처가 일치하지 않아요. 다시 확인해주세요.</div>
+    </div>
+    <p class="hint" style="text-align:center;">본인 확인용이에요. 다른 학생 정보는 조회할 수 없어요.<br>연락처가 등록 안 되어 있다면 원장님께 문의해주세요.</p>
+  </div>
+
+  <!-- ===== 메인 화면 ===== -->
+  <div id="appScreen">
+    <div class="top-greeting">
+      <div>
+        <h1 id="greetName">-</h1>
+        <div class="sub" id="greetSub">-</div>
+      </div>
+      <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </div>
+
+    <!-- 출결 달력 -->
+    <div class="card">
+      <div class="cal-nav">
+        <button onclick="shiftCalMonth(-1)">‹</button>
+        <span class="card-title" id="calMonthLabel" style="margin:0;">-</span>
+        <button onclick="shiftCalMonth(1)">›</button>
+      </div>
+      <div class="card-sub" id="calSummary">-</div>
+      <div class="cal-weekdays">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="cal-grid" id="attCalGrid"></div>
+      <div class="legend">
+        <span><i style="background:var(--color-success);"></i>출석</span>
+        <span><i style="background:var(--color-danger);"></i>결석</span>
+        <span><i style="background:var(--color-extra);"></i>보강 반영일</span>
+      </div>
+      <p class="hint">테두리 있는 날짜를 누르면 결석 신청을 할 수 있어요. <b>당일도 신청 가능해요.</b></p>
+
+      <div id="absencePanel">
+        <div id="absencePanelDateLabel" style="font-size:13.5px;font-weight:800;margin-bottom:10px;"></div>
+        <div class="field">
+          <label>결석 사유 · 보강 가능일 <span style="color:var(--color-danger);">*</span></label>
+          <textarea id="absenceReason" rows="3" placeholder="예: 감기 기운이 있어서 못 가요. 목요일 오후 4시 이후 보강 가능해요"></textarea>
+        </div>
+        <div class="panel-actions">
+          <button class="ghost" onclick="closeAbsencePanel()">취소</button>
+          <button onclick="submitAbsence()">신청하기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 보강 적립 -->
+    <div class="card" id="makeupCard" style="display:none;">
+      <div class="card-title">보강 적립 현황</div>
+      <div class="card-sub">결석한 날 수업시간만큼 5분 단위로 채워가요</div>
+      <div id="makeupProgressList"></div>
+    </div>
+
+    <!-- 선생님께 하고 싶은 말 -->
+    <div class="card">
+      <div class="card-title">선생님께 하고 싶은 말</div>
+      <textarea id="msgInput" rows="2" placeholder="예: 요즘 곱셈을 어려워해요, 신경 써주세요"></textarea>
+      <button style="width:100%;margin-top:10px;" onclick="sendMessage()">보내기</button>
+      <div id="msgHistory"></div>
+    </div>
+
+    <!-- 매쓰홀릭 리포트 -->
+    <div class="card" id="reportCard" style="display:none;">
+      <div class="card-title">매쓰홀릭 월간평가 리포트</div>
+      <div class="report-row">
+        <span id="reportMonthLabel" style="font-size:13px;">-</span>
+        <a id="reportLink" href="#" target="_blank" rel="noopener">리포트 보기 ↗</a>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
+  authDomain: "checkkkk-e5774.firebaseapp.com",
+  databaseURL: "https://checkkkk-e5774-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "checkkkk-e5774",
+  storageBucket: "checkkkk-e5774.firebasestorage.app",
+  messagingSenderId: "378303125830",
+  appId: "1:378303125830:web:d6ef8f50b79d83de1d2d47"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
+
+let currentStudent = null;
+let attendance = [];
+let elemMakeupProgress = [];
+let parentMessages = [];
+let mathholicLinks = [];
+
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let selectedAbsenceDate = null;
+
+function snapshotToArray(v){
+  if(!v) return [];
+  return Object.entries(v).map(([id, val]) => Object.assign({ id }, val));
+}
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function normalizePhone(p){
+  return String(p || '').replace(/[^0-9]/g, '').slice(-4);
+}
+function weekdayLabelOf(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return JS_DAY_TO_LABEL[d.getDay()];
+}
+function getDayDuration(student, dayLabel){
+  return (student.scheduleDuration && student.scheduleDuration[dayLabel]) || 60;
+}
+function currentMonthStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+/* ===== 로그인 (자동로그인 포함) ===== */
+function tryLogin(){
+  const name = document.getElementById('loginName').value.trim();
+  const phone = document.getElementById('loginPhone').value.trim();
+  const errEl = document.getElementById('loginError');
+  if(!name || phone.length < 4){
+    errEl.textContent = '자녀 이름과 연락처 뒷자리 4자리를 모두 입력해주세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+  db.ref('students').once('value').then(snap => {
+    const all = snapshotToArray(snap.val());
+    const match = all.find(s => (s.name || '').trim() === name &&
+      (s.parentPhone ? normalizePhone(s.parentPhone) === phone : phone === '0000'));
+    if(!match){
+      errEl.textContent = '자녀 이름 또는 연락처가 일치하지 않아요. 다시 확인해주세요.';
+      errEl.style.display = 'block';
+      return;
+    }
+    errEl.style.display = 'none';
+    currentStudent = match;
+    localStorage.setItem('parentPageAuth', JSON.stringify({ id: match.id, name: match.name, phone: phone }));
+    startApp();
+  });
+}
+
+function logout(){
+  localStorage.removeItem('parentPageAuth');
+  currentStudent = null;
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginName').value = '';
+  document.getElementById('loginPhone').value = '';
+}
+
+function tryAutoLogin(){
+  const saved = localStorage.getItem('parentPageAuth');
+  if(!saved) return;
+  try{
+    const auth = JSON.parse(saved);
+    db.ref('students/' + auth.id).once('value').then(snap => {
+      const s = snap.val();
+      if(s && (s.name || '').trim() === auth.name &&
+        (s.parentPhone ? normalizePhone(s.parentPhone) === auth.phone : auth.phone === '0000')){
+        currentStudent = Object.assign({ id: auth.id }, s);
+        startApp();
+      }
+    });
+  }catch(e){}
+}
+
+function startApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('greetName').textContent = currentStudent.name + ' 학생 학부모님';
+  const today = new Date();
+  const todayLbl = JS_DAY_TO_LABEL[today.getDay()];
+  const todayTime = currentStudent.schedule && currentStudent.schedule[todayLbl];
+  document.getElementById('greetSub').textContent = todayTime
+    ? `오늘은 ${todayLbl}요일, ${todayTime} 수업이에요`
+    : `오늘은 ${todayLbl}요일, 수업 없는 날이에요`;
+  attachListeners();
+}
+
+function attachListeners(){
+  db.ref('attendance').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    attendance = snapshotToArray(snap.val());
+    renderAttCalendar();
+  });
+  db.ref('elemMakeupProgress').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    elemMakeupProgress = snapshotToArray(snap.val());
+    renderMakeupProgress();
+  });
+  db.ref('parentMessages').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    parentMessages = snapshotToArray(snap.val());
+    renderMessages();
+  });
+  db.ref('mathholicLinks').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    mathholicLinks = snapshotToArray(snap.val());
+    renderReport();
+  });
+}
+
+/* ===== 출결 달력 ===== */
+function shiftCalMonth(delta){
+  calMonth += delta;
+  if(calMonth < 0){ calMonth = 11; calYear--; }
+  if(calMonth > 11){ calMonth = 0; calYear++; }
+  closeAbsencePanel();
+  renderAttCalendar();
+}
+
+function attendanceOn(dateStr){
+  return attendance.find(a => a.date === dateStr && a.status);
+}
+
+function renderAttCalendar(){
+  const label = document.getElementById('calMonthLabel');
+  const grid = document.getElementById('attCalGrid');
+  const summary = document.getElementById('calSummary');
+  if(!label || !grid) return;
+
+  label.textContent = `${calYear}년 ${calMonth + 1}월`;
+
+  const schedule = currentStudent.schedule || {};
+  const today = todayStr();
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  const makeupDoneDates = new Set(
+    elemMakeupProgress.flatMap(p => (p.log || []).map(l => l.sessionDate).filter(Boolean))
+  );
+
+  let attCount = 0, absentCount = 0;
+  let html = '';
+  for(let i = 0; i < firstDay; i++) html += `<div class="cal-day"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(dateStr + 'T00:00:00').getDay();
+    const dLbl = JS_DAY_TO_LABEL[dow];
+    const rec = attendanceOn(dateStr);
+    const isClassDay = !!schedule[dLbl];
+
+    let cls = 'cal-day';
+    let onclick = '';
+    if(rec){
+      if(rec.status === '결석'){ cls += ' absent'; absentCount++; }
+      else{ cls += ' att'; attCount++; if(makeupDoneDates.has(dateStr)) cls += ' extra'; }
+    }else if(isClassDay && dateStr >= today){
+      cls += ' upcoming';
+      onclick = ` onclick="openAbsencePanel('${dateStr}')"`;
+    }
+    html += `<div class="${cls}"${onclick}>${d}</div>`;
+  }
+  grid.innerHTML = html;
+  summary.textContent = `출석 ${attCount}회 · 결석 ${absentCount}회`;
+}
+
+/* ===== 결석 신청 ===== */
+function openAbsencePanel(dateStr){
+  selectedAbsenceDate = dateStr;
+  const panel = document.getElementById('absencePanel');
+  panel.style.display = 'block';
+  document.getElementById('absencePanelDateLabel').textContent = `${dateStr} 결석 신청`;
+  document.getElementById('absenceReason').value = '';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function closeAbsencePanel(){
+  selectedAbsenceDate = null;
+  document.getElementById('absencePanel').style.display = 'none';
+}
+function submitAbsence(){
+  const reason = document.getElementById('absenceReason').value.trim();
+  if(!reason){ alert('결석 사유를 입력해주세요.'); return; }
+  db.ref('attendance').push({
+    studentId: currentStudent.id,
+    date: selectedAbsenceDate,
+    status: '결석',
+    memo: reason,
+    source: 'parent',
+    createdAt: Date.now()
+  });
+  closeAbsencePanel();
+  alert('결석 신청이 접수되었습니다.');
+}
+
+/* ===== 보강 적립 ===== */
+function renderMakeupProgress(){
+  const card = document.getElementById('makeupCard');
+  const box = document.getElementById('makeupProgressList');
+  if(!card || !box) return;
+
+  const absences = attendance.filter(a => a.status === '결석').sort((a,b) => b.date.localeCompare(a.date));
+  if(!absences.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  box.innerHTML = absences.map(a => {
+    const weekday = weekdayLabelOf(a.date);
+    const target = getDayDuration(currentStudent, weekday);
+    const progress = elemMakeupProgress.find(p => p.date === a.date);
+    const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+    const pct = target ? Math.min(100, Math.round((logged / target) * 100)) : 0;
+    const circumference = 138.2;
+    const offset = circumference * (1 - pct / 100);
+    const done = logged >= target;
+
+    const log = (progress && progress.log) || [];
+
+    return `
+      <div style="border-top:1px solid var(--color-border); padding-top:12px; margin-top:12px;">
+        <div class="gauge-row">
+          <svg width="52" height="52" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="22" fill="none" stroke="var(--color-surface-alt)" stroke-width="6"></circle>
+            <circle cx="26" cy="26" r="22" fill="none" stroke="${done ? 'var(--color-success)' : 'var(--color-extra)'}" stroke-width="6"
+              stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" transform="rotate(-90 26 26)"></circle>
+            <text x="26" y="30" text-anchor="middle" font-size="11" fill="var(--color-text)">${logged}분</text>
+          </svg>
+          <div class="gauge-text">${a.date} 결석 · 목표 ${target}분 중<br><b>${logged}분 적립</b>${done ? ' · 완료' : ` · ${target - logged}분 남았어요`}</div>
+        </div>
+        ${log.length ? log.map(l => `<div class="makeup-log-item done">보강 진행<span>+${l.minutes}분</span></div>`).join('') : `<div class="makeup-log-item pending">아직 진행된 보강이 없어요<span>-</span></div>`}
+      </div>`;
+  }).join('');
+}
+
+/* ===== 선생님께 하고 싶은 말 ===== */
+function sendMessage(){
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('parentMessages').push({
+    studentId: currentStudent.id,
+    from: 'parent',
+    text,
+    createdAt: Date.now(),
+    read: false
+  });
+  input.value = '';
+}
+
+function renderMessages(){
+  const box = document.getElementById('msgHistory');
+  if(!box) return;
+  const list = [...parentMessages].sort((a,b) => b.createdAt - a.createdAt);
+  if(!list.length){ box.innerHTML = ''; return; }
+
+  box.innerHTML = list.map(m => {
+    if(m.from !== 'parent') return '';
+    const time = new Date(m.createdAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    const reply = parentMessages.find(r => r.from === 'staff' && r.createdAt > m.createdAt);
+    return `
+      <div class="msg-item">
+        <div class="msg-mine">"${escapeHtml(m.text)}"</div>
+        <div class="msg-time">${time} 보냄</div>
+        ${reply ? `<div class="msg-reply">선생님 답장: ${escapeHtml(reply.text)}</div>` : `<div class="hint" style="margin-top:0;">아직 답장 전이에요</div>`}
+      </div>`;
+  }).join('');
+}
+
+/* ===== 매쓰홀릭 리포트 ===== */
+function renderReport(){
+  const card = document.getElementById('reportCard');
+  if(!card) return;
+  const month = currentMonthStr();
+  const rec = mathholicLinks.find(m => m.month === month);
+  if(!rec){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  document.getElementById('reportMonthLabel').textContent = `${month.replace('-','년 ')}월 리포트`;
+  document.getElementById('reportLink').href = rec.url;
+}
+
+tryAutoLogin();
+</script>
+</body>
+</html>
