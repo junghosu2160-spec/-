@@ -631,7 +631,7 @@
         <span class="nav-icon">👩‍🏫</span><span>직원 관리</span>
       </button>
       <button class="nav-item" data-view="studentapp" onclick="switchView('studentapp')">
-        <span class="nav-icon">📱</span><span>학생 페이지 관리</span>
+        <span class="nav-icon">📱</span><span>학생 개별관리</span>
       </button>
     </nav>
     <div class="sidebar-footer">
@@ -2018,7 +2018,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리', studentapp:'학생 페이지 관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리', studentapp:'학생 개별관리' };
 
 function switchView(view){
   currentView = view;
@@ -2186,16 +2186,27 @@ function renderTimetableHeadcount(targetId){
       }).join('')}
     </tr>`;
 
-  const extraDateInputEl = document.getElementById('extraMakeupDate');
-  const refDateForExtra = (typeof selectedSlotDate !== 'undefined' && selectedSlotDate) ? selectedSlotDate
-    : (extraDateInputEl && extraDateInputEl.value) ? extraDateInputEl.value : null;
+  const todayForExtra = todayStr();
   function extraCountAt(d, t){
-    if(!refDateForExtra || weekdayLabelOf(refDateForExtra) !== d) return 0;
-    return absenceRequests.filter(r =>
-      r.type === 'extra_makeup' && r.status !== 'rejected' &&
-      ((r.extraDate === refDateForExtra && r.extraTime === t) ||
-       (!r.extraDate && studentMakeupSlots.some(s => s.id === r.makeupSlotId && s.date === refDateForExtra && s.time === t)))
-    ).length;
+    let count = 0;
+    absenceRequests.forEach(r => {
+      if(r.status !== 'confirmed') return;
+      let mDate, mTime;
+      if(r.type === 'extra_makeup'){
+        if(r.extraDate){ mDate = r.extraDate; mTime = r.extraTime; }
+        else{
+          const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+          if(!slot) return;
+          mDate = slot.date; mTime = slot.time;
+        }
+      }else{
+        const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+        if(!slot) return;
+        mDate = slot.date; mTime = slot.time;
+      }
+      if(mDate >= todayForExtra && weekdayLabelOf(mDate) === d && mTime === t) count++;
+    });
+    return count;
   }
 
   const timeRows = times.map(t => `
@@ -2275,22 +2286,20 @@ function showTimetableStudents(day, time, popupId){
     })
     .sort(compareByGradeThenName);
 
-  // 지금 선택된 보강 날짜(학생페이지관리 탭의 달력 또는 출결관리 탭의 추가보강 날짜)가 이 요일과 일치하면, 그 시간대에 보강으로 등록된 학생도 같이 보여준다
+  // 이 요일·시간대에 앞으로 예정된 보강(결석보강+추가보강)을 전부 모아서 같이 보여준다
   let makeupStudents = [];
   if(!isElem && !isMid && !isHigh && !isAllDay){
-    const extraDateInput = document.getElementById('extraMakeupDate');
-    let refDate = null;
-    if(typeof selectedSlotDate !== 'undefined' && selectedSlotDate && weekdayLabelOf(selectedSlotDate) === day) refDate = selectedSlotDate;
-    else if(extraDateInput && extraDateInput.value && weekdayLabelOf(extraDateInput.value) === day) refDate = extraDateInput.value;
-
-    if(refDate){
-      const bookedIds = absenceRequests.filter(r =>
-        r.type === 'extra_makeup' && r.status !== 'rejected' &&
-        ((r.extraDate === refDate && r.extraTime === time) ||
-         (!r.extraDate && studentMakeupSlots.some(s => s.id === r.makeupSlotId && s.date === refDate && s.time === time)))
-      ).map(r => r.studentId);
-      makeupStudents = students.filter(s => bookedIds.includes(s.id) && !list.some(l => l.id === s.id));
-    }
+    const todayForPopup = todayStr();
+    const bookedIds = new Set();
+    absenceRequests.forEach(r => {
+      if(r.status !== 'confirmed') return;
+      const slot = r.type === 'extra_makeup' && r.extraDate
+        ? { date: r.extraDate, time: r.extraTime }
+        : studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+      if(!slot) return;
+      if(slot.date >= todayForPopup && weekdayLabelOf(slot.date) === day && slot.time === time) bookedIds.add(r.studentId);
+    });
+    makeupStudents = students.filter(s => bookedIds.has(s.id) && !list.some(l => l.id === s.id));
   }
 
   const title = isElem ? `${day}요일 초등부`
@@ -5067,13 +5076,15 @@ function renderMakeupSlotList(){
     const dateStr = `${slotCalYear}-${String(slotCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const slots = slotsOnDate(dateStr);
     const totalCap = slots.reduce((sum, s) => sum + (s.capacity || 0), 0);
+    const totalBooked = slots.reduce((sum, s) => sum + slotBookedCountAdmin(s.id), 0);
+    const remain = totalCap - totalBooked;
     const isPast = dateStr < today;
     let cls = 'cal-cell';
     if(totalCap > 0) cls += ' teacher-cal-work';
     if(dateStr === selectedSlotDate) cls += ' selected';
     html += `<div class="${cls}" style="aspect-ratio:auto;min-height:38px;flex-direction:column;${isPast ? 'opacity:0.4;' : ''}" onclick="selectSlotDate('${dateStr}')">
       <span class="cal-num" style="font-size:11px;">${d}</span>
-      ${totalCap > 0 ? `<div style="font-size:8.5px;color:var(--color-primary);font-weight:800;">정원 ${totalCap}</div>` : ''}
+      ${totalCap > 0 ? `<div style="font-size:8.5px;color:${remain <= 0 ? 'var(--color-danger)' : 'var(--color-primary)'};font-weight:800;">${remain <= 0 ? '마감' : `${remain}/${totalCap}자리`}</div>` : ''}
     </div>`;
   }
   grid.innerHTML = html;
@@ -5156,7 +5167,7 @@ function renderExtraMakeupSection(){
     `<option value="regular:${escapeHtml(t)}">${escapeHtml(t)} (정규수업 · 정원제한 없음)</option>`
   ).join('');
 
-  sel.innerHTML = (slotOptions + regularOptions) || `<option value="">이 날짜엔 시간대가 없어요 (직접 시간대 문구를 학생 페이지 관리 탭에서 등록해 주세요)</option>`;
+  sel.innerHTML = (slotOptions + regularOptions) || `<option value="">이 날짜엔 시간대가 없어요 (직접 시간대 문구를 학생 개별관리 탭에서 등록해 주세요)</option>`;
 
   const midHigh = students.filter(s => {
     const g = s.grade || '';
@@ -5359,7 +5370,10 @@ function openStudentPageFrame(studentId, name){
   document.getElementById('studentPageFrameWrap').style.display = 'block';
   document.getElementById('studentPageFrameTitle').textContent = `${name} 학생 화면`;
   document.getElementById('studentPageFrame').src = `학생페이지.html?admin=${studentId}`;
-  document.querySelectorAll('[id^="studentPageChip_"]').forEach(el => el.classList.remove('active-chip'));
+  document.querySelectorAll('[id^="studentPageChip_"]').forEach(el => {
+    el.style.background = '';
+    el.style.color = '';
+  });
   const chip = document.getElementById('studentPageChip_' + studentId);
   if(chip){ chip.style.background = 'var(--color-primary)'; chip.style.color = '#fff'; }
   document.getElementById('studentPageFrameWrap').scrollIntoView({ behavior:'smooth', block:'start' });
