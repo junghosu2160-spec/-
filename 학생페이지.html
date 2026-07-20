@@ -293,6 +293,7 @@ const ENCOURAGE_TIERS = [
 ];
 
 let currentStudent = null;
+let isAdminView = false;
 let students = [];
 let attendance = [];
 let homeworkItems = [];
@@ -366,6 +367,21 @@ function logout(){
 }
 
 function tryAutoLogin(){
+  // 원장님 관리자 화면에서 iframe으로 열 때: ?admin=학생ID 로 로그인 없이 바로 진입
+  const params = new URLSearchParams(window.location.search);
+  const adminStudentId = params.get('admin');
+  if(adminStudentId){
+    db.ref('students/' + adminStudentId).once('value').then(snap => {
+      const s = snap.val();
+      if(s){
+        currentStudent = Object.assign({ id: adminStudentId }, s);
+        isAdminView = true;
+        startApp();
+      }
+    });
+    return;
+  }
+
   const saved = localStorage.getItem('studentPageAuth');
   if(!saved) return;
   try{
@@ -383,13 +399,16 @@ function tryAutoLogin(){
 function startApp(){
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appScreen').style.display = 'block';
-  document.getElementById('greetName').textContent = '안녕, ' + currentStudent.name + ' 학생';
+  document.getElementById('greetName').textContent = (isAdminView ? '' : '안녕, ') + currentStudent.name + ' 학생';
   const today = new Date();
   const todayLbl = JS_DAY_TO_LABEL[today.getDay()];
   const todayTime = currentStudent.schedule && currentStudent.schedule[todayLbl];
   document.getElementById('greetSub').textContent = todayTime
     ? `오늘은 ${todayLbl}요일, ${todayTime} 수업이에요`
     : `오늘은 ${todayLbl}요일, 수업 없는 날이에요`;
+  if(isAdminView){
+    document.querySelector('.logout-btn').style.display = 'none';
+  }
 
   attachListeners();
 }
