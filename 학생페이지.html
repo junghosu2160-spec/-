@@ -88,6 +88,16 @@
 
   /* ===== 결석/보강 신청 패널 ===== */
   #absencePanel{display:none; background:var(--color-surface-alt); border-radius:var(--radius-sm); padding:14px; margin-top:12px;}
+  .mc-nav{display:flex; align-items:center; justify-content:center; gap:10px; font-size:13px; font-weight:700; margin-bottom:6px;}
+  .mc-nav-btn{background:none; border:1px solid var(--color-border); color:var(--color-text); padding:2px 8px; font-size:13px; border-radius:6px; font-weight:400;}
+  .mc-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;}
+  .mc-weekdays span{text-align:center; font-size:10px; color:var(--color-text-muted);}
+  .mc-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px;}
+  .mc-day{aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:11px; border-radius:7px; color:var(--color-text-muted);}
+  .mc-day.avail{background:var(--color-accent); background:#FFF4D6; color:#8A6400; font-weight:700; cursor:pointer;}
+  .mc-day.selected{outline:2px solid var(--color-primary); outline-offset:-2px;}
+  .mc-dot{width:4px; height:4px; border-radius:50%; background:#E6A800; margin-top:1px;}
   .field{margin-bottom:12px;}
   .field label{display:block; font-size:12.5px; font-weight:600; margin-bottom:5px;}
   .slot-option{
@@ -196,8 +206,20 @@
           <textarea id="absenceReason" rows="2" placeholder="예: 학교 시험기간이라 못 갑니다"></textarea>
         </div>
         <div class="field" id="makeupSlotWrap">
-          <label>보강 받을 시간대 선택</label>
-          <div id="makeupSlotList"></div>
+          <label>보강 받을 날짜 선택</label>
+          <div class="mc-nav">
+            <button type="button" class="mc-nav-btn" onclick="shiftMakeupCalMonth(-1)">‹</button>
+            <span id="makeupCalMonthLabel">-</span>
+            <button type="button" class="mc-nav-btn" onclick="shiftMakeupCalMonth(1)">›</button>
+          </div>
+          <div class="mc-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div class="mc-grid" id="makeupCalGrid"></div>
+          <div id="makeupTimeWrap" style="display:none;margin-top:12px;">
+            <label id="makeupTimeLabel" style="display:block;font-size:12.5px;font-weight:600;margin-bottom:6px;"></label>
+            <div id="makeupSlotList"></div>
+          </div>
         </div>
         <div class="panel-actions">
           <button class="ghost" onclick="closeAbsencePanel()">취소</button>
@@ -290,6 +312,10 @@ function todayStr(){
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
+function formatDateWithWeekday(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getMonth()+1}/${d.getDate()} (${JS_DAY_TO_LABEL[d.getDay()]})`;
+}
 function escapeHtml(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -380,12 +406,12 @@ function attachListeners(){
   });
   db.ref('makeupSlots').on('value', snap => {
     makeupSlots = snapshotToArray(snap.val());
-    if(selectedAbsenceDate) renderMakeupSlots();
+    if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
   });
-  db.ref('absenceRequests').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+  db.ref('absenceRequests').on('value', snap => {
     absenceRequests = snapshotToArray(snap.val());
     renderRequestHistory();
-    if(selectedAbsenceDate) renderMakeupSlots();
+    if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
   });
   db.ref('studentGoals/' + currentStudent.id).on('value', snap => {
     studentGoal = snap.val() || { weeklyGoal: 5 };
@@ -461,18 +487,27 @@ function renderAttCalendar(){
 }
 
 /* ===== 결석/보강 신청 패널 ===== */
+let makeupCalYear, makeupCalMonth, selectedMakeupDate;
+
 function openAbsencePanel(dateStr){
   selectedAbsenceDate = dateStr;
+  selectedMakeupDate = null;
   const panel = document.getElementById('absencePanel');
   panel.style.display = 'block';
   document.getElementById('absencePanelDateLabel').textContent = `${dateStr} 결석 신청`;
   document.getElementById('absenceReason').value = '';
   document.getElementById('absenceStatusBanner').style.display = 'none';
-  renderMakeupSlots();
+  document.getElementById('makeupTimeWrap').style.display = 'none';
+
+  const base = new Date(dateStr + 'T00:00:00');
+  makeupCalYear = base.getFullYear();
+  makeupCalMonth = base.getMonth();
+  renderMakeupCal();
   panel.scrollIntoView({ behavior:'smooth', block:'center' });
 }
 function closeAbsencePanel(){
   selectedAbsenceDate = null;
+  selectedMakeupDate = null;
   document.getElementById('absencePanel').style.display = 'none';
 }
 
@@ -480,26 +515,71 @@ function slotBookedCount(slotId){
   return absenceRequests.filter(r => r.makeupSlotId === slotId && r.status !== 'rejected').length;
 }
 
-function renderMakeupSlots(){
-  const listEl = document.getElementById('makeupSlotList');
-  if(!selectedAbsenceDate) return;
+function shiftMakeupCalMonth(delta){
+  makeupCalMonth += delta;
+  if(makeupCalMonth < 0){ makeupCalMonth = 11; makeupCalYear--; }
+  if(makeupCalMonth > 11){ makeupCalMonth = 0; makeupCalYear++; }
+  renderMakeupCal();
+}
 
-  const upcoming = makeupSlots
-    .filter(s => s.date >= selectedAbsenceDate)
-    .sort((a,b) => (a.date + a.time).localeCompare(b.date + b.time));
+function datesWithAvailableSlots(){
+  const dates = new Set();
+  makeupSlots.forEach(s => {
+    if(s.date < selectedAbsenceDate) return;
+    if(slotBookedCount(s.id) < (s.capacity || 0)) dates.add(s.date);
+  });
+  return dates;
+}
 
-  if(!upcoming.length){
-    listEl.innerHTML = `<p class="hint">현재 등록된 보강 가능 시간대가 없어요. 원장님께 문의해주세요.</p>`;
-    return;
+function renderMakeupCal(){
+  const label = document.getElementById('makeupCalMonthLabel');
+  const grid = document.getElementById('makeupCalGrid');
+  if(!label || !grid) return;
+  label.textContent = `${makeupCalYear}년 ${makeupCalMonth + 1}월`;
+
+  const availDates = datesWithAvailableSlots();
+  const firstDay = new Date(makeupCalYear, makeupCalMonth, 1).getDay();
+  const daysInMonth = new Date(makeupCalYear, makeupCalMonth + 1, 0).getDate();
+
+  let html = '';
+  for(let i = 0; i < firstDay; i++) html += `<div class="mc-day"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const dateStr = `${makeupCalYear}-${String(makeupCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isAvail = availDates.has(dateStr);
+    let cls = 'mc-day';
+    if(isAvail) cls += ' avail';
+    if(dateStr === selectedMakeupDate) cls += ' selected';
+    const onclick = isAvail ? ` onclick="selectMakeupDate('${dateStr}')"` : '';
+    html += `<div class="${cls}"${onclick}>${d}${isAvail ? '<span class="mc-dot"></span>' : ''}</div>`;
   }
-  listEl.innerHTML = upcoming.map(s => {
+  grid.innerHTML = html;
+
+  if(!availDates.size){
+    document.getElementById('makeupTimeWrap').style.display = 'block';
+    document.getElementById('makeupTimeLabel').textContent = '';
+    document.getElementById('makeupSlotList').innerHTML = `<p class="hint">현재 등록된 보강 가능 시간대가 없어요. 원장님께 문의해주세요.</p>`;
+  }
+}
+
+function selectMakeupDate(dateStr){
+  selectedMakeupDate = dateStr;
+  renderMakeupCal();
+
+  const d = new Date(dateStr + 'T00:00:00');
+  const wLbl = JS_DAY_TO_LABEL[d.getDay()];
+  document.getElementById('makeupTimeLabel').textContent = `${d.getMonth()+1}/${d.getDate()} (${wLbl}) 보강 가능 시간`;
+  document.getElementById('makeupTimeWrap').style.display = 'block';
+
+  const slots = makeupSlots.filter(s => s.date === dateStr).sort((a,b) => a.time.localeCompare(b.time));
+  const listEl = document.getElementById('makeupSlotList');
+  listEl.innerHTML = slots.map(s => {
     const booked = slotBookedCount(s.id);
     const cap = s.capacity || 0;
     const full = booked >= cap;
     return `
       <label class="slot-option ${full ? 'disabled' : ''}">
         <input type="radio" name="makeupSlot" value="${s.id}" ${full ? 'disabled' : ''}>
-        <span class="slot-label">${escapeHtml(s.date)} · ${escapeHtml(s.time)}</span>
+        <span class="slot-label">${escapeHtml(s.time)}</span>
         <span class="slot-seat ${full ? 'full' : ''}">${full ? '(마감)' : `(자리 ${cap - booked}개)`}</span>
       </label>`;
   }).join('');
@@ -510,6 +590,7 @@ function renderMakeupSlots(){
 function monthlyConfirmedCount(){
   const ym = todayStr().slice(0,7);
   return absenceRequests.filter(r =>
+    r.studentId === currentStudent.id &&
     r.status === 'confirmed' &&
     (r.createdAt || '').slice(0,7) === ym
   ).length;
@@ -535,9 +616,10 @@ function submitAbsence(){
   const slotId = selectedSlot.value;
   const slot = makeupSlots.find(s => s.id === slotId);
   const booked = slotBookedCount(slotId);
-  if(booked >= (slot.capacity || 0)){ showBanner('방금 자리가 찼어요. 다른 시간대를 선택해주세요.', 'wait'); renderMakeupSlots(); return; }
+  if(booked >= (slot.capacity || 0)){ showBanner('방금 자리가 찼어요. 다른 시간대를 선택해주세요.', 'wait'); selectMakeupDate(selectedMakeupDate); return; }
 
   const needsApproval = monthlyConfirmedCount() >= MONTHLY_FREE_LIMIT;
+  const slotLabel = formatDateWithWeekday(slot.date) + ' · ' + slot.time;
 
   db.ref('absenceRequests').push({
     studentId: currentStudent.id,
@@ -545,7 +627,7 @@ function submitAbsence(){
     absenceDate: selectedAbsenceDate,
     reason,
     makeupSlotId: slotId,
-    makeupSlotLabel: `${slot.date} · ${slot.time}`,
+    makeupSlotLabel: slotLabel,
     status: needsApproval ? 'pending' : 'confirmed',
     createdAt: new Date().toISOString()
   });
@@ -553,7 +635,7 @@ function submitAbsence(){
   showBanner(
     needsApproval
       ? '신청 접수됐어요. 이번 달 보강 횟수를 넘어서 원장님 승인 후 확정돼요.'
-      : `보강이 바로 확정됐어요! ${slot.date} · ${slot.time}`,
+      : `보강이 바로 확정됐어요! ${slotLabel}`,
     needsApproval ? 'wait' : 'ok'
   );
   setTimeout(closeAbsencePanel, 1800);
@@ -568,7 +650,8 @@ function showBanner(text, type){
 
 function renderRequestHistory(){
   const box = document.getElementById('reqHistoryList');
-  const sorted = [...absenceRequests].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  const mine = absenceRequests.filter(r => r.studentId === currentStudent.id);
+  const sorted = [...mine].sort((a,b) => (b.createdAt||'').localeCompare(a.createdAt||''));
   if(!sorted.length){
     box.innerHTML = `<p class="hint">신청 내역이 없어요.</p>`;
     return;
