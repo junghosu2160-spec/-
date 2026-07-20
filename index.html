@@ -933,7 +933,7 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">결석 → 보강 예약 <span class="hint">보강 예약 안 한 학생은 계속 남아있어요 · 예약하면 그 날 출결 화면에 자동으로 나타나요</span></div>
+          <div class="card-title">결석 → 보강 예약 <span class="hint">보강 예약 안 한 학생은 계속 남아있어요 · 날짜+시간까지 정해야 캘린더·학생관리에 나타나요</span></div>
           <div id="weeklyAbsentList"></div>
         </div>
 
@@ -1410,7 +1410,7 @@ const db = firebase.database();
 
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
-let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
+let makeupSchedules = []; // {id, studentId, date, time, note, createdAt} - 보강 예약 (time은 미설정일 수 있음)
 let makeupDismissed = {}; // {"studentId_date": true} - "보강 안함" 처리된 결석
 let autoAbsenceExcluded = {}; // {"studentId_date": true} - 직접 삭제해서 자동 결석 처리 대상에서 뺀 날짜
 let selectedAbsenceIds = new Set(); // 보강 리스트 일괄삭제용 선택 상태
@@ -2193,6 +2193,9 @@ function renderTimetableHeadcount(targetId){
   studentMakeupSlots.forEach(slot => {
     if(weekDates.includes(slot.date)) timesSet.add(slot.time);
   });
+  makeupSchedules.forEach(m => {
+    if(m.time && weekDates.includes(m.date)) timesSet.add(m.time);
+  });
   const times = [...timesSet].sort();
 
   const countAt = (list, day, time) => list.filter(s => getDayTime(s, day) === time).length;
@@ -2210,6 +2213,10 @@ function renderTimetableHeadcount(targetId){
         mDate = slot.date; mTime = slot.time;
       }
       if(mDate === dateStr && mTime === t) count++;
+    });
+    // 결석 → 보강 예약(makeupSchedules)에서 시간까지 설정된 건도 함께 집계
+    makeupSchedules.forEach(m => {
+      if(m.date === dateStr && m.time === t) count++;
     });
     return count;
   }
@@ -2325,6 +2332,9 @@ function showTimetableStudents(day, time, popupId, dateStr){
         : studentMakeupSlots.find(s => s.id === r.makeupSlotId);
       if(!slot) return;
       if(slot.date === dateStr && slot.time === time) bookedIds.add(r.studentId);
+    });
+    makeupSchedules.forEach(m => {
+      if(m.date === dateStr && m.time === time) bookedIds.add(m.studentId);
     });
     makeupStudents = students.filter(s => bookedIds.has(s.id) && !list.some(l => l.id === s.id));
   }
@@ -3582,7 +3592,7 @@ function getEffectiveDayTime(s, weekday, date){
   const normal = getDayTime(s, weekday);
   if(normal) return normal;
   const makeup = makeupSchedules.find(m => m.studentId === s.id && m.date === date);
-  if(makeup) return 'MAKEUP';
+  if(makeup) return makeup.time || 'MAKEUP'; // 시간까지 설정된 보강이면 그 시간으로, 아니면 임시 'MAKEUP' 그룹으로
   // 학생 페이지 결석 보강 확정 또는 원장님이 등록한 추가보강도 그 날 출결 화면에 자동으로 나타나게 함
   const extra = absenceRequests.find(r =>
     r.studentId === s.id && r.status === 'confirmed' &&
@@ -3949,7 +3959,12 @@ function renderWeeklyAbsentList(){
       const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
       // 학생페이지/직원관리에서 새 보강 시스템으로 이미 예약된 경우도 "예약 완료"로 인식
       const newBooked = !makeup && hasAnyUpcomingMakeup(a.studentId, a.date);
-      return { ...a, alreadyMakeup: !!makeup || newBooked, makeupDate: makeup ? makeup.date : (newBooked ? '새 보강 시스템' : null) };
+      return {
+        ...a,
+        alreadyMakeup: !!makeup || newBooked,
+        makeupDate: makeup ? makeup.date : (newBooked ? '새 보강 시스템' : null),
+        makeupTime: makeup ? (makeup.time || '') : (newBooked ? 'NEW' : '') // makeup 있는데 time이 빈 문자열이면 "시간 미설정"
+      };
     });
 
   if(!absences.length){
@@ -3968,6 +3983,7 @@ function renderWeeklyAbsentList(){
 
   const rowHtml = a => {
     const inputId = `makeupDate-${a.id}`;
+    const timeSelId = `makeupTime-${a.id}`;
     const checked = selectedAbsenceIds.has(a.id);
     // 이 학생이 예전에(다른 결석 건으로) 보강 예약을 한 적이 있으면 "재결석"으로 표시
     const hasPriorMakeup = !a.alreadyMakeup && makeupSchedules.some(m => m.studentId === a.stu.id && m.note !== `${a.date} 결석 보강`);
@@ -3979,19 +3995,36 @@ function renderWeeklyAbsentList(){
           ${hasPriorMakeup ? `<span class="repeat-absence-tag">⚠ 재결석</span>` : ''}
         </div>
         ${a.alreadyMakeup
-          ? `<span class="status-pill 출석">→ ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? fmtDateKR(a.makeupDate) + ' ' : ''}보강 예약됨</span>
+          ? `<span class="status-pill 출석">→ ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? fmtDateKR(a.makeupDate) + (a.makeupTime && a.makeupTime !== 'NEW' ? ` ${a.makeupTime}` : '') + ' ' : ''}보강 예약됨</span>
              ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? `<button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>` : ''}`
-          : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>
+          : `<input type="date" id="${inputId}" onchange="onMakeupDateChange('${inputId}','${timeSelId}')" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+             <select id="${timeSelId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜를 먼저 선택하세요</option></select>
+             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}','${timeSelId}')">보강 예약</button>
              <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강 안함</button>
              <button class="btn btn-danger-outline btn-sm" onclick="deleteAbsenceRecord('${a.id}','${a.studentId}','${a.date}')">삭제</button>`}
       </div>`;
   };
 
-  const pending = absences.filter(a => !a.alreadyMakeup);
-  const done = absences.filter(a => a.alreadyMakeup);
+  // 날짜는 잡혔지만 시간은 아직 설정 안 된 보강 — 따로 표시해서 시간을 설정할 수 있게 함
+  const needsTimeRowHtml = a => {
+    const timeSelId = `setTime-${a.id}`;
+    return `
+      <div class="weekly-absent-row makeup-needs-time" style="background:var(--color-warning-soft);border-color:var(--color-warning);">
+        <div class="wa-name">
+          <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)}
+          <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석 → ${fmtDateKR(a.makeupDate)} 보강 <span style="color:var(--color-warning-dark,#C98A2E);font-weight:700;">(시간 미설정)</span></span>
+        </div>
+        <select id="${timeSelId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">${makeupTimeOptionsHtml(a.makeupDate, '')}</select>
+        <button class="btn btn-primary btn-sm" onclick="setMakeupTime('${a.stu.id}','${a.date}','${timeSelId}')">시간 설정</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>
+      </div>`;
+  };
 
-  const byGrade = list => {
+  const pending = absences.filter(a => !a.alreadyMakeup);
+  const needsTime = absences.filter(a => a.alreadyMakeup && /^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) && !a.makeupTime);
+  const done = absences.filter(a => a.alreadyMakeup && !needsTime.includes(a));
+
+  const byGrade = (list, renderFn) => {
     const groups = {};
     list.forEach(a => {
       const g = a.stu.grade;
@@ -4002,7 +4035,7 @@ function renderWeeklyAbsentList(){
       .sort((a,b)=> GRADES.indexOf(a) - GRADES.indexOf(b))
       .map(g => {
         const rows = groups[g].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
-        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(rowHtml).join('')}`;
+        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(renderFn).join('')}`;
       }).join('');
   };
 
@@ -4014,7 +4047,13 @@ function renderWeeklyAbsentList(){
       </label>
       <button class="btn btn-danger-outline btn-sm" id="bulkDeleteAbsencesBtn" onclick="bulkDeleteSelectedAbsences()" style="display:none;">🗑 선택 삭제 (<span id="selectedAbsenceCountLabel">0</span>)</button>
     </div>`;
-  html += byGrade(pending);
+  html += byGrade(pending, rowHtml);
+  if(needsTime.length){
+    html += `<div class="sms-group-title" style="margin-top:16px;color:var(--color-warning-dark,#C98A2E);">
+      ⏰ 시간 설정 필요 (${needsTime.length}건) <span class="hint">날짜만 잡힌 보강이에요 · 시간을 설정하면 캘린더·학생관리에 표시돼요</span>
+    </div>`;
+    html += needsTime.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(needsTimeRowHtml).join('');
+  }
   if(done.length){
     html += `<div class="sms-group-title done" style="margin-top:16px;cursor:pointer;" onclick="toggleDoneMakeupSection()">
       <span id="doneMakeupToggleIcon">▸</span> 예약 완료 (${done.length}건) <span class="hint">눌러서 펼치기</span>
@@ -4070,11 +4109,56 @@ function bulkDeleteSelectedAbsences(){
   showToast(`결석 기록 ${ids.length}건을 삭제했습니다.`);
 }
 
-function scheduleMakeup(studentId, inputId, absenceDate){
+// 특정 날짜에 선택 가능한 보강 시간 옵션(<option>)을 만든다.
+// 그 날짜에 설정된 보강 시간대(studentMakeupSlots) + 그 요일 정규수업 시간을 합쳐서 보여준다.
+function makeupTimeOptionsHtml(dateVal, selectedTime){
+  if(!dateVal) return `<option value="">날짜를 먼저 선택하세요</option>`;
+  const slots = slotsOnDate(dateVal).sort((a,b) => a.time.localeCompare(b.time));
+  const slotTimes = new Set(slots.map(s => s.time));
+  const ref = weekdayHeadcountRef(dateVal);
+  const regularTimes = Object.keys(ref).filter(t => !slotTimes.has(t)).sort();
+
+  const slotOptions = slots.map(s => {
+    const remain = s.capacity - slotBookedCountAdmin(s.id);
+    return `<option value="${escapeHtml(s.time)}" ${selectedTime===s.time?'selected':''}>${escapeHtml(s.time)} (보강자리 ${remain}개 남음)</option>`;
+  }).join('');
+  const regularOptions = regularTimes.map(t =>
+    `<option value="${escapeHtml(t)}" ${selectedTime===t?'selected':''}>${escapeHtml(t)} (정규수업 시간)</option>`
+  ).join('');
+
+  const blank = `<option value="" ${selectedTime?'':'selected'}>시간 미정 (나중에 설정)</option>`;
+  const opts = slotOptions + regularOptions;
+  return opts ? (blank + opts) : `<option value="">이 날짜엔 열린 시간대가 없어요 (보강 시간대 관리에서 먼저 추가해 주세요)</option>`;
+}
+
+// 보강 예약 행에서 날짜를 바꾸면, 그 날짜에 맞는 시간 옵션으로 시간 select를 다시 채운다
+function onMakeupDateChange(dateInputId, selectId){
+  const dateVal = document.getElementById(dateInputId).value;
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML = makeupTimeOptionsHtml(dateVal, '');
+}
+
+function scheduleMakeup(studentId, inputId, absenceDate, timeSelId){
   const dateVal = document.getElementById(inputId).value;
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
-  db.ref('makeupSchedules').push({ studentId, date: dateVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
-  showToast('보강 일정이 등록되었습니다. 그 날짜 출결 화면에 자동으로 나타나요.');
+  const timeSel = timeSelId ? document.getElementById(timeSelId) : null;
+  const timeVal = timeSel ? timeSel.value : '';
+  db.ref('makeupSchedules').push({ studentId, date: dateVal, time: timeVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
+  showToast(timeVal
+    ? `보강 일정이 등록되었습니다. ${dateVal} ${timeVal} 출결/캘린더 화면에 자동으로 나타나요.`
+    : '보강 날짜가 등록되었습니다. 시간은 아래 "시간 설정 필요" 목록에서 나중에 설정할 수 있어요.');
+}
+
+// 이미 날짜만 잡혀있던 보강에 시간을 설정(또는 재설정)한다
+function setMakeupTime(studentId, absenceDate, timeSelId){
+  const sel = document.getElementById(timeSelId);
+  const timeVal = sel ? sel.value : '';
+  if(!timeVal){ alert('시간을 선택해 주세요.'); return; }
+  const m = makeupSchedules.find(m => m.studentId === studentId && m.note === `${absenceDate} 결석 보강`);
+  if(!m){ showToast('보강 예약을 찾을 수 없어요.'); return; }
+  db.ref('makeupSchedules/' + m.id).update({ time: timeVal });
+  showToast('보강 시간이 설정되었습니다. 캘린더와 학생관리 화면에 반영돼요.');
 }
 
 function dismissMakeup(studentId, date){
