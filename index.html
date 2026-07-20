@@ -2354,7 +2354,7 @@ function showTimetableStudents(day, time, popupId, dateStr){
       </div>
       <div class="tp-names">
         ${list.map(s => `<span class="tp-name"><span>${escapeHtml(s.name)}</span>${gradeBadge(s.grade)}</span>`).join('')}
-        ${makeupStudents.map(s => `<span class="tp-name" style="background:#EEEAFB;color:#5030B0;border-color:#D8CEF5;"><span>${escapeHtml(s.name)} (보강)</span></span>`).join('')}
+        ${makeupStudents.map(s => `<span class="tp-name" style="background:#161616;color:#fff;border:1px solid #8B5CF6;"><span>${escapeHtml(s.name)} (보강)</span>${gradeBadge(s.grade)}</span>`).join('')}
         ${!list.length && !makeupStudents.length ? '<span class="cell-muted">학생이 없습니다.</span>' : ''}
       </div>
     </div>`;
@@ -3925,6 +3925,15 @@ function toggleDoneMakeupSection(){
   if(icon) icon.textContent = willShow ? '▾' : '▸';
 }
 
+function toggleNeedsTimePastSection(){
+  const sec = document.getElementById('needsTimePastSection');
+  const icon = document.getElementById('needsTimePastToggleIcon');
+  if(!sec) return;
+  const willShow = sec.style.display === 'none';
+  sec.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
 function hasAnyUpcomingMakeup(studentId, sinceDate){
   return absenceRequests.some(r => {
     if(r.studentId !== studentId || r.status !== 'confirmed') return false;
@@ -4006,13 +4015,18 @@ function renderWeeklyAbsentList(){
   };
 
   // 날짜는 잡혔지만 시간은 아직 설정 안 된 보강 — 따로 표시해서 시간을 설정할 수 있게 함
-  const needsTimeRowHtml = a => {
+  // highlight=false면 이미 지나서 출석까지 끝난 보강이라 색 없이 조용히 표시
+  const needsTimeRowHtml = (a, highlight) => {
     const timeSelId = `setTime-${a.id}`;
+    const boxStyle = highlight ? 'background:var(--color-warning-soft);border-color:var(--color-warning);' : '';
+    const tag = highlight
+      ? `<span style="color:var(--color-warning-dark,#C98A2E);font-weight:700;">(시간 미설정)</span>`
+      : `<span class="cell-muted">(출석 완료 · 시간만 미설정)</span>`;
     return `
-      <div class="weekly-absent-row makeup-needs-time" style="background:var(--color-warning-soft);border-color:var(--color-warning);">
+      <div class="weekly-absent-row makeup-needs-time" style="${boxStyle}">
         <div class="wa-name">
           <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)}
-          <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석 → ${fmtDateKR(a.makeupDate)} 보강 <span style="color:var(--color-warning-dark,#C98A2E);font-weight:700;">(시간 미설정)</span></span>
+          <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석 → ${fmtDateKR(a.makeupDate)} 보강 ${tag}</span>
         </div>
         <select id="${timeSelId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">${makeupTimeOptionsHtml(a.makeupDate, '')}</select>
         <button class="btn btn-primary btn-sm" onclick="setMakeupTime('${a.stu.id}','${a.date}','${timeSelId}')">시간 설정</button>
@@ -4020,9 +4034,17 @@ function renderWeeklyAbsentList(){
       </div>`;
   };
 
+  // 보강 날짜에 이미 출석/지각으로 체크됐다면 = 사실상 보강이 끝난 것이므로 급한 색 표시가 필요 없음
+  const makeupAlreadyAttended = (studentId, dateStr) => {
+    const rec = attendance.find(x => x.studentId === studentId && x.date === dateStr);
+    return !!rec && (rec.status === '출석' || rec.status === '지각');
+  };
+
   const pending = absences.filter(a => !a.alreadyMakeup);
-  const needsTime = absences.filter(a => a.alreadyMakeup && /^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) && !a.makeupTime);
-  const done = absences.filter(a => a.alreadyMakeup && !needsTime.includes(a));
+  const needsTimeAll = absences.filter(a => a.alreadyMakeup && /^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) && !a.makeupTime);
+  const needsTime = needsTimeAll.filter(a => !makeupAlreadyAttended(a.stu.id, a.makeupDate));
+  const needsTimePastDone = needsTimeAll.filter(a => makeupAlreadyAttended(a.stu.id, a.makeupDate));
+  const done = absences.filter(a => a.alreadyMakeup && !needsTimeAll.includes(a));
 
   const byGrade = (list, renderFn) => {
     const groups = {};
@@ -4052,7 +4074,13 @@ function renderWeeklyAbsentList(){
     html += `<div class="sms-group-title" style="margin-top:16px;color:var(--color-warning-dark,#C98A2E);">
       ⏰ 시간 설정 필요 (${needsTime.length}건) <span class="hint">날짜만 잡힌 보강이에요 · 시간을 설정하면 캘린더·학생관리에 표시돼요</span>
     </div>`;
-    html += needsTime.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(needsTimeRowHtml).join('');
+    html += needsTime.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(a => needsTimeRowHtml(a, true)).join('');
+  }
+  if(needsTimePastDone.length){
+    html += `<div class="sms-group-title" style="margin-top:16px;cursor:pointer;" onclick="toggleNeedsTimePastSection()">
+      <span id="needsTimePastToggleIcon">▸</span> 지난 보강 · 이미 출석함 (${needsTimePastDone.length}건) <span class="hint">시간 기록만 안 남았어요 · 눌러서 펼치기</span>
+    </div>`;
+    html += `<div id="needsTimePastSection" style="display:none;opacity:0.6;">${needsTimePastDone.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(a => needsTimeRowHtml(a, false)).join('')}</div>`;
   }
   if(done.length){
     html += `<div class="sms-group-title done" style="margin-top:16px;cursor:pointer;" onclick="toggleDoneMakeupSection()">
