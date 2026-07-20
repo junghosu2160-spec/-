@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>중·고등부 출결 관리 · 델타수학 전문학원</title>
+<style>
+  :root{
+    --bg:#F6F7F9; --card:#FFFFFF; --border:#E5E8EC;
+    --text:#22272E; --text-sub:#6B7280; --text-muted:#9AA1AB;
+    --blue-bg:#E6F1FB; --blue-tx:#0C447C;
+    --pink-bg:#FBEAF0; --pink-tx:#72243E;
+    --green-bg:#EAF3DE; --green-tx:#27500A;
+    --amber-bg:#FAEEDA; --amber-tx:#633806;
+    --red-bg:#FCEBEB; --red-tx:#791F1F;
+    --radius:10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--bg); color:var(--text); padding:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{max-width:560px; margin:0 auto;}
+  .header{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px; margin-bottom:12px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand .delta{
+    width:36px; height:36px; border-radius:10px; background:var(--blue-bg);
+    color:var(--blue-tx); font-size:20px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand h1{font-size:16px; font-weight:700;}
+  .brand .sub{font-size:12px; color:var(--text-sub); margin-top:2px;}
+  .sync{font-size:11px; color:var(--text-sub); text-align:right; white-space:nowrap;}
+  .date-line{font-size:13px; font-weight:600; margin-top:2px;}
+
+  .banner{
+    display:none; background:#FFF6DC; border:1px solid #E0A400; border-radius:var(--radius);
+    padding:11px 13px; margin-bottom:12px;
+  }
+  .banner .label{font-size:11px; font-weight:800; color:#8A6400; margin-bottom:3px;}
+  .banner .text{font-size:13.5px; color:#4A3A00; line-height:1.5; white-space:pre-wrap;}
+
+  .stats{display:flex; gap:8px; margin-bottom:12px;}
+  .stat{
+    flex:1; background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:10px 6px; text-align:center;
+  }
+  .stat .num{font-size:20px; font-weight:800;}
+  .stat .lbl{font-size:11px; color:var(--text-sub); margin-top:2px;}
+  .stat.present .num{color:var(--green-tx);}
+  .stat.absent .num{color:var(--red-tx);}
+
+  .chips{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+  .chip{
+    flex:1; min-width:64px; text-align:center; font-size:13px; padding:9px 4px;
+    border-radius:var(--radius); background:var(--card); border:1px solid var(--border);
+    color:var(--text-sub); cursor:pointer; user-select:none;
+  }
+  .chip.on{background:var(--blue-bg); color:var(--blue-tx); border-color:var(--blue-bg); font-weight:700;}
+
+  .search-input{
+    width:100%; padding:11px 13px; font-size:14px; border:1px solid var(--border);
+    border-radius:var(--radius); background:var(--card); margin-bottom:12px; outline:none;
+  }
+  .search-input:focus{border-color:#378ADD;}
+
+  .stu-card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:11px 13px; margin-bottom:8px;
+  }
+  .stu-top{display:flex; align-items:center; gap:8px; margin-bottom:9px; flex-wrap:wrap;}
+  .g-badge{
+    font-size:12px; font-weight:700; padding:2px 9px; border-radius:11px; white-space:nowrap;
+  }
+
+  .stu-name{font-size:15px; font-weight:700;}
+  .stu-time{font-size:12px; color:var(--text-muted);}
+  .stu-checkin{font-size:11.5px; color:var(--text-sub); margin-left:auto; white-space:nowrap;}
+  .btn-row{display:flex; gap:6px;}
+  .st-btn{
+    flex:1; text-align:center; font-size:13px; padding:9px 0; border-radius:var(--radius);
+    background:var(--card); border:1px solid var(--border); color:var(--text-sub);
+    cursor:pointer; user-select:none; font-weight:500;
+  }
+  .st-btn.on-출석{background:var(--green-bg); color:var(--green-tx); border-color:var(--green-bg); font-weight:700;}
+  .st-btn.on-지각{background:var(--amber-bg); color:var(--amber-tx); border-color:var(--amber-bg); font-weight:700;}
+  .st-btn.on-결석{background:var(--red-bg); color:var(--red-tx); border-color:var(--red-bg); font-weight:700;}
+
+  .empty{
+    text-align:center; color:var(--text-muted); font-size:13.5px; padding:34px 0;
+    background:var(--card); border:1px dashed var(--border); border-radius:12px; margin-bottom:8px;
+  }
+
+  .note-card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:14px; margin-top:14px;
+  }
+  .note-card .title{font-size:14px; font-weight:700; margin-bottom:2px;}
+  .note-card .desc{font-size:12px; color:var(--text-sub); margin-bottom:9px;}
+  .note-card textarea{
+    width:100%; min-height:84px; font-size:14px; line-height:1.55; padding:11px 12px;
+    border:1px solid var(--border); border-radius:var(--radius); resize:vertical;
+    font-family:inherit; outline:none; background:#FBFCFD;
+  }
+  .note-card textarea:focus{border-color:#378ADD; background:#fff;}
+  .note-actions{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:9px;}
+  .save-btn{
+    font-size:14px; font-weight:700; padding:9px 22px; border-radius:var(--radius);
+    background:var(--blue-bg); color:var(--blue-tx); border:none; cursor:pointer;
+  }
+  .save-btn:active{transform:scale(0.97);}
+  .saved-msg{display:none; font-size:12.5px; color:var(--green-tx);}
+  .hint{font-size:11px; color:var(--text-muted); margin-top:12px; line-height:1.6; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="brand">
+      <div class="delta">δ</div>
+      <div>
+        <h1>중·고등부 출결 관리</h1>
+        <div class="sub">델타수학 전문학원</div>
+      </div>
+    </div>
+    <div>
+      <div class="sync" id="syncStatus">🔄 연결 중...</div>
+      <div class="date-line" id="todayLabel">-</div>
+    </div>
+  </div>
+
+  <div class="banner" id="directorNoteBanner">
+    <div class="label">📢 원장님 전달사항</div>
+    <div class="text" id="directorNoteText"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">오늘 수업 예정</div></div>
+    <div class="stat present"><div class="num" id="statPresent">0</div><div class="lbl">출석 (지각 포함)</div></div>
+    <div class="stat absent"><div class="num" id="statAbsent">0</div><div class="lbl">결석</div></div>
+  </div>
+
+  <div class="chips" id="timeChips"></div>
+
+  <input type="text" class="search-input" id="searchInput" placeholder="🔍 이름으로 검색 (오늘 수업 없는 학생도 찾을 수 있어요)" oninput="renderList()">
+
+  <div id="studentList"></div>
+
+  <div class="note-card">
+    <div class="title">📮 원장님께 전달사항</div>
+    <div class="desc">오늘 수업 관련 하고 싶은 말을 자유롭게 적어주세요. 원장님 대시보드에 전달돼요.</div>
+    <textarea id="dailyNoteTextarea" placeholder="예: 이서연 학생 시험기간이라 다음주 보강 원한다고 합니다."></textarea>
+    <div class="note-actions">
+      <span class="saved-msg" id="dailyNoteSavedMsg">✓ 저장되었습니다.</span>
+      <button class="save-btn" onclick="saveDailyNote()">저장</button>
+    </div>
+  </div>
+
+  <div class="hint">
+    출석 · 지각 · 결석 버튼을 누르면 즉시 자동 저장되며,<br>
+    원장님 관리자 프로그램에 실시간으로 반영돼요. 잘못 눌렀다면 다른 버튼을 다시 누르면 돼요.
+  </div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
+  authDomain: "checkkkk-e5774.firebaseapp.com",
+  databaseURL: "https://checkkkk-e5774-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "checkkkk-e5774",
+  storageBucket: "checkkkk-e5774.firebasestorage.app",
+  messagingSenderId: "378303125830",
+  appId: "1:378303125830:web:d6ef8f50b79d83de1d2d47"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const WEEKDAYS = ['월','화','수','목','금','토','일'];
+const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
+
+let students = [];
+let attendance = [];
+let makeupSchedules = [];
+let selectedTime = '전체';
+
+function snapshotToArray(val){
+  if(!val) return [];
+  return Object.entries(val).map(([id, v]) => Object.assign({ id }, v));
+}
+function todayStr(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+function nowTimeStr(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+}
+function todayLabel(){
+  return JS_DAY_TO_LABEL[new Date().getDay()];
+}
+function escapeHtml(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// 원장님 관리자 프로그램(index.html)과 동일한 학년별 색상
+const GRADE_COLORS = {
+  '중1': { bg:'#DCEEFF', text:'#1F5FA8' },
+  '중2': { bg:'#BFE0FB', text:'#1B4D8C' },
+  '중3': { bg:'#9ECFFA', text:'#123D73' },
+  '고1': { bg:'#FFE1EC', text:'#8A2456' },
+  '고2': { bg:'#FFC2D9', text:'#7A1642' },
+  '고3': { bg:'#FFA3C4', text:'#6B1238' },
+  'N수/기타': { bg:'#ECECEC', text:'#666666' },
+};
+function gradeColorOf(grade){
+  return GRADE_COLORS[grade] || { bg:'#ECECEC', text:'#666666' };
+}
+function isMidHigh(stu){
+  const g = stu.grade || '';
+  return g.startsWith('중') || g.startsWith('고') || g === 'N수/기타';
+}
+function getDayTime(stu, dayLbl){
+  return (stu.schedule && stu.schedule[dayLbl]) || null;
+}
+function getTodayRecord(studentId){
+  const date = todayStr();
+  return attendance.find(a => a.studentId === studentId && a.date === date) || null;
+}
+
+/* ===== 출결 상태 저장 ===== */
+function setStatus(studentId, status){
+  const rec = getTodayRecord(studentId);
+  if(rec){
+    if(rec.status === status) return;
+    const upd = { status };
+    if(status !== '결석' && !rec.checkInTime) upd.checkInTime = nowTimeStr();
+    db.ref('attendance/' + rec.id).update(upd);
+  }else{
+    db.ref('attendance').push({
+      studentId,
+      date: todayStr(),
+      status,
+      checkInTime: status === '결석' ? '' : nowTimeStr(),
+      checkOutTime: '',
+      memo: ''
+    });
+  }
+}
+
+/* ===== 목록 렌더 ===== */
+const GRADE_ORDER = ['중1','중2','중3','고1','고2','고3','N수/기타'];
+function gradeSort(g){ const i = GRADE_ORDER.indexOf(g); return i === -1 ? 99 : i; }
+
+function hasTodayMakeup(studentId){
+  return makeupSchedules.some(m => m.studentId === studentId && m.date === todayStr());
+}
+function getEffectiveTime(s, lbl){
+  return getDayTime(s, lbl) || (hasTodayMakeup(s.id) ? '보강' : null);
+}
+function todaysMidHighStudents(){
+  const lbl = todayLabel();
+  return students
+    .filter(s => isMidHigh(s) && getEffectiveTime(s, lbl))
+    .sort((a,b) => {
+      const tA = getDayTime(a, lbl) || '99:99';
+      const tB = getDayTime(b, lbl) || '99:99';
+      const t = tA.localeCompare(tB);
+      if(t !== 0) return t;
+      const g = gradeSort(a.grade) - gradeSort(b.grade);
+      if(g !== 0) return g;
+      return (a.name || '').localeCompare(b.name || '', 'ko');
+    });
+}
+
+function renderTimeChips(){
+  const lbl = todayLabel();
+  const all = todaysMidHighStudents();
+  const times = [...new Set(all.map(s => getEffectiveTime(s, lbl)))].sort((a,b) => {
+    if(a === '보강') return 1;
+    if(b === '보강') return -1;
+    return a.localeCompare(b);
+  });
+  const el = document.getElementById('timeChips');
+  if(!times.includes(selectedTime) && selectedTime !== '전체') selectedTime = '전체';
+  el.innerHTML = ['전체'].concat(times).map(t =>
+    `<div class="chip ${selectedTime === t ? 'on' : ''}" onclick="selectTime('${t}')">${t}</div>`
+  ).join('');
+}
+function selectTime(t){
+  selectedTime = t;
+  renderList();
+}
+
+function cardHtml(stu, timeStr){
+  const rec = getTodayRecord(stu.id);
+  const status = rec ? rec.status : null;
+  const g = stu.grade || '';
+  const gc = gradeColorOf(g);
+  const checkin = (rec && rec.checkInTime && status !== '결석')
+    ? `<span class="stu-checkin">등원 ${escapeHtml(rec.checkInTime)}</span>` : '';
+  return `
+    <div class="stu-card">
+      <div class="stu-top">
+        <span class="g-badge" style="background:${gc.bg};color:${gc.text};">${escapeHtml(g)}</span>
+        <span class="stu-name">${escapeHtml(stu.name)}</span>
+        <span class="stu-time">${timeStr ? escapeHtml(timeStr) : '오늘 수업 없음'}</span>
+        ${checkin}
+      </div>
+      <div class="btn-row">
+        <div class="st-btn ${status === '출석' ? 'on-출석' : ''}" onclick="setStatus('${stu.id}','출석')">출석</div>
+        <div class="st-btn ${status === '지각' ? 'on-지각' : ''}" onclick="setStatus('${stu.id}','지각')">지각</div>
+        <div class="st-btn ${status === '결석' ? 'on-결석' : ''}" onclick="setStatus('${stu.id}','결석')">결석</div>
+      </div>
+    </div>`;
+}
+
+function renderList(){
+  const lbl = todayLabel();
+  const q = document.getElementById('searchInput').value.trim();
+  const listEl = document.getElementById('studentList');
+  let list;
+
+  if(q){
+    list = students.filter(s => isMidHigh(s) && (s.name || '').includes(q));
+    listEl.innerHTML = list.length
+      ? list.map(s => cardHtml(s, getDayTime(s, lbl))).join('')
+      : `<div class="empty">'${escapeHtml(q)}' 검색 결과가 없어요.</div>`;
+  }else{
+    list = todaysMidHighStudents();
+    if(selectedTime !== '전체') list = list.filter(s => getEffectiveTime(s, lbl) === selectedTime);
+    listEl.innerHTML = list.length
+      ? list.map(s => cardHtml(s, getEffectiveTime(s, lbl))).join('')
+      : `<div class="empty">오늘(${lbl}) 수업 예정인 중·고등부 학생이 없어요.</div>`;
+  }
+  renderStats();
+  renderTimeChips();
+}
+
+function renderStats(){
+  const all = todaysMidHighStudents();
+  let present = 0, absent = 0;
+  all.forEach(s => {
+    const rec = getTodayRecord(s.id);
+    if(!rec) return;
+    if(rec.status === '결석') absent++;
+    else if(rec.status === '출석' || rec.status === '지각') present++;
+  });
+  document.getElementById('statTotal').textContent = all.length;
+  document.getElementById('statPresent').textContent = present;
+  document.getElementById('statAbsent').textContent = absent;
+}
+
+/* ===== Firebase 실시간 리스너 ===== */
+db.ref('students').on('value', snap => {
+  students = snapshotToArray(snap.val());
+  renderList();
+});
+db.ref('attendance').on('value', snap => {
+  attendance = snapshotToArray(snap.val());
+  renderList();
+});
+db.ref('makeupSchedules').on('value', snap => {
+  makeupSchedules = snapshotToArray(snap.val());
+  renderList();
+});
+db.ref('.info/connected').on('value', snap => {
+  const el = document.getElementById('syncStatus');
+  if(snap.val() === true){ el.textContent = '🟢 실시간 동기화 중'; }
+  else{ el.textContent = '🔴 연결 대기 중...'; }
+});
+
+/* ===== 원장님 전달사항 배너 (읽기 전용) ===== */
+db.ref('directorNotes/' + todayStr()).on('value', snap => {
+  const data = snap.val();
+  const note = data && (typeof data === 'string' ? data : data.note);
+  const banner = document.getElementById('directorNoteBanner');
+  if(note && String(note).trim()){
+    document.getElementById('directorNoteText').textContent = note;
+    banner.style.display = 'block';
+  }else{
+    banner.style.display = 'none';
+  }
+});
+
+/* ===== 오늘 전달사항 (중고등부 → 원장님) ===== */
+function loadDailyNote(){
+  db.ref('dailyNotesMH/' + todayStr()).once('value').then(snap => {
+    const data = snap.val();
+    document.getElementById('dailyNoteTextarea').value = (data && data.note) || '';
+  });
+}
+function saveDailyNote(){
+  const note = document.getElementById('dailyNoteTextarea').value.trim();
+  db.ref('dailyNotesMH/' + todayStr()).set({ date: todayStr(), note, updatedAt: Date.now() });
+  const msg = document.getElementById('dailyNoteSavedMsg');
+  msg.style.display = 'inline';
+  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+}
+loadDailyNote();
+
+/* ===== 날짜 표시 및 자정 갱신 ===== */
+function renderDateLabel(){
+  const d = new Date();
+  document.getElementById('todayLabel').textContent =
+    (d.getMonth()+1) + '월 ' + d.getDate() + '일 (' + todayLabel() + ')';
+}
+renderDateLabel();
+let lastDate = todayStr();
+setInterval(() => {
+  if(todayStr() !== lastDate){
+    lastDate = todayStr();
+    renderDateLabel();
+    loadDailyNote();
+    renderList();
+  }
+}, 60000);
+</script>
+</body>
+</html>
