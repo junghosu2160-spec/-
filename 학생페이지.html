@@ -410,6 +410,7 @@ function extraMakeupDatesForStudent(){
   const dates = new Set();
   absenceRequests.forEach(r => {
     if(r.type !== 'extra_makeup' || r.status !== 'confirmed') return;
+    if(r.extraDate){ dates.add(r.extraDate); return; }
     const slot = makeupSlots.find(s => s.id === r.makeupSlotId);
     if(slot) dates.add(slot.date);
   });
