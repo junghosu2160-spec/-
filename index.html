@@ -919,6 +919,7 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(-1)">‹</button>
               <div class="cal-month-label" id="calMonthLabel">-</div>
               <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(1)">›</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="calGoToday()" style="margin-left:6px;">오늘</button>
             </div>
             <div class="cal-weekdays">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -1242,23 +1243,34 @@
           <div class="card-title">
             보강 가능 시간대 <span class="hint">학생이 결석 신청할 때 이 목록에서 골라요</span>
           </div>
-          <div class="toolbar" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
-              <span id="slotCalMonthLabel" style="font-size:15px;font-weight:800;">-</span>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
+
+          <div class="grid grid-2" style="align-items:start;">
+            <div>
+              <div class="toolbar" style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
+                  <span id="slotCalMonthLabel" style="font-size:14px;font-weight:800;">-</span>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
+                </div>
+              </div>
+              <div style="max-width:260px;">
+                <div class="cal-weekdays">
+                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+                </div>
+                <div class="cal-grid" id="slotCalGrid"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">이번 주 타임별 등원 인원 <span class="hint">참고용</span></div>
+              <div id="slotHeadcountRef" style="overflow-x:auto;"></div>
             </div>
           </div>
-          <div class="cal-weekdays">
-            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-          </div>
-          <div class="cal-grid" id="slotCalGrid" style="gap:3px;"></div>
 
           <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border-radius:var(--radius-md);padding:14px;margin-top:14px;">
             <div id="slotEditorTitle" style="font-weight:800;font-size:14px;margin-bottom:2px;"></div>
-            <p class="cell-muted" style="font-size:11.5px;margin:0 0 10px;">이 요일 정규 등원 인원과, 이날 출근하는 선생님 수를 참고해서 정원을 정해보세요.</p>
+            <p class="cell-muted" style="font-size:11.5px;margin:0 0 10px;">이날 출근하는 선생님을 참고해서 정원을 정해보세요.</p>
 
-            <div id="slotRefChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"></div>
             <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
 
             <div id="slotInputRows"></div>
@@ -1273,6 +1285,24 @@
               </div>
             </div>
             <button class="btn btn-primary" style="width:100%;margin-top:6px;" onclick="saveSlotEditor()">저장</button>
+
+            <div class="divider"></div>
+            <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">결석 아닌 학생도 추가보강으로 등록</div>
+            <div class="form-row">
+              <div class="field" style="flex:1.4;">
+                <label>시간대 선택</label>
+                <select id="extraMakeupSlotSelect"></select>
+              </div>
+              <div class="field" style="flex:1.4;">
+                <label>학생 검색</label>
+                <input type="text" id="extraMakeupStudentSearch" list="extraMakeupStudentList" placeholder="이름 입력">
+                <datalist id="extraMakeupStudentList"></datalist>
+              </div>
+              <div class="form-actions" style="align-self:flex-end;">
+                <button class="btn btn-primary btn-sm" onclick="addExtraMakeup()">추가보강 등록</button>
+              </div>
+            </div>
+            <div id="extraMakeupListForDate"></div>
           </div>
         </div>
 
@@ -2074,8 +2104,8 @@ function renderGradeDonut(){
   ], '전체 학생');
 }
 
-function renderTimetableHeadcount(){
-  const box = document.getElementById('timetableHeadcount');
+function renderTimetableHeadcount(targetId){
+  const box = document.getElementById(targetId || 'timetableHeadcount');
   if(!box) return;
 
   const allDays = ['월','화','수','목','금','토'];
@@ -3852,6 +3882,13 @@ function calShiftMonth(delta){
   renderAttCalendar();
 }
 
+function calGoToday(){
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderAttCalendar();
+}
+
 function renderAttCalendar(){
   const grid = document.getElementById('calGrid');
   const label = document.getElementById('calMonthLabel');
@@ -4779,6 +4816,7 @@ function renderMakeupSlotList(){
   const grid = document.getElementById('slotCalGrid');
   if(!label || !grid) return;
   label.textContent = `${slotCalYear}년 ${slotCalMonth + 1}월`;
+  renderTimetableHeadcount('slotHeadcountRef');
 
   const today = new Date().toISOString().slice(0,10);
   const firstDay = new Date(slotCalYear, slotCalMonth, 1).getDay();
@@ -4817,13 +4855,6 @@ function renderSlotEditor(){
   const dLbl = weekdayLabelOf(selectedSlotDate);
   document.getElementById('slotEditorTitle').textContent = `${selectedSlotDate} (${dLbl}) 보강 정원`;
 
-  // 참고: 정규 등원 인원
-  const ref = weekdayHeadcountRef(selectedSlotDate);
-  const refTimes = Object.keys(ref).sort();
-  document.getElementById('slotRefChips').innerHTML = refTimes.length
-    ? refTimes.map(t => `<span class="teacher-chip" style="cursor:default;">${escapeHtml(t)} <b>${ref[t]}명</b></span>`).join('')
-    : `<span class="cell-muted" style="font-size:11.5px;">이 요일 정규 수업이 없습니다.</span>`;
-
   // 참고: 이 날짜 출근하는 선생님
   const workingTeachers = teachers.filter(t => isTeacherWorking(t, selectedSlotDate));
   document.getElementById('slotTeacherChips').innerHTML = workingTeachers.length
@@ -4831,6 +4862,8 @@ function renderSlotEditor(){
     : `<span class="cell-muted" style="font-size:11.5px;">이날 출근 예정인 선생님이 없습니다.</span>`;
 
   // 시간대별 정원 입력 — 기존 정규 시간 + 이미 설정된 보강 시간을 합쳐서 표시
+  const ref = weekdayHeadcountRef(selectedSlotDate);
+  const refTimes = Object.keys(ref);
   const existing = slotsOnDate(selectedSlotDate);
   const existingByTime = {};
   existing.forEach(s => { existingByTime[s.time] = s; });
@@ -4854,6 +4887,78 @@ function renderSlotEditor(){
         </div>`;
     }).join('');
   }
+
+  renderExtraMakeupSection();
+}
+
+function renderExtraMakeupSection(){
+  const sel = document.getElementById('extraMakeupSlotSelect');
+  const datalist = document.getElementById('extraMakeupStudentList');
+  const listBox = document.getElementById('extraMakeupListForDate');
+  if(!sel) return;
+
+  const slots = slotsOnDate(selectedSlotDate).sort((a,b) => a.time.localeCompare(b.time));
+  sel.innerHTML = slots.length
+    ? slots.map(s => `<option value="${s.id}">${escapeHtml(s.time)}</option>`).join('')
+    : `<option value="">먼저 위에서 시간대 정원을 저장해 주세요</option>`;
+
+  const midHigh = students.filter(s => {
+    const g = s.grade || '';
+    return g.startsWith('중') || g.startsWith('고');
+  }).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+  datalist.innerHTML = midHigh.map(s => `<option value="${escapeHtml(s.name)}">`).join('');
+
+  const extras = absenceRequests.filter(r =>
+    r.type === 'extra_makeup' &&
+    slots.some(s => s.id === r.makeupSlotId)
+  );
+  listBox.innerHTML = extras.length
+    ? extras.map(r => `
+        <span class="teacher-chip" style="margin-top:6px;margin-right:4px;">
+          ✓ ${escapeHtml(r.studentName)} (${escapeHtml(r.makeupSlotLabel || '')})
+          <span style="cursor:pointer;color:var(--color-danger);margin-left:5px;" onclick="removeExtraMakeup('${r.id}')">✕</span>
+        </span>`).join('')
+    : '';
+}
+
+function addExtraMakeup(){
+  const slotSel = document.getElementById('extraMakeupSlotSelect');
+  const studentInput = document.getElementById('extraMakeupStudentSearch');
+  const slotId = slotSel.value;
+  const studentName = studentInput.value.trim();
+
+  if(!slotId){ alert('시간대를 먼저 저장해 주세요.'); return; }
+  const slot = studentMakeupSlots.find(s => s.id === slotId);
+  if(!slot){ alert('시간대를 찾을 수 없어요.'); return; }
+
+  const student = students.find(s => s.name === studentName);
+  if(!student){ alert('학생 이름을 정확히 입력하거나 목록에서 선택해 주세요.'); return; }
+
+  const booked = slotBookedCountAdmin(slotId);
+  if(booked >= slot.capacity){ alert('이 시간대는 이미 정원이 찼어요.'); return; }
+
+  const alreadyIn = absenceRequests.some(r => r.makeupSlotId === slotId && r.studentId === student.id && r.status !== 'rejected');
+  if(alreadyIn){ alert('이 학생은 이미 이 시간대에 등록되어 있어요.'); return; }
+
+  db.ref('absenceRequests').push({
+    studentId: student.id,
+    studentName: student.name,
+    absenceDate: '',
+    reason: '추가보강 (원장님 등록)',
+    makeupSlotId: slotId,
+    makeupSlotLabel: `${slot.date} · ${slot.time}`,
+    status: 'confirmed',
+    type: 'extra_makeup',
+    createdAt: new Date().toISOString()
+  });
+
+  studentInput.value = '';
+  showToast(`${student.name} 학생이 추가보강으로 등록되었습니다.`);
+}
+
+function removeExtraMakeup(id){
+  if(!confirm('이 추가보강 등록을 취소하시겠습니까?')) return;
+  db.ref('absenceRequests/' + id).remove();
 }
 
 function saveSlotEditor(){
@@ -4889,6 +4994,7 @@ function saveSlotEditor(){
   }
 
   showToast('보강 정원이 저장되었습니다.');
+  renderExtraMakeupSection();
 }
 
 /* ===== 보강 승인 대기 / 확정 명단 ===== */
