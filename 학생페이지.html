@@ -425,11 +425,13 @@ function attachListeners(){
   });
   db.ref('makeupSlots').on('value', snap => {
     makeupSlots = snapshotToArray(snap.val());
+    renderAttCalendar();
     if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
   });
   db.ref('absenceRequests').on('value', snap => {
     absenceRequests = snapshotToArray(snap.val());
     renderRequestHistory();
+    renderAttCalendar();
     if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
   });
   db.ref('studentGoals/' + currentStudent.id).on('value', snap => {

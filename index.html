@@ -2149,6 +2149,29 @@ function renderGradeDonut(){
   ], '전체 학생');
 }
 
+let headcountWeekMonday = mondayOfCurrentWeek();
+function mondayOfCurrentWeek(){
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return dateToStr(d);
+}
+function dateToStr(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function addDaysStr(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return dateToStr(d);
+}
+function shiftHeadcountWeek(delta){
+  headcountWeekMonday = addDaysStr(headcountWeekMonday, delta * 7);
+  if(document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(document.getElementById('slotHeadcountRef')) renderTimetableHeadcount('slotHeadcountRef');
+}
+
 function renderTimetableHeadcount(targetId){
   targetId = targetId || 'timetableHeadcount';
   const popupId = targetId === 'timetableHeadcount' ? 'timetableStudentPopup' : targetId + 'Popup';
@@ -2156,101 +2179,106 @@ function renderTimetableHeadcount(targetId){
   if(!box) return;
 
   const allDays = ['월','화','수','목','금','토'];
+  const weekDates = allDays.map((d,i) => addDaysStr(headcountWeekMonday, i));
   const secondary = students.filter(s => !(s.grade || '').startsWith('초')); // 중·고
   const elementary = students.filter(s => (s.grade || '').startsWith('초'));
   const middleSchool = students.filter(s => (s.grade || '').startsWith('중'));
   const highSchool = students.filter(s => (s.grade || '').startsWith('고') || s.grade === 'N수/기타');
 
-  // 중·고 학생들의 요일별 등원 시간 중 실제 등장하는 시간만 표 행으로 사용
+  // 중·고 학생들의 요일별 등원 시간 중 실제 등장하는 시간 + 이번 주에 등록된 보강 시간대도 표 행으로 사용
   const timesSet = new Set();
   secondary.forEach(s => {
     allDays.forEach(day => { const t = getDayTime(s, day); if(t) timesSet.add(t); });
+  });
+  studentMakeupSlots.forEach(slot => {
+    if(weekDates.includes(slot.date)) timesSet.add(slot.time);
   });
   const times = [...timesSet].sort();
 
   const countAt = (list, day, time) => list.filter(s => getDayTime(s, day) === time).length;
   const countDay = (list, day) => list.filter(s => getDayTime(s, day)).length;
 
+  function extraCountAt(dateStr, t){
+    let count = 0;
+    absenceRequests.forEach(r => {
+      if(r.status !== 'confirmed') return;
+      let mDate, mTime;
+      if(r.type === 'extra_makeup' && r.extraDate){ mDate = r.extraDate; mTime = r.extraTime; }
+      else{
+        const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+        if(!slot) return;
+        mDate = slot.date; mTime = slot.time;
+      }
+      if(mDate === dateStr && mTime === t) count++;
+    });
+    return count;
+  }
+
+  const weekLabel = `${headcountWeekMonday.slice(5).replace('-','/')} ~ ${addDaysStr(headcountWeekMonday,5).slice(5).replace('-','/')}`;
+  const weekNav = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftHeadcountWeek(-1)">‹ 지난주</button>
+      <span style="font-size:12px;font-weight:800;">${weekLabel}</span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftHeadcountWeek(1)">다음주 ›</button>
+    </div>`;
+
   if(!times.length && !elementary.some(s => allDays.some(d => getDayTime(s, d)))){
-    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 시간표가 없습니다.</div>`;
+    box.innerHTML = weekNav + `<div class="cell-muted" style="font-size:12.5px;">등록된 시간표가 없습니다.</div>`;
     return;
   }
 
   const elemRow = `
     <tr>
       <td class="tt-elem-label">초등부</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         if(d === '토') return `<td><span class="tc-empty">-</span></td>`;
         const n = countDay(elementary, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-elem" onclick="showTimetableStudents('${d}','ELEM','${popupId}')">${n}</button>` : `<span class="tc-empty">-</span>`}</td>`;
+        return `<td>${n ? `<button type="button" class="tc-count tc-elem" onclick="showTimetableStudents('${d}','ELEM','${popupId}','${weekDates[i]}')">${n}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`;
-
-  const todayForExtra = todayStr();
-  function extraCountAt(d, t){
-    let count = 0;
-    absenceRequests.forEach(r => {
-      if(r.status !== 'confirmed') return;
-      let mDate, mTime;
-      if(r.type === 'extra_makeup'){
-        if(r.extraDate){ mDate = r.extraDate; mTime = r.extraTime; }
-        else{
-          const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
-          if(!slot) return;
-          mDate = slot.date; mTime = slot.time;
-        }
-      }else{
-        const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
-        if(!slot) return;
-        mDate = slot.date; mTime = slot.time;
-      }
-      if(mDate >= todayForExtra && weekdayLabelOf(mDate) === d && mTime === t) count++;
-    });
-    return count;
-  }
 
   const timeRows = times.map(t => `
     <tr>
       <td>${t}</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countAt(secondary, d, t);
-        const extra = extraCountAt(d, t);
+        const extra = extraCountAt(weekDates[i], t);
         const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
-        return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}','${weekDates[i]}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`).join('');
 
   const middleTotalRow = `
     <tr class="tt-total">
       <td>중학생</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(middleSchool, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}')">${n}</button>` : '-'}</td>`;
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}','${weekDates[i]}')">${n}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
   const highTotalRow = `
     <tr class="tt-total">
       <td>고등학생</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(highSchool, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}')">${n}</button>` : '-'}</td>`;
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}','${weekDates[i]}')">${n}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
   const combinedTotalRow = `
     <tr class="tt-total tt-grand">
       <td>합계</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(secondary, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}')">${n}</button>` : '-'}</td>`;
+        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}','${weekDates[i]}')">${n}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
-  box.innerHTML = `
+  box.innerHTML = weekNav + `
     <table class="timetable-headcount">
       <thead>
-        <tr><th>시간</th>${allDays.map(d => `<th>${d}</th>`).join('')}</tr>
+        <tr><th>시간</th>${allDays.map((d,i) => `<th>${d}<br><span style="font-weight:400;font-size:9.5px;color:var(--color-text-muted);">${weekDates[i].slice(5).replace('-','/')}</span></th>`).join('')}</tr>
       </thead>
       <tbody>
         ${elemRow}
@@ -2263,7 +2291,7 @@ function renderTimetableHeadcount(targetId){
     <div id="${popupId}"></div>`;
 }
 
-function showTimetableStudents(day, time, popupId){
+function showTimetableStudents(day, time, popupId, dateStr){
   popupId = popupId || 'timetableStudentPopup';
   const box = document.getElementById(popupId);
   if(!box) return;
@@ -2286,10 +2314,9 @@ function showTimetableStudents(day, time, popupId){
     })
     .sort(compareByGradeThenName);
 
-  // 이 요일·시간대에 앞으로 예정된 보강(결석보강+추가보강)을 전부 모아서 같이 보여준다
+  // 이 정확한 날짜(선택된 주 기준)에 예정된 보강(결석보강+추가보강)을 모아서 같이 보여준다
   let makeupStudents = [];
-  if(!isElem && !isMid && !isHigh && !isAllDay){
-    const todayForPopup = todayStr();
+  if(!isElem && !isMid && !isHigh && !isAllDay && dateStr){
     const bookedIds = new Set();
     absenceRequests.forEach(r => {
       if(r.status !== 'confirmed') return;
@@ -2297,16 +2324,17 @@ function showTimetableStudents(day, time, popupId){
         ? { date: r.extraDate, time: r.extraTime }
         : studentMakeupSlots.find(s => s.id === r.makeupSlotId);
       if(!slot) return;
-      if(slot.date >= todayForPopup && weekdayLabelOf(slot.date) === day && slot.time === time) bookedIds.add(r.studentId);
+      if(slot.date === dateStr && slot.time === time) bookedIds.add(r.studentId);
     });
     makeupStudents = students.filter(s => bookedIds.has(s.id) && !list.some(l => l.id === s.id));
   }
 
-  const title = isElem ? `${day}요일 초등부`
-    : isMid ? `${day}요일 중학생`
-    : isHigh ? `${day}요일 고등학생`
-    : isAllDay ? `${day}요일 합계`
-    : `${day}요일 ${time}`;
+  const dateLabel = dateStr ? ` (${dateStr.slice(5).replace('-','/')})` : '';
+  const title = isElem ? `${day}요일${dateLabel} 초등부`
+    : isMid ? `${day}요일${dateLabel} 중학생`
+    : isHigh ? `${day}요일${dateLabel} 고등학생`
+    : isAllDay ? `${day}요일${dateLabel} 합계`
+    : `${day}요일${dateLabel} ${time}`;
 
   box.innerHTML = `
     <div class="timetable-student-popup">
@@ -3763,7 +3791,7 @@ function renderTodayAbsentAlert(){
   const today = todayStr();
   const absentToday = attendance.filter(a => a.date === today && a.status === '결석');
   const needMakeup = absentToday.filter(a => {
-    const hasMakeup = absenceRequests.some(r => r.studentId === a.studentId && r.absenceDate === today && r.status !== 'rejected') ||
+    const hasMakeup = hasAnyUpcomingMakeup(a.studentId, today) ||
       makeupSchedules.some(m => m.studentId === a.studentId && m.note === `${today} 결석 보강`);
     return !hasMakeup;
   });
@@ -3878,6 +3906,28 @@ function getThisWeekRange(){
   return { start: fmt(monday), end: fmt(sunday) };
 }
 
+function toggleDoneMakeupSection(){
+  const sec = document.getElementById('doneMakeupSection');
+  const icon = document.getElementById('doneMakeupToggleIcon');
+  if(!sec) return;
+  const willShow = sec.style.display === 'none';
+  sec.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
+function hasAnyUpcomingMakeup(studentId, sinceDate){
+  return absenceRequests.some(r => {
+    if(r.studentId !== studentId || r.status !== 'confirmed') return false;
+    let mDate;
+    if(r.type === 'extra_makeup' && r.extraDate) mDate = r.extraDate;
+    else{
+      const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+      mDate = slot ? slot.date : null;
+    }
+    return mDate && mDate >= sinceDate;
+  });
+}
+
 function renderWeeklyAbsentList(){
   const box = document.getElementById('weeklyAbsentList');
   if(!box) return;
@@ -3897,7 +3947,9 @@ function renderWeeklyAbsentList(){
     .filter(a => a.stu)
     .map(a => {
       const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
-      return { ...a, alreadyMakeup: !!makeup, makeupDate: makeup ? makeup.date : null };
+      // 학생페이지/직원관리에서 새 보강 시스템으로 이미 예약된 경우도 "예약 완료"로 인식
+      const newBooked = !makeup && hasAnyUpcomingMakeup(a.studentId, a.date);
+      return { ...a, alreadyMakeup: !!makeup || newBooked, makeupDate: makeup ? makeup.date : (newBooked ? '새 보강 시스템' : null) };
     });
 
   if(!absences.length){
@@ -3927,8 +3979,8 @@ function renderWeeklyAbsentList(){
           ${hasPriorMakeup ? `<span class="repeat-absence-tag">⚠ 재결석</span>` : ''}
         </div>
         ${a.alreadyMakeup
-          ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>
-             <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>`
+          ? `<span class="status-pill 출석">→ ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? fmtDateKR(a.makeupDate) + ' ' : ''}보강 예약됨</span>
+             ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? `<button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>` : ''}`
           : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
              <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>
              <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강 안함</button>
@@ -3964,8 +4016,10 @@ function renderWeeklyAbsentList(){
     </div>`;
   html += byGrade(pending);
   if(done.length){
-    html += `<div class="sms-group-title done" style="margin-top:16px;">✓ 예약 완료</div>`;
-    html += `<div style="opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
+    html += `<div class="sms-group-title done" style="margin-top:16px;cursor:pointer;" onclick="toggleDoneMakeupSection()">
+      <span id="doneMakeupToggleIcon">▸</span> 예약 완료 (${done.length}건) <span class="hint">눌러서 펼치기</span>
+    </div>`;
+    html += `<div id="doneMakeupSection" style="display:none;opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
   }
 
   box.innerHTML = html;
