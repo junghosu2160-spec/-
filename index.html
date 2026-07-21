@@ -516,22 +516,28 @@
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   .event-type-tag.기타{background:#E7EBEF;color:#475569;}
-  /* ===== 요일별 개인 시간표 입력 ===== */
-  .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
-  .schedule-cell{display:flex;flex-direction:column;gap:4px;align-items:stretch;}
-  .schedule-cell .sc-day{font-size:12px;font-weight:800;color:var(--color-text-muted);text-align:center;padding-bottom:5px;border-bottom:1px solid var(--color-border);margin-bottom:2px;}
-  .schedule-cell input[type="hidden"]{display:none;}
-  .sc-time-chip{display:block;width:100%;padding:5px 2px;text-align:center;font-size:12px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:pointer;transition:all .12s;line-height:1.3;}
+  /* ===== 요일별 개인 시간표 입력 (탭 방식) ===== */
+  .sched-day-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+  .sched-day-tab{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--color-border);color:var(--color-text-muted);background:var(--color-surface-alt);transition:all .1s;}
+  .sched-day-tab:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sched-day-tab.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sched-day-tab.has-time{border-color:#5CC893;color:#0F6E56;}
+  .sched-day-tab.has-time.active{background:#E1F5EE;border-color:#5CC893;color:#085041;}
+  .sched-panel{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;}
+  .sched-panel-label{font-size:11.5px;color:var(--color-text-muted);font-weight:700;margin-bottom:10px;}
+  .sched-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .sc-time-chip{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--color-border);color:var(--color-text-muted);background:var(--color-surface);transition:all .1s;}
   .sc-time-chip:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
   .sc-time-chip.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);font-weight:700;}
-  .sc-time-chip.custom-active{background:#E8F8EF;border-color:#5CC893;color:#1E7A4A;font-weight:700;}
-  .sc-custom-btn{display:block;width:100%;padding:4px 2px;text-align:center;font-size:11px;border:1px dashed var(--color-border);border-radius:7px;background:transparent;color:var(--color-text-muted);cursor:pointer;}
+  .sc-custom-btn{padding:7px 12px;border-radius:8px;font-size:12.5px;border:1px dashed var(--color-border);background:transparent;color:var(--color-text-muted);cursor:pointer;}
   .sc-custom-btn:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
-  .sc-custom-row{display:flex;gap:3px;margin-top:2px;}
-  .sc-custom-row select{flex:1;font-size:11px;padding:4px 2px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);min-width:0;}
-  .sc-dur-select{width:100%;font-size:11.5px;padding:5px 4px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-muted);margin-top:2px;}
+  .sc-custom-row{display:flex;gap:5px;align-items:center;margin-bottom:10px;}
+  .sc-custom-row select{font-size:13px;padding:6px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text);}
+  .sc-dur-select{font-size:13px;padding:6px 10px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-muted);}
   .sc-dur-select.set{color:var(--color-text);border-color:var(--color-primary-light);}
-  @media(max-width:640px){ .schedule-grid{grid-template-columns:repeat(4,1fr);} }
+  .sched-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .sched-sum-chip{font-size:11.5px;padding:3px 9px;border-radius:6px;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text);}
+  .sched-sum-chip span{color:var(--color-text-muted);margin-right:2px;}
 
   .sched-chip{
     display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;
@@ -693,8 +699,8 @@
         <div class="grid grid-3">
           <div class="card stat-card">
             <div class="label">전체 학생 수</div>
-            <div class="value" id="statTotalStudents">0</div>
-            <div class="sub">명 등록</div>
+            <div class="value" id="statTotalStudents" onclick="switchView('students')" style="cursor:pointer;" title="학생 관리로 이동">0</div>
+            <div class="sub" onclick="switchView('students')" style="cursor:pointer;color:var(--color-primary-light);">학생 관리 →</div>
           </div>
           <div class="card stat-card">
             <div class="label">오늘 출결 현황</div>
@@ -717,21 +723,16 @@
               </div>
               <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
               <div style="flex:0 0 auto;">
-                <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">학년별 학생 수</div>
-                <div class="donut-wrap donut-wrap-compact" id="gradeDonut"></div>
-              </div>
-              <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
-              <div style="flex:0 0 auto;">
                 <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">타임별 등원 인원</div>
                 <div style="display:flex;gap:12px;align-items:flex-start;">
-                  <div id="timetableHeadcount" style="flex:0 0 280px;"></div>
+                  <div id="timetableHeadcount" style="flex:0 0 auto;"></div>
                 </div>
               </div>
             </div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
             <div class="divider"></div>
             <div class="toolbar" style="margin:0 0 8px 0;">
-              <div class="card-title" style="margin:0;">이번 주 상담일정</div>
+              <div class="card-title" style="margin:0;">이번 주 일정</div>
               <span class="cell-muted" id="weeklyCounselProgress" style="font-size:12px;font-weight:700;"></span>
             </div>
             <div id="weeklyCounselList"></div>
@@ -825,7 +826,12 @@
           </div>
           <div class="field" style="margin-bottom:14px;">
             <div style="display:flex;align-items:flex-end;gap:10px;">
-              <div class="schedule-grid" id="stuScheduleGrid" style="flex:1;"></div>
+              <div style="flex:1;">
+                <div class="sched-day-tabs" id="schedDayTabs"></div>
+                <div class="sched-panel" id="schedPanel"></div>
+                <div class="sched-summary" id="schedSummary"></div>
+                <div id="stuScheduleGrid" style="display:none;"></div>
+              </div>
               <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()" style="flex:0 0 auto;">학생 등록</button>
             </div>
           </div>
@@ -2682,7 +2688,7 @@ function renderTeacherDailyNotes(){
   const recent = dailyNotes
     .filter(n => n.note && n.note.trim())
     .sort((a,b)=> b.date.localeCompare(a.date))
-    .slice(0, 7);
+    .slice(0, 14);
 
   if(!recent.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">아직 등록된 전달사항이 없습니다.</div>`;
@@ -2690,14 +2696,48 @@ function renderTeacherDailyNotes(){
   }
 
   const today = todayStr();
-  box.innerHTML = recent.map(n => {
-    const isToday = n.date === today;
-    return `
-    <div class="teacher-note-box ${isToday ? 'today' : ''}">
-      <div class="teacher-note-date">${formatDateKR(n.date)}${isToday ? ' · 오늘' : ''}</div>
-      <div class="teacher-note-text">${escapeHtml(n.note)}</div>
+  const todayNote = recent.find(n => n.date === today);
+  const pastNotes = recent.filter(n => n.date !== today);
+  const pastOpen = box.dataset.pastOpen === 'true';
+
+  let html = '';
+  if(todayNote){
+    html += `
+    <div class="teacher-note-box today">
+      <div class="teacher-note-date">${formatDateKR(todayNote.date)} · 오늘</div>
+      <div class="teacher-note-text">${escapeHtml(todayNote.note)}</div>
     </div>`;
-  }).join('');
+  } else {
+    html += `<div class="cell-muted" style="font-size:12.5px;">오늘 등록된 전달사항이 없습니다.</div>`;
+  }
+
+  if(pastNotes.length){
+    html += `
+    <div style="margin-top:6px;">
+      <span style="font-size:11.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="togglePastNotes(this)">
+        ${pastOpen ? '▾' : '▸'} 지난 전달사항 (${pastNotes.length}건)
+      </span>
+      <div id="pastNotesList" style="display:${pastOpen ? 'block' : 'none'};margin-top:6px;">
+        ${pastNotes.map(n => `
+          <div class="teacher-note-box" style="margin-bottom:6px;">
+            <div class="teacher-note-date">${formatDateKR(n.date)}</div>
+            <div class="teacher-note-text">${escapeHtml(n.note)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function togglePastNotes(el){
+  const list = document.getElementById('pastNotesList');
+  const box = document.getElementById('teacherDailyNotesList');
+  if(!list) return;
+  const isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  el.innerHTML = `${isOpen ? '▸' : '▾'} 지난 전달사항`;
+  if(box) box.dataset.pastOpen = String(!isOpen);
 }
 
 function toggleCounselDone(eventId, currentDone){
@@ -2710,31 +2750,39 @@ function renderWeeklyCounselList(){
   if(!box) return;
 
   const { start, end } = getThisWeekRange();
-  const weekCounsel = events
-    .filter(e => e.type === '상담' && e.date >= start && e.date <= end)
-    .sort((a,b)=> a.date.localeCompare(b.date));
+  const weekEvents = events
+    .filter(e => e.date >= start && e.date <= end)
+    .sort((a,b) => a.date.localeCompare(b.date));
 
   if(progressEl){
-    const doneCount = weekCounsel.filter(e => e.done).length;
-    progressEl.textContent = weekCounsel.length ? `${doneCount} / ${weekCounsel.length} 완료` : '';
+    const doneCount = weekEvents.filter(e => e.done).length;
+    progressEl.textContent = weekEvents.length ? `${doneCount} / ${weekEvents.length} 완료` : '';
   }
 
-  if(!weekCounsel.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 등록된 상담 일정이 없습니다.</div>`;
+  if(!weekEvents.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 등록된 일정이 없습니다.</div>`;
     return;
   }
 
+  // 타입별 색상
+  const typeColor = {
+    '시험': { bg:'var(--color-danger-soft)', text:'var(--color-danger)', border:'var(--color-danger)' },
+    '상담': { bg:'#FFF6DC', text:'var(--color-accent-dark)', border:'var(--color-accent-dark)' },
+    '기타': { bg:'#E7EBEF', text:'#475569', border:'#94A3B8' },
+    '기작팀': { bg:'#FCE7F6', text:'#B4308F', border:'#B4308F' },
+  };
+
   const today = todayStr();
-  box.innerHTML = weekCounsel.map(e => {
+  box.innerHTML = weekEvents.map(e => {
     const isToday = e.date === today;
     const weekday = weekdayLabelOf(e.date);
+    const c = typeColor[e.type] || typeColor['기타'];
     return `
-      <div class="avg-mini" style="align-items:center;${e.done ? 'opacity:0.55;' : ''}">
-        <span style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleCounselDone('${e.id}', ${!!e.done})" style="width:16px;height:16px;cursor:pointer;">
-          <span style="${e.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(e.title)}</span>
-        </span>
-        <span class="cell-muted" style="font-size:11.5px;">${weekday}${isToday ? ' · 오늘' : ''}</span>
+      <div class="avg-mini" style="align-items:center;gap:8px;${e.done ? 'opacity:0.55;' : ''}">
+        <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleCounselDone('${e.id}', ${!!e.done})" style="width:15px;height:15px;cursor:pointer;flex-shrink:0;">
+        <span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:700;background:${c.bg};color:${c.text};border:1px solid ${c.border};flex-shrink:0;">${escapeHtml(e.type)}</span>
+        <span style="flex:1;${e.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(e.title)}</span>
+        <span class="cell-muted" style="font-size:11.5px;white-space:nowrap;">${weekday}${isToday ? ' · 오늘' : ''}</span>
       </div>`;
   }).join('');
 }
@@ -3273,152 +3321,172 @@ function initGradeSelect(sel){
 }
 
 // 학생 등록 폼의 요일별(월~일) 시간 입력 칸 생성
+let schedCurrentDay = '월'; // 현재 선택된 요일 탭
+// 임시 저장용 (폼 제출 전까지 메모리에)
+let schedValues = {}; // {월: '16:30', 화: '', ...}
+let schedDurs = {};   // {월: 90, ...}
+
 function renderScheduleGrid(){
+  // hidden input들은 readScheduleFromForm에서 쓰므로 유지
   const grid = document.getElementById('stuScheduleGrid');
-  if(!grid) return;
+  if(grid) grid.innerHTML = WEEKDAYS.map(d =>
+    `<input type="hidden" id="stuSched-${d}"><input type="hidden" id="stuSchedDurH-${d}">`
+  ).join('');
+  renderSchedTabs();
+  renderSchedPanel(schedCurrentDay);
+  renderSchedSummary();
+}
+
+function renderSchedTabs(){
+  const tabsEl = document.getElementById('schedDayTabs');
+  if(!tabsEl) return;
+  tabsEl.innerHTML = WEEKDAYS.map(d => {
+    const val = schedValues[d] || '';
+    const hasTime = !!val;
+    const isActive = d === schedCurrentDay;
+    return `<button type="button" class="sched-day-tab ${isActive?'active':''} ${hasTime?'has-time':''}"
+      onclick="selectSchedDay('${d}')">${d}${hasTime ? ' ●' : ''}</button>`;
+  }).join('');
+}
+
+function selectSchedDay(d){
+  schedCurrentDay = d;
+  renderSchedTabs();
+  renderSchedPanel(d);
+}
+
+function renderSchedPanel(d){
+  const panel = document.getElementById('schedPanel');
+  if(!panel) return;
   const durations = [30,40,45,50,60,70,80,90,100,120];
   const existingTimes = [...new Set(
-    students.flatMap(s => WEEKDAYS.map(d => s.schedule && s.schedule[d]).filter(Boolean))
+    students.flatMap(s => WEEKDAYS.map(day => s.schedule && s.schedule[day]).filter(Boolean))
   )].sort();
-  grid.innerHTML = WEEKDAYS.map(d => `
-    <div class="schedule-cell">
-      <span class="sc-day">${d}</span>
-      <input type="hidden" id="stuSched-${d}">
-      <div id="stuChips-${d}">
-        ${existingTimes.map(t => `<button type="button" class="sc-time-chip" onclick="selectSchedChip('${d}','${t}')">${t}</button>`).join('')}
-        <button type="button" class="sc-custom-btn" onclick="toggleSchedCustom('${d}')">+ 직접 입력</button>
-      </div>
-      <div id="stuSchedCustom-${d}" style="display:none;" class="sc-custom-row">
-        <select id="stuSchedH-${d}" onchange="applySchedCustom('${d}')">
-          <option value="">시</option>
-          ${Array.from({length:14},(_,i)=>i+9).map(h=>`<option value="${String(h).padStart(2,'0')}">${h}시</option>`).join('')}
-        </select>
-        <select id="stuSchedM-${d}" onchange="applySchedCustom('${d}')">
-          <option value="">분</option>
-          ${['00','10','20','30','40','50'].map(m=>`<option value="${m}">${m}분</option>`).join('')}
-        </select>
-      </div>
-      <select id="stuSchedDur-${d}" class="sc-dur-select">
-        <option value="">수업시간</option>
-        ${durations.map(m => `<option value="${m}">${m}분</option>`).join('')}
+  const curTime = schedValues[d] || '';
+  const curDur = schedDurs[d] || '';
+  const isCustom = curTime && !existingTimes.includes(curTime);
+
+  panel.innerHTML = `
+    <div class="sched-panel-label">${d}요일 수업 시간</div>
+    <div class="sched-chips">
+      ${existingTimes.map(t => `<button type="button" class="sc-time-chip ${curTime===t?'active':''}"
+        onclick="schedSelectChip('${d}','${t}')">${t}</button>`).join('')}
+      <button type="button" class="sc-custom-btn ${isCustom?'active':''}"
+        onclick="schedToggleCustom('${d}')" id="schedCustomBtn-${d}">+ 직접 입력</button>
+    </div>
+    <div id="schedCustomRow-${d}" style="display:${isCustom?'flex':'none'};" class="sc-custom-row">
+      <select id="schedH-${d}" onchange="schedApplyCustom('${d}')">
+        <option value="">시</option>
+        ${Array.from({length:14},(_,i)=>i+9).map(h=>`<option value="${String(h).padStart(2,'0')}" ${curTime.startsWith(String(h).padStart(2,'0'))?'selected':''}>${h}시</option>`).join('')}
+      </select>
+      <select id="schedM-${d}" onchange="schedApplyCustom('${d}')">
+        <option value="">분</option>
+        ${['00','10','20','30','40','50'].map(m=>`<option value="${m}" ${curTime.endsWith(':'+m)?'selected':''}>${m}분</option>`).join('')}
       </select>
     </div>
-  `).join('');
+    <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+      <label style="font-size:12px;color:var(--color-text-muted);">수업 시간</label>
+      <select class="sc-dur-select ${curDur?'set':''}" id="schedDur-${d}" onchange="schedSetDur('${d}',this.value)">
+        <option value="">선택 안 함</option>
+        ${durations.map(m => `<option value="${m}" ${curDur==m?'selected':''}>${m}분</option>`).join('')}
+      </select>
+      ${curTime ? `<button type="button" style="font-size:11.5px;padding:4px 10px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-danger-soft);color:var(--color-danger);cursor:pointer;" onclick="schedClearDay('${d}')">지우기</button>` : ''}
+    </div>`;
 }
 
-function selectSchedChip(d, time){
-  const hidden = document.getElementById('stuSched-' + d);
-  const customDiv = document.getElementById('stuSchedCustom-' + d);
-  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
-  const alreadyActive = hidden.value === time;
-  // 토글: 이미 선택된 거 다시 누르면 해제
-  chips.forEach(c => c.classList.remove('active','custom-active'));
-  if(alreadyActive){
-    hidden.value = '';
-  } else {
-    hidden.value = time;
-    chips.forEach(c => { if(c.textContent.trim() === time) c.classList.add('active'); });
-  }
-  if(customDiv) customDiv.style.display = 'none';
-  updateSchedDurHighlight(d);
+function schedSelectChip(d, time){
+  schedValues[d] = schedValues[d] === time ? '' : time;
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
 }
 
-function toggleSchedCustom(d){
-  const customDiv = document.getElementById('stuSchedCustom-' + d);
-  const hidden = document.getElementById('stuSched-' + d);
-  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
-  const isOpen = customDiv.style.display !== 'none';
+function schedToggleCustom(d){
+  const row = document.getElementById(`schedCustomRow-${d}`);
+  if(!row) return;
+  const isOpen = row.style.display !== 'none';
   if(isOpen){
-    customDiv.style.display = 'none';
-    hidden.value = '';
-    chips.forEach(c => c.classList.remove('active','custom-active'));
+    row.style.display = 'none';
+    schedValues[d] = '';
   } else {
-    chips.forEach(c => c.classList.remove('active','custom-active'));
-    hidden.value = '';
-    customDiv.style.display = 'flex';
+    row.style.display = 'flex';
+    schedValues[d] = '';
   }
-  updateSchedDurHighlight(d);
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
 }
 
-function applySchedCustom(d){
-  const h = document.getElementById('stuSchedH-' + d).value;
-  const m = document.getElementById('stuSchedM-' + d).value;
-  const hidden = document.getElementById('stuSched-' + d);
-  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
+function schedApplyCustom(d){
+  const h = (document.getElementById(`schedH-${d}`)?.value) || '';
+  const m = (document.getElementById(`schedM-${d}`)?.value) || '';
   if(h && m){
-    hidden.value = `${h}:${m}`;
-    chips.forEach(c => c.classList.remove('active','custom-active'));
-    // 직접입력 버튼에도 시각적 표시
-    const customBtn = document.querySelector(`#stuChips-${d} .sc-custom-btn`);
-    if(customBtn){ customBtn.style.borderColor='#5CC893'; customBtn.style.color='#1E7A4A'; }
+    schedValues[d] = `${h}:${m}`;
   } else {
-    hidden.value = '';
+    schedValues[d] = '';
   }
-  updateSchedDurHighlight(d);
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedSummary();
 }
 
-function updateSchedDurHighlight(d){
-  const hidden = document.getElementById('stuSched-' + d);
-  const durSel = document.getElementById('stuSchedDur-' + d);
-  if(durSel){
-    if(hidden && hidden.value) durSel.classList.add('set');
-    else durSel.classList.remove('set');
-  }
+function schedSetDur(d, val){
+  schedDurs[d] = val ? parseInt(val,10) : '';
+  syncSchedHidden();
+  renderSchedSummary();
 }
+
+function schedClearDay(d){
+  schedValues[d] = '';
+  schedDurs[d] = '';
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
+}
+
+function syncSchedHidden(){
+  WEEKDAYS.forEach(d => {
+    const hidEl = document.getElementById('stuSched-' + d);
+    if(hidEl) hidEl.value = schedValues[d] || '';
+  });
+}
+
+function renderSchedSummary(){
+  const el = document.getElementById('schedSummary');
+  if(!el) return;
+  const set = WEEKDAYS.filter(d => schedValues[d]);
+  if(!set.length){ el.innerHTML = ''; return; }
+  el.innerHTML = set.map(d => {
+    const dur = schedDurs[d] ? ` · ${schedDurs[d]}분` : '';
+    return `<span class="sched-sum-chip"><span>${d}</span>${schedValues[d]}${dur}</span>`;
+  }).join('');
+}
+
+function updateSchedDurHighlight(d){ /* 하위호환 유지 */ }
 
 function readScheduleFromForm(){
   const schedule = {};
   const scheduleDuration = {};
   WEEKDAYS.forEach(d => {
-    const val = document.getElementById('stuSched-' + d).value;
+    const val = schedValues[d] || '';
     if(val) schedule[d] = val;
-    const durEl = document.getElementById('stuSchedDur-' + d);
-    const dur = durEl ? durEl.value : '';
+    const dur = schedDurs[d];
     if(val && dur) scheduleDuration[d] = parseInt(dur, 10);
   });
   return { schedule, scheduleDuration };
 }
 
 function fillScheduleForm(schedule, scheduleDuration){
+  // schedValues/schedDurs에 로드
   WEEKDAYS.forEach(d => {
-    const val = (schedule && schedule[d]) || '';
-    const hidden = document.getElementById('stuSched-' + d);
-    if(hidden) hidden.value = val;
-
-    // 모든 칩 초기화
-    const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
-    chips.forEach(c => c.classList.remove('active','custom-active'));
-    const customDiv = document.getElementById('stuSchedCustom-' + d);
-    const customBtn = document.querySelector(`#stuChips-${d} .sc-custom-btn`);
-    if(customBtn){ customBtn.style.borderColor=''; customBtn.style.color=''; }
-
-    if(val){
-      // 칩 중에 일치하는 게 있으면 active
-      let matched = false;
-      chips.forEach(c => { if(c.textContent.trim() === val){ c.classList.add('active'); matched = true; } });
-      if(!matched){
-        // 직접입력 모드로
-        if(customDiv) customDiv.style.display = 'flex';
-        const parts = val.split(':');
-        const hEl = document.getElementById('stuSchedH-' + d);
-        const mEl = document.getElementById('stuSchedM-' + d);
-        if(hEl && parts[0]) hEl.value = parts[0];
-        if(mEl && parts[1]) mEl.value = parts[1];
-        if(customBtn){ customBtn.style.borderColor='#5CC893'; customBtn.style.color='#1E7A4A'; }
-      } else {
-        if(customDiv) customDiv.style.display = 'none';
-      }
-    } else {
-      if(customDiv) customDiv.style.display = 'none';
-    }
-
-    const durEl = document.getElementById('stuSchedDur-' + d);
-    if(durEl){
-      durEl.value = (scheduleDuration && scheduleDuration[d]) || '';
-      if(val && durEl.value) durEl.classList.add('set');
-      else durEl.classList.remove('set');
-    }
+    schedValues[d] = (schedule && schedule[d]) || '';
+    schedDurs[d] = (scheduleDuration && scheduleDuration[d]) || '';
   });
+  schedCurrentDay = '월';
+  renderScheduleGrid();
 }
 
 function submitStudent(){
