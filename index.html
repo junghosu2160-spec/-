@@ -1734,7 +1734,11 @@ db.ref('homework').on('value', snap => {
 });
 db.ref('elemMakeupProgress').on('value', snap => {
   elemMakeupProgress = snapshotToArray(snap.val());
-  if(currentView === 'attendance') renderElemMakeupList();
+  if(currentView === 'attendance'){
+    renderElemMakeupList();
+    renderElemMakeupPanel();
+    if(elemMakeupPopupStudentId) renderElemMakeupPopup();
+  }
 });
 db.ref('parentMessages').on('value', snap => {
   parentMessages = snapshotToArray(snap.val());
@@ -5492,11 +5496,13 @@ function registerElemMakeupPopup(studentId){
   if(existing){
     db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: target });
   } else {
-    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: 0, log: [] });
   }
-  showToast('보강을 등록했어요.');
+  showToast(`${target}분 목표로 보강을 등록했어요.`);
   elemMakeupPopupDate = date;
-  setTimeout(() => { renderElemMakeupPopup(); renderElemMakeupPanel(); }, 200);
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
 }
 
 function changeElemTargetPopup(studentId, date){
@@ -5507,11 +5513,14 @@ function changeElemTargetPopup(studentId, date){
   const existing = getElemProgress(studentId, date);
   if(existing){
     db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+    existing.targetMinutes = newTarget;
   } else {
-    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [] });
   }
   showToast(`목표 시간을 ${newTarget}분으로 변경했어요.`);
-  setTimeout(() => { renderElemMakeupPopup(); renderElemMakeupPanel(); }, 200);
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
 }
 
 function directElemMakeupPopup(studentId, date, target){
@@ -5520,7 +5529,8 @@ function directElemMakeupPopup(studentId, date, target){
   const minutes = parseInt(inputEl.value, 10);
   if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
   quickElemMakeupIdx(studentId, date, minutes, target);
-  setTimeout(() => { renderElemMakeupPopup(); renderElemMakeupPanel(); }, 200);
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
 }
 
 function renderElemMakeupList(){
@@ -5623,8 +5633,11 @@ function quickElemMakeupIdx(studentId, date, minutes, target){
   log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
   if(existing){
     db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+    existing.loggedMinutes = newLogged;
+    existing.log = log;
   } else {
-    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: newLogged, log });
   }
   showToast(`${minutes}분 반영했어요.`);
 }
@@ -5641,8 +5654,11 @@ function directElemMakeupIdx(studentId, date, target){
   log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
   if(existing){
     db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+    existing.loggedMinutes = newLogged;
+    existing.log = log;
   } else {
-    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: newLogged, log });
   }
   showToast(`${minutes}분 반영했어요.`);
 }
