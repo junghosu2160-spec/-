@@ -299,7 +299,7 @@
   .sms-filter-row:last-child{margin-bottom:0;}
   .sms-filter-label{font-size:11px;color:var(--color-text-muted);width:36px;flex-shrink:0;font-weight:700;}
   .sms-chip{padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid transparent;background:var(--color-surface-alt);color:var(--color-text-muted);white-space:nowrap;transition:all .1s;}
-  .sms-chip.active{color:#fff;font-weight:800;border-color:transparent;}
+  .sms-chip.active{background:var(--color-primary);color:#fff;font-weight:800;border-color:transparent;}
   .sms-chip.active::before{content:'✓ ';}
   .sms-chip.ts .cnt{font-size:10px;opacity:.85;margin-left:2px;}
   .sms-chip.ts.active{background:var(--color-primary);}
@@ -462,6 +462,19 @@
   }
   .elem-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   @media(max-width:880px){.elem-card-grid{grid-template-columns:repeat(2,1fr);}}
+  .elem-makeup-btn{margin-left:auto;padding:4px 11px;border-radius:16px;font-size:11px;font-weight:700;background:var(--color-success-soft);color:var(--color-success);border:1px solid #9FE1CB;cursor:pointer;}
+  .elem-makeup-btn:hover{filter:brightness(0.96);}
+  .elem-makeup-panel{margin-bottom:10px;}
+  .elem-makeup-name-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid var(--color-border);margin-bottom:5px;background:var(--color-surface-alt);}
+  .elem-makeup-name-row:hover{background:var(--color-surface);}
+  .elem-makeup-name-row .mn-name{font-weight:800;font-size:12.5px;}
+  .elem-makeup-name-row .mn-remain{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;font-weight:700;}
+  .elem-makeup-name-row .mn-arrow{color:var(--color-text-muted);font-size:12px;}
+  .elem-makeup-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px;}
+  .elem-makeup-popup-box{background:var(--color-surface);border-radius:14px;padding:18px 20px;width:320px;max-width:100%;box-shadow:var(--shadow-md);}
+  .elem-makeup-popup-title{font-size:14.5px;font-weight:800;margin-bottom:2px;}
+  .elem-makeup-popup-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;}
+  .elem-makeup-popup-close{float:right;font-size:12px;color:var(--color-text-muted);cursor:pointer;}
   .elem-card{
     padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
     transition:filter .1s ease;user-select:none;
@@ -4302,7 +4315,11 @@ function renderElementaryBundleHtml(list, date){
   const sorted = [...list].sort(compareByGradeThenName);
   return `
     <div class="att-group">
-      <div class="att-group-title" style="color:var(--color-success);">🎒 초등부 <span class="cnt">${sorted.length}명</span></div>
+      <div class="att-group-title" style="color:var(--color-success);">
+        🎒 초등부 <span class="cnt">${sorted.length}명</span>
+        <button type="button" class="elem-makeup-btn" onclick="toggleElemMakeupPanel()">📋 보강관리</button>
+      </div>
+      <div id="elemMakeupPanel" class="elem-makeup-panel" style="display:none;"></div>
       <div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>
       <p class="hint" style="margin-top:8px;margin-bottom:0;">카드를 누르면 출석→지각→결석→대기중 순서로 바뀌어요. 초등부 선생님 페이지와 실시간으로 같이 반영돼요.</p>
     </div>`;
@@ -5304,6 +5321,157 @@ function elemAbsenceKey(studentId, date){ return studentId + '_' + date; }
 
 function getElemProgress(studentId, date){
   return elemMakeupProgress.find(p => p.studentId === studentId && p.date === date);
+}
+
+/* ===== 초등부 보강관리 (버튼 → 명단 → 팝업) ===== */
+let elemMakeupPanelOpen = false;
+let elemMakeupPopupStudentId = null;
+let elemMakeupPopupDate = null;
+
+function toggleElemMakeupPanel(){
+  elemMakeupPanelOpen = !elemMakeupPanelOpen;
+  renderElemMakeupPanel();
+}
+
+function getElemMakeupNeedList(){
+  const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  const start = `${d30.getFullYear()}-${String(d30.getMonth()+1).padStart(2,'0')}-${String(d30.getDate()).padStart(2,'0')}`;
+  const end = todayStr();
+  return attendance
+    .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`])
+    .map(a => ({ ...a, stu: studentById(a.studentId) }))
+    .filter(a => a.stu && (a.stu.grade || '').startsWith('초'))
+    .map(a => {
+      const weekday = weekdayLabelOf(a.date);
+      const target = getDayDuration(a.stu, weekday);
+      const progress = getElemProgress(a.studentId, a.date);
+      const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+      return { ...a, target, logged, remaining: target - logged, done: logged >= target };
+    })
+    .filter(a => !a.done) // 보강 다 끝난 학생은 명단에서 제외
+    .sort((a,b) => b.date.localeCompare(a.date));
+}
+
+function renderElemMakeupPanel(){
+  const box = document.getElementById('elemMakeupPanel');
+  if(!box) return;
+  if(!elemMakeupPanelOpen){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  const list = getElemMakeupNeedList();
+  if(!list.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;padding:6px 2px;">보강이 필요한 학생이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = list.map(a => `
+    <div class="elem-makeup-name-row" onclick="openElemMakeupPopup('${a.studentId}','${a.date}')">
+      <span class="mn-name">${escapeHtml(a.stu.name)}</span>
+      <span class="cell-muted" style="font-size:11px;">${fmtDateKR2(a.date)} 결석</span>
+      <span class="mn-remain">${a.remaining}분 남음</span>
+      <span class="mn-arrow">›</span>
+    </div>`).join('');
+}
+
+function openElemMakeupPopup(studentId, date){
+  elemMakeupPopupStudentId = studentId;
+  elemMakeupPopupDate = date;
+  renderElemMakeupPopup();
+}
+
+function closeElemMakeupPopup(){
+  elemMakeupPopupStudentId = null;
+  elemMakeupPopupDate = null;
+  const el = document.getElementById('elemMakeupPopupOverlay');
+  if(el) el.remove();
+}
+
+function renderElemMakeupPopup(){
+  if(!elemMakeupPopupStudentId){ return; }
+  const studentId = elemMakeupPopupStudentId, date = elemMakeupPopupDate;
+  const stu = studentById(studentId);
+  if(!stu){ closeElemMakeupPopup(); return; }
+
+  const weekday = weekdayLabelOf(date);
+  const target = getDayDuration(stu, weekday);
+  const progress = getElemProgress(studentId, date);
+  const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+  const remaining = target - logged;
+  const pct = target ? Math.round((logged / target) * 100) : 0;
+  const done = logged >= target;
+  const progressId = progress ? progress.id : null;
+
+  let overlay = document.getElementById('elemMakeupPopupOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'elemMakeupPopupOverlay';
+    overlay.className = 'elem-makeup-popup-overlay';
+    overlay.onclick = (e) => { if(e.target === overlay) closeElemMakeupPopup(); };
+    document.body.appendChild(overlay);
+  }
+
+  const bodyHtml = done ? `
+      <div style="font-size:12.5px;color:var(--color-success);font-weight:700;margin:10px 0;">✓ 목표 ${target}분 · 완료</div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-ghost btn-sm" onclick="resetElemMakeup('${progressId}','${studentId}','${date}');renderElemMakeupPopup();renderElemMakeupPanel();">↩ 되돌리기</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeElemMakeupPopup();renderElemMakeupPanel();">닫기</button>
+      </div>` : `
+      <div style="display:flex;align-items:center;gap:4px;margin:10px 0;padding:6px 8px;background:var(--color-surface-alt);border-radius:8px;">
+        <span style="font-size:11px;color:var(--color-text-muted);">목표</span>
+        <input type="number" id="popupTarget-${studentId}-${date}" value="${target}" min="5" max="300" style="width:44px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
+        <span style="font-size:11px;color:var(--color-text-muted);">분</span>
+        <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;" onclick="changeElemTargetPopup('${studentId}','${date}')">변경</button>
+      </div>
+      <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;overflow:hidden;margin-bottom:4px;">
+        <div style="width:${pct}%;height:100%;background:var(--color-extra);border-radius:99px;"></div>
+      </div>
+      <div class="cell-muted" style="font-size:11.5px;margin-bottom:10px;"><b style="color:var(--color-text);">${logged}분</b> 완료 · ${remaining}분 남음</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',10,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+10분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',15,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+15분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',20,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+20분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',30,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+30분</button>
+        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-primary btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();">+${remaining}분 완료</button>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+        <input type="number" id="popupDirect-${studentId}-${date}" value="${remaining}" min="1" max="300" style="width:52px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
+        <span class="cell-muted" style="font-size:11.5px;">분 반영</span>
+        <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="directElemMakeupPopup('${studentId}','${date}',${target})">반영</button>
+      </div>
+      <div style="text-align:center;">
+        <span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${studentId}','${date}');closeElemMakeupPopup();renderElemMakeupPanel();">보강없음 (공휴일 등)</span>
+      </div>`;
+
+  overlay.innerHTML = `
+    <div class="elem-makeup-popup-box">
+      <span class="elem-makeup-popup-close" onclick="closeElemMakeupPopup()">닫기 ✕</span>
+      <div class="elem-makeup-popup-title">${escapeHtml(stu.name)}</div>
+      <div class="elem-makeup-popup-sub">${fmtDateKR2(date)} 결석</div>
+      ${bodyHtml}
+    </div>`;
+}
+
+function changeElemTargetPopup(studentId, date){
+  const inputEl = document.getElementById(`popupTarget-${studentId}-${date}`);
+  if(!inputEl) return;
+  const newTarget = parseInt(inputEl.value, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+  showToast(`목표 시간을 ${newTarget}분으로 변경했어요.`);
+  setTimeout(() => { renderElemMakeupPopup(); renderElemMakeupPanel(); }, 200);
+}
+
+function directElemMakeupPopup(studentId, date, target){
+  const inputEl = document.getElementById(`popupDirect-${studentId}-${date}`);
+  if(!inputEl) return;
+  const minutes = parseInt(inputEl.value, 10);
+  if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
+  quickElemMakeupIdx(studentId, date, minutes, target);
+  setTimeout(() => { renderElemMakeupPopup(); renderElemMakeupPanel(); }, 200);
 }
 
 function renderElemMakeupList(){
