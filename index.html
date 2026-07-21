@@ -214,7 +214,17 @@
   }
   .empty-row td{text-align:center;color:var(--color-text-muted);padding:36px 12px;font-size:13px;}
 
-  /* ===== Status pill (attendance) ===== */
+  /* ===== Status buttons (attendance) ===== */
+  .status-group{display:flex;gap:6px;}
+  .status-btn{
+    padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:700;
+    border:1px solid var(--color-border);background:#fff;color:var(--color-text-muted);
+  }
+  .status-btn[data-status="출석"].active{background:var(--color-success);border-color:var(--color-success);color:#fff;}
+  .status-btn[data-status="지각"].active{background:var(--color-warning);border-color:var(--color-warning);color:#fff;}
+  .status-btn[data-status="결석"].active{background:var(--color-danger);border-color:var(--color-danger);color:#fff;}
+  .status-btn:hover:not(.active){background:var(--color-surface-alt);}
+
   .status-pill{padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700;}
   .status-pill.출석{background:var(--color-success-soft);color:var(--color-success);}
   .status-pill.지각{background:var(--color-warning-soft);color:var(--color-warning);}
@@ -291,6 +301,8 @@
   }
   .class-item .ci-name{font-weight:800;font-size:13.5px;}
   .class-item .ci-meta{font-size:12px;color:var(--color-text-muted);margin-top:2px;}
+  .history-box{background:var(--color-surface-alt);border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;}
+  .history-box h4{margin:0 0 8px 0;font-size:12.5px;color:var(--color-text-muted);}
 
   /* ===== 학생별 출결 캘린더 ===== */
   .cal-header{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px 0;}
@@ -535,12 +547,12 @@
   /* ===== 출결 체크: 시간대별 그룹 ===== */
   .att-group{margin-bottom:18px;}
   .att-group:last-child{margin-bottom:0;}
-  .att-columns{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .att-columns{display:grid;grid-template-columns:1fr;gap:0;}
   .att-column-title{
     font-size:14px;font-weight:800;margin-bottom:12px;padding-bottom:8px;
     border-bottom:2px solid var(--color-primary);
   }
-  @media(max-width:900px){ .att-columns{grid-template-columns:1fr;} }
+  @media(min-width:1400px){ .att-columns{grid-template-columns:1fr 1fr;gap:22px;} }
   .att-group-title{
     display:flex;align-items:center;gap:8px;
     font-size:13px;font-weight:800;color:var(--color-primary-light);
@@ -548,22 +560,14 @@
   }
   .att-group-title .cnt{font-size:11.5px;font-weight:700;color:var(--color-text-muted);}
   .att-row{
-    display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;user-select:none;
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
     padding:10px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);
-    margin-bottom:8px;background:var(--color-surface);transition:filter .1s ease;
+    margin-bottom:8px;background:var(--color-surface);
   }
-  .att-row:hover{filter:brightness(0.97);}
   .att-row.overdue{border-color:var(--color-danger);background:var(--color-danger-soft);}
-  .att-row.출석{border-color:var(--color-success);background:var(--color-success-soft);}
-  .att-row.지각{border-color:var(--color-warning);background:var(--color-warning-soft);}
-  .att-row.결석{border-color:var(--color-danger);background:var(--color-danger-soft);}
   .att-row-main{flex:1 1 180px;min-width:160px;display:flex;align-items:center;gap:8px;}
   .att-row-main strong{font-size:13.5px;}
   .att-overdue-tag{font-size:11px;font-weight:800;color:var(--color-danger);background:#fff;padding:2px 8px;border-radius:999px;}
-  .att-row-status{font-size:12px;font-weight:800;color:var(--color-text-muted);flex:0 0 auto;}
-  .att-row.출석 .att-row-status{color:var(--color-success);}
-  .att-row.지각 .att-row-status{color:var(--color-warning);}
-  .att-row.결석 .att-row-status{color:var(--color-danger);}
   .att-time-info{display:flex;gap:10px;font-size:12px;color:var(--color-text-muted);flex:0 0 auto;}
   .att-memo-input{flex:1 1 140px;min-width:120px;padding:7px 10px;font-size:12.5px;}
   .avg-mini{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--color-border);}
@@ -924,104 +928,157 @@
 
       <!-- ================= 출결 관리 ================= -->
       <section class="view" id="view-attendance">
-        <div class="card" id="todayAbsentAlertCard" style="display:none;background:var(--color-danger-soft);border-color:var(--color-danger);">
-          <div class="card-title" style="color:var(--color-danger);">🔴 오늘 결석 → 보강 필요한 학생</div>
+
+        <div class="card section-gap">
+          <div class="card-title">
+            보강 시간대 관리 <span class="hint">참고 자료와 함께 정원을 정해보세요</span>
+          </div>
+          <div class="grid grid-3" style="align-items:start;gap:14px;">
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">보강 정원 달력</div>
+              <div class="toolbar" style="margin-bottom:8px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
+                <span id="slotCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
+              </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="cal-grid" id="slotCalGrid"></div>
+            </div>
+
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">이번 주 타임별 등원 인원 <span class="hint">숫자 클릭 시 명단</span></div>
+              <div id="slotHeadcountRef" style="overflow-x:auto;"></div>
+            </div>
+
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">선생님 출근 캘린더</div>
+              <div class="toolbar" style="margin-bottom:8px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(-1)">‹</button>
+                <span id="refTeacherCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(1)">›</button>
+              </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="bigcal-grid" id="refTeacherCalGrid" style="gap:3px;"></div>
+            </div>
+          </div>
+
+          <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-top:16px;">
+            <div id="slotEditorTitle" style="font-weight:800;font-size:16px;margin-bottom:4px;"></div>
+            <p class="cell-muted" style="font-size:12.5px;margin:0 0 12px;">이날 출근하는 선생님을 참고해서 시간대별 정원을 정해보세요.</p>
+
+            <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 14px;">
+              <div id="slotInputRows"></div>
+            </div>
+
+            <div class="form-row" style="margin-top:14px;">
+              <div class="field" style="flex:1;">
+                <label>새 시간대 (선택)</label>
+                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
+              </div>
+              <div class="field" style="flex:0 0 100px;">
+                <label>정원</label>
+                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:15px;padding:12px;" onclick="saveSlotEditor()">저장</button>
+          </div>
+        </div>
+
+        <div class="card" id="todayAbsentAlertCard" style="display:none;background:var(--color-danger-soft);border-color:var(--color-danger);padding:10px 14px;">
+          <div style="font-size:12.5px;font-weight:800;color:var(--color-danger);">🔴 오늘 결석 → 보강 필요한 학생</div>
           <div id="todayAbsentAlertList"></div>
         </div>
 
-        <div class="grid grid-2 section-gap">
-          <div style="display:flex;flex-direction:column;gap:20px;">
-            <div class="card">
-              <div class="card-title">오늘의 출결 체크</div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;">
-                <div style="position:relative;display:inline-flex;">
-                  <button type="button" class="btn btn-ghost btn-sm" id="attDatePickerBtn" onclick="toggleAttDatePopup()" style="display:flex;align-items:center;gap:6px;">
-                    📅 <span id="attDatePickerLabel">-</span>
-                  </button>
-                  <input type="date" id="attDate" onchange="renderAttendance()" style="display:none;">
-                  <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
-                    <div class="cal-header" style="margin-bottom:6px;">
-                      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
-                      <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
-                      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(1)">›</button>
-                    </div>
-                    <div class="cal-weekdays">
-                      <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                    </div>
-                    <div class="cal-grid" id="attDatePopupGrid"></div>
-                  </div>
-                </div>
-                <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:130px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
-                  <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
-                  등원 예정만
-                </label>
-                <div id="attTimeFilterChips" class="weekday-picker" style="margin:0;"></div>
-                <input type="month" id="exportMonthInput" style="min-width:120px;">
-                <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
+        <div class="card section-gap" style="padding:10px 14px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:relative;">
+            <button type="button" class="btn btn-ghost btn-sm" id="attDatePickerBtn" onclick="toggleAttDatePopup()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
+              📅 <span id="attDatePickerLabel">-</span>
+            </button>
+            <input type="date" id="attDate" onchange="renderAttendance()" style="display:none;">
+            <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:120px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
+              <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
+              등원 예정만
+            </label>
+            <div id="attTimeFilterChips" class="weekday-picker" style="margin:0;"></div>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+              <input type="month" id="exportMonthInput" style="min-width:120px;">
+              <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
+            </div>
+            <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
+              <div class="cal-header" style="margin-bottom:6px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
+                <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(1)">›</button>
               </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="cal-grid" id="attDatePopupGrid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-2 section-gap" style="align-items:start;">
+          <!-- 왼쪽: 출결 체크 + 초등부 보강 현황 -->
+          <div>
+            <div class="card">
               <div id="attGroups"></div>
             </div>
-
-            <div class="card">
+            <div class="card section-gap">
               <div class="card-title">초등부 결석 · 보강 현황 <span class="hint">5분 단위로 채워가요</span></div>
               <div id="elemMakeupList" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
             </div>
           </div>
 
-          <div style="display:flex;flex-direction:column;gap:20px;">
-            <div class="card">
-              <div class="card-title">결석 → 보강 예약 <span class="hint">보강 예약 안 한 학생은 계속 남아있어요 · 날짜+시간까지 정해야 캘린더·학생관리에 나타나요</span></div>
-              <div style="margin-bottom:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:var(--color-surface-alt);cursor:pointer;" onclick="toggleManualMakeupSection()">
-                  <span style="font-size:12.5px;font-weight:700;color:var(--color-text-muted);">📋 수동 보강 추가 <span class="hint">월 중간 입학생 등 결석 기록 없이 보강을 바로 부여할 때</span></span>
-                  <span id="manualMakeupToggleIcon" style="font-size:11px;color:var(--color-text-muted);">▸</span>
-                </div>
-                <div id="manualMakeupBody" style="display:none;padding:12px 14px;">
-                  <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
-                    <div class="field" style="flex:1.2;min-width:120px;margin:0;">
-                      <label style="font-size:11.5px;">학생</label>
-                      <input type="text" id="manualMakeupStudent" list="manualMakeupStudentList" placeholder="이름 입력" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
-                      <datalist id="manualMakeupStudentList"></datalist>
-                    </div>
-                    <div class="field" style="flex:1;min-width:110px;margin:0;">
-                      <label style="font-size:11.5px;">보강 날짜</label>
-                      <input type="date" id="manualMakeupDate" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;" onchange="renderManualMakeupTimeOptions()">
-                    </div>
-                    <div class="field" style="flex:1;min-width:120px;margin:0;">
-                      <label style="font-size:11.5px;">시간대</label>
-                      <select id="manualMakeupTime" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;"><option value="">날짜 먼저 선택</option></select>
-                    </div>
-                    <div class="field" style="flex:1.2;min-width:130px;margin:0;">
-                      <label style="font-size:11.5px;">메모 (선택)</label>
-                      <input type="text" id="manualMakeupNote" placeholder="예: 월중 입학 보강" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="addManualMakeup()" style="flex:0 0 auto;white-space:nowrap;">보강 추가</button>
+          <!-- 오른쪽: 보강 예약 + 추가보강 -->
+          <div class="card">
+            <div class="card-title">결석 → 보강 예약 <span class="hint">날짜+시간까지 정해야 캘린더·학생관리에 나타나요</span></div>
+
+            <div id="manualMakeupToggleWrap" style="margin-bottom:10px;">
+              <div style="font-size:12px;color:var(--color-text-muted);cursor:pointer;padding:5px 0;border-bottom:1px solid var(--color-border);" onclick="toggleManualMakeupPanel()">
+                <span id="manualMakeupToggleIcon">▸</span> 수동 보강 추가 (월중 입학 등)
+              </div>
+              <div id="manualMakeupPanel" style="display:none;margin-top:8px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                  <div class="field" style="flex:1.2;min-width:120px;margin:0;">
+                    <label style="font-size:11.5px;">학생</label>
+                    <input type="text" id="manualMakeupStudent" list="manualMakeupStudentList" placeholder="이름 입력" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
+                    <datalist id="manualMakeupStudentList"></datalist>
                   </div>
+                  <div class="field" style="flex:1;min-width:110px;margin:0;">
+                    <label style="font-size:11.5px;">보강 날짜</label>
+                    <input type="date" id="manualMakeupDate" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;" onchange="renderManualMakeupTimeOptions()">
+                  </div>
+                  <div class="field" style="flex:1;min-width:120px;margin:0;">
+                    <label style="font-size:11.5px;">시간대</label>
+                    <select id="manualMakeupTime" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;"><option value="">날짜 먼저 선택</option></select>
+                  </div>
+                  <div class="field" style="flex:1.2;min-width:130px;margin:0;">
+                    <label style="font-size:11.5px;">메모 (선택)</label>
+                    <input type="text" id="manualMakeupNote" placeholder="예: 월중 입학 보강" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
+                  </div>
+                  <button class="btn btn-primary btn-sm" onclick="addManualMakeup()" style="flex:0 0 auto;white-space:nowrap;">보강 추가</button>
                 </div>
               </div>
-              <div id="weeklyAbsentList"></div>
             </div>
 
-            <div class="card">
-              <div class="card-title">결석 아닌 학생 추가보강 등록 <span class="hint">보강 시간대 또는 정규수업 시간에 추가할 수 있어요</span></div>
-              <div class="form-row">
-                <div class="field" style="flex:1;">
-                  <label>날짜</label>
-                  <input type="date" id="extraMakeupDate" onchange="renderExtraMakeupSection()">
-                </div>
-                <div class="field" style="flex:1.2;">
-                  <label>시간대 선택</label>
-                  <select id="extraMakeupSlotSelect"></select>
-                </div>
-                <div class="field" style="flex:1.2;">
-                  <label>학생 검색</label>
-                  <input type="text" id="extraMakeupStudentSearch" list="extraMakeupStudentList" placeholder="이름 입력">
-                  <datalist id="extraMakeupStudentList"></datalist>
-                </div>
-                <div class="form-actions" style="align-self:flex-end;">
-                  <button class="btn btn-primary btn-sm" onclick="addExtraMakeup()">추가보강 등록</button>
-                </div>
+            <div id="weeklyAbsentList"></div>
+
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border);">
+              <div class="card-title" style="margin-bottom:8px;">추가보강 등록 <span class="hint">결석 아닌 학생</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                <input type="date" id="extraMakeupDate" onchange="renderExtraMakeupSection()" style="flex:1;min-width:110px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <select id="extraMakeupSlotSelect" style="flex:1;min-width:110px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"></select>
+                <input type="text" id="extraMakeupStudentSearch" list="extraMakeupStudentList" placeholder="이름 입력" style="flex:1;min-width:100px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <datalist id="extraMakeupStudentList"></datalist>
+                <button class="btn btn-primary btn-sm" onclick="addExtraMakeup()">등록</button>
               </div>
               <div id="extraMakeupListForDate"></div>
             </div>
@@ -1357,66 +1414,6 @@
           <div id="announceList" style="margin-top:14px;"></div>
         </div>
 
-        <div class="card section-gap">
-          <div class="card-title">
-            보강 시간대 관리 <span class="hint">참고 자료와 함께 정원을 정해보세요</span>
-          </div>
-          <div class="grid grid-3" style="align-items:start;gap:14px;">
-            <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">보강 정원 달력</div>
-              <div class="toolbar" style="margin-bottom:8px;">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
-                <span id="slotCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
-              </div>
-              <div class="cal-weekdays">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="cal-grid" id="slotCalGrid"></div>
-            </div>
-
-            <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">이번 주 타임별 등원 인원 <span class="hint">숫자 클릭 시 명단</span></div>
-              <div id="slotHeadcountRef" style="overflow-x:auto;"></div>
-            </div>
-
-            <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">선생님 출근 캘린더</div>
-              <div class="toolbar" style="margin-bottom:8px;">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(-1)">‹</button>
-                <span id="refTeacherCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(1)">›</button>
-              </div>
-              <div class="cal-weekdays">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="bigcal-grid" id="refTeacherCalGrid" style="gap:3px;"></div>
-            </div>
-          </div>
-
-          <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-top:16px;">
-            <div id="slotEditorTitle" style="font-weight:800;font-size:16px;margin-bottom:4px;"></div>
-            <p class="cell-muted" style="font-size:12.5px;margin:0 0 12px;">이날 출근하는 선생님을 참고해서 시간대별 정원을 정해보세요.</p>
-
-            <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div>
-
-            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 14px;">
-              <div id="slotInputRows"></div>
-            </div>
-
-            <div class="form-row" style="margin-top:14px;">
-              <div class="field" style="flex:1;">
-                <label>새 시간대 (선택)</label>
-                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
-              </div>
-              <div class="field" style="flex:0 0 100px;">
-                <label>정원</label>
-                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
-              </div>
-            </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:15px;padding:12px;" onclick="saveSlotEditor()">저장</button>
-          </div>
-        </div>
 
         <div class="card section-gap">
           <div class="card-title">
@@ -1667,24 +1664,23 @@ db.ref('teachers').on('value', snap => {
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
   if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); renderStaffCal(); }
-  if(currentView === 'studentapp') renderRefTeacherCal();
+  if(currentView === 'attendance') renderRefTeacherCal();
 });
 db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
   if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); renderStaffCal(); }
-  if(currentView === 'studentapp') renderRefTeacherCal();
+  if(currentView === 'attendance') renderRefTeacherCal();
 });
 db.ref('makeupSlots').on('value', snap => {
   studentMakeupSlots = snapshotToArray(snap.val());
-  if(currentView === 'studentapp') renderMakeupSlotList();
-  if(currentView === 'attendance') renderExtraMakeupSection();
+  if(currentView === 'attendance'){ renderMakeupSlotList(); renderExtraMakeupSection(); }
 });
 db.ref('absenceRequests').on('value', snap => {
   absenceRequests = snapshotToArray(snap.val());
-  if(currentView === 'studentapp'){ renderMakeupSlotList(); renderPendingApprovals(); renderConfirmedMakeupList(); }
-  if(currentView === 'attendance') renderExtraMakeupSection();
+  if(currentView === 'studentapp'){ renderPendingApprovals(); renderConfirmedMakeupList(); }
+  if(currentView === 'attendance'){ renderMakeupSlotList(); renderExtraMakeupSection(); }
 });
 db.ref('homework').on('value', snap => {
   homeworkItems = snapshotToArray(snap.val());
@@ -1731,7 +1727,7 @@ db.ref('.info/connected').on('value', snap => {
 function refreshCurrentView(){
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'students') renderStudents();
-  if(currentView === 'attendance') renderAttendance();
+  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
   if(currentView === 'calendar') renderBigCalendar();
   if(currentView === 'scores'){ renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   populateStudentDropdowns();
@@ -2244,13 +2240,13 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderElemMakeupList(); renderManualMakeupStudentList(); }
+  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderElemMakeupList(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
   if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); }
   if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
-  if(view === 'studentapp'){ renderAnnounceChips(); renderAnnounceList(); renderMakeupSlotList(); renderRefTeacherCal(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); renderParentPageNameGroups(); }
+  if(view === 'studentapp'){ renderAnnounceChips(); renderAnnounceList(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); renderParentPageNameGroups(); }
   if(view === 'parentchat'){ renderChatThreadList(); renderMatholicLinkManager(); }
 }
 
@@ -4057,6 +4053,20 @@ function getAttendanceRecord(studentId, date){
   return attendance.find(a => a.studentId === studentId && a.date === date);
 }
 
+function setAttendanceStatus(studentId, date, status){
+  let rec = getAttendanceRecord(studentId, date);
+  if(rec){
+    if(rec.status === status){
+      db.ref('attendance/' + rec.id).remove(); // 같은 버튼 다시 누르면 해제
+    }else{
+      db.ref('attendance/' + rec.id).update({ status });
+    }
+  }else{
+    db.ref('attendance').push({ studentId, date, status, memo:'' });
+  }
+  showToast('출결이 저장되었습니다.');
+}
+
 function setAttendanceMemo(studentId, date, memo){
   let rec = getAttendanceRecord(studentId, date);
   if(rec){
@@ -4103,24 +4113,33 @@ function toggleAttMakeupCollapse(){
   renderAttendance();
 }
 
+function toggleManualMakeupPanel(){
+  const panel = document.getElementById('manualMakeupPanel');
+  const icon = document.getElementById('manualMakeupToggleIcon');
+  if(!panel) return;
+  const willShow = panel.style.display === 'none';
+  panel.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
 function attRowHtml(s, date, isToday, nowTime, t){
   const rec = getAttendanceRecord(s.id, date);
   const status = rec ? rec.status : null;
   const overdue = isToday && t !== '99:99' && t !== 'MAKEUP' && !rec && nowTime > t;
   const scheduleDays = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).join('·');
-  let statusCls = '', statusLabel = '○ 미체크';
-  if(status === '출석') { statusCls = '출석'; statusLabel = '● 출석'; }
-  else if(status === '지각') { statusCls = '지각'; statusLabel = '● 지각'; }
-  else if(status === '결석') { statusCls = '결석'; statusLabel = '● 결석'; }
   return `
-    <div class="att-row ${statusCls} ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}" onclick="cycleAttendanceStatus('${s.id}','${date}')" title="눌러서 미체크→출석→지각→결석 순서로 바꿔요">
+    <div class="att-row ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}">
       <div class="att-row-main">
         <strong>${escapeHtml(s.name)}</strong>
         ${gradeBadge(s.grade)}
         ${scheduleDays ? `<span class="cell-muted" style="font-size:10.5px;font-weight:400;">${escapeHtml(scheduleDays)}</span>` : ''}
         ${overdue ? `<span class="att-overdue-tag">⏳ 미출석</span>` : ''}
       </div>
-      <div class="att-row-status">${statusLabel}</div>
+      <div class="status-group">
+        <button class="status-btn ${status==='출석'?'active':''}" data-status="출석" onclick="setAttendanceStatus('${s.id}','${date}','출석')">출석</button>
+        <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
+        <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
+      </div>
       <div class="att-time-info">
         <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
         <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
@@ -4168,20 +4187,6 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
 }
 
 function cycleElementaryStatus(studentId, date){
-  const order = [null, '출석', '지각', '결석'];
-  const rec = getAttendanceRecord(studentId, date);
-  const current = rec ? rec.status : null;
-  const nextIdx = (order.indexOf(current) + 1) % order.length;
-  const next = order[nextIdx];
-  if(rec){
-    if(next === null) db.ref('attendance/' + rec.id).remove();
-    else db.ref('attendance/' + rec.id).update({ status: next });
-  }else if(next !== null){
-    db.ref('attendance').push({ studentId, date, status: next, memo:'' });
-  }
-}
-
-function cycleAttendanceStatus(studentId, date){
   const order = [null, '출석', '지각', '결석'];
   const rec = getAttendanceRecord(studentId, date);
   const current = rec ? rec.status : null;
@@ -4407,15 +4412,6 @@ function toggleDoneMakeupSection(){
 function toggleNeedsTimePastSection(){
   const sec = document.getElementById('needsTimePastSection');
   const icon = document.getElementById('needsTimePastToggleIcon');
-  if(!sec) return;
-  const willShow = sec.style.display === 'none';
-  sec.style.display = willShow ? 'block' : 'none';
-  if(icon) icon.textContent = willShow ? '▾' : '▸';
-}
-
-function toggleManualMakeupSection(){
-  const sec = document.getElementById('manualMakeupBody');
-  const icon = document.getElementById('manualMakeupToggleIcon');
   if(!sec) return;
   const willShow = sec.style.display === 'none';
   sec.style.display = willShow ? 'block' : 'none';
@@ -5186,6 +5182,7 @@ function init(){
   renderScheduleGrid();
   renderTeacherDaysPicker();
   populateStudentDropdowns();
+  renderAttCalendar();
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
