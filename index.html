@@ -454,10 +454,29 @@
     margin-top:14px;
   }
   .teacher-item{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
-    margin-bottom:8px;background:var(--color-surface-alt);
+    border:1px solid var(--color-border);border-radius:var(--radius-md);
+    margin-bottom:8px;background:var(--color-surface);overflow:hidden;
   }
+  .teacher-item-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 14px;cursor:pointer;background:var(--color-surface-alt);
+    transition:background .12s;
+  }
+  .teacher-item-header:hover{background:var(--color-surface);}
+  .teacher-item-header.open{background:var(--color-surface);}
+  .teacher-item-chevron{font-size:11px;color:var(--color-text-muted);transition:transform .15s;margin-left:4px;flex-shrink:0;}
+  .teacher-item-chevron.open{transform:rotate(180deg);}
+  .teacher-mini-cal{padding:12px 14px;border-top:1px solid var(--color-border);background:var(--color-surface);}
+  .teacher-mini-cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .teacher-mini-cal-nav span{font-size:12.5px;font-weight:800;flex:1;text-align:center;color:var(--color-text);}
+  .teacher-mini-cal-nav button{font-size:12px;padding:2px 8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:pointer;}
+  .teacher-mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .teacher-mini-cal-grid .mc-wday{font-size:10px;color:var(--color-text-muted);text-align:center;padding:2px 0;font-weight:700;}
+  .teacher-mini-cal-grid .mc-day{font-size:11.5px;text-align:center;padding:4px 2px;border-radius:5px;color:var(--color-text-muted);}
+  .teacher-mini-cal-grid .mc-day.work{font-weight:800;color:#fff;}
+  .teacher-mini-cal-grid .mc-day.today-ring{outline:2px solid var(--color-primary);outline-offset:-1px;border-radius:5px;}
+  .teacher-cal-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .teacher-cal-summary span{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);}
   .cal-num{position:relative;}
   .cal-cell.has-event-시험 .cal-num::after,
   .cal-cell.has-event-상담 .cal-num::after,
@@ -1653,6 +1672,13 @@ db.ref('dailyNotes').on('value', snap => {
 });
 db.ref('teachers').on('value', snap => {
   teachers = snapshotToArray(snap.val());
+  // 실제 존재하지 않는 선생님 ID는 숨김 목록에서 자동 제거
+  const validIds = new Set(teachers.map(t => t.id));
+  const cleaned = hiddenTeacherIds.filter(id => validIds.has(id));
+  if(cleaned.length !== hiddenTeacherIds.length){
+    hiddenTeacherIds = cleaned;
+    localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  }
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
   if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); renderStaffCal(); }
@@ -5588,6 +5614,62 @@ function deleteStaff(id){
   showToast('선생님이 삭제되었습니다.');
 }
 
+// 선생님별 미니달력 펼침 상태 {teacherId: {open, year, month}}
+let staffMiniCalState = {};
+
+function toggleStaffMiniCal(id){
+  if(!staffMiniCalState[id]){
+    const now = new Date();
+    staffMiniCalState[id] = { open: true, year: now.getFullYear(), month: now.getMonth() };
+  } else {
+    staffMiniCalState[id].open = !staffMiniCalState[id].open;
+  }
+  renderStaffList();
+}
+
+function shiftStaffMiniCalMonth(id, delta){
+  if(!staffMiniCalState[id]) return;
+  staffMiniCalState[id].month += delta;
+  if(staffMiniCalState[id].month < 0){ staffMiniCalState[id].month = 11; staffMiniCalState[id].year--; }
+  if(staffMiniCalState[id].month > 11){ staffMiniCalState[id].month = 0; staffMiniCalState[id].year++; }
+  renderStaffList();
+}
+
+function renderStaffMiniCal(t){
+  const state = staffMiniCalState[t.id];
+  if(!state || !state.open) return '';
+  const { year, month } = state;
+  const todayStr = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let workCount = 0;
+  let cells = ['일','월','화','수','목','금','토'].map(d => `<div class="mc-wday">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++) cells += `<div class="mc-day"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const working = isTeacherWorking(t, ds);
+    if(working) workCount++;
+    const isToday = ds === todayStr;
+    const dow = new Date(ds+'T00:00:00').getDay();
+    const colorStyle = working ? `background:${t.color};` : '';
+    const numColor = !working ? (dow===0?'color:#D64550;':dow===6?'color:#378ADD;':'') : '';
+    cells += `<div class="mc-day ${working?'work':''} ${isToday?'today-ring':''}" style="${colorStyle}${numColor}">${d}</div>`;
+  }
+  return `
+    <div class="teacher-mini-cal">
+      <div class="teacher-mini-cal-nav">
+        <button type="button" onclick="event.stopPropagation();shiftStaffMiniCalMonth('${t.id}',-1)">‹</button>
+        <span>${year}년 ${month+1}월</span>
+        <button type="button" onclick="event.stopPropagation();shiftStaffMiniCalMonth('${t.id}',1)">›</button>
+      </div>
+      <div class="teacher-mini-cal-grid">${cells}</div>
+      <div class="teacher-cal-summary">
+        <span>이번달 출근 ${workCount}일</span>
+        <span>${(t.days||[]).length ? t.days.join('·')+' 기본' : '기본 요일 없음'}</span>
+      </div>
+    </div>`;
+}
+
 function renderStaffList(){
   const box = document.getElementById('staffList');
   if(!box) return;
@@ -5595,21 +5677,27 @@ function renderStaffList(){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 선생님이 없습니다.</div>`;
     return;
   }
-  box.innerHTML = teachers.map(t => `
+  box.innerHTML = teachers.map(t => {
+    const isOpen = staffMiniCalState[t.id] && staffMiniCalState[t.id].open;
+    return `
     <div class="teacher-item">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;"></span>
-        <div>
-          <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
-          <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? t.days.join('·') : '기본 출근 요일 없음'}${t.phone ? ' · ' + escapeHtml(t.phone) : ''}</div>
+      <div class="teacher-item-header ${isOpen?'open':''}" onclick="toggleStaffMiniCal('${t.id}')">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;flex-shrink:0;"></span>
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
+            <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? t.days.join('·') : '기본 출근 요일 없음'}${t.phone ? ' · ' + escapeHtml(t.phone) : ''}</div>
+          </div>
         </div>
+        <div style="display:flex;gap:6px;align-items:center;" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="editStaff('${t.id}')">수정</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="deleteStaff('${t.id}')">삭제</button>
+        </div>
+        <span class="teacher-item-chevron ${isOpen?'open':''}">▾</span>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="editStaff('${t.id}')">수정</button>
-        <button class="btn btn-danger-outline btn-sm" onclick="deleteStaff('${t.id}')">삭제</button>
-      </div>
-    </div>
-  `).join('');
+      ${renderStaffMiniCal(t)}
+    </div>`;
+  }).join('');
 }
 
 /* ===== 선생님 출근 달력 ===== */
