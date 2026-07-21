@@ -291,8 +291,6 @@
   }
   .class-item .ci-name{font-weight:800;font-size:13.5px;}
   .class-item .ci-meta{font-size:12px;color:var(--color-text-muted);margin-top:2px;}
-  .history-box{background:var(--color-surface-alt);border-radius:var(--radius-md);padding:12px 14px;margin-top:8px;}
-  .history-box h4{margin:0 0 8px 0;font-size:12.5px;color:var(--color-text-muted);}
 
   /* ===== 학생별 출결 캘린더 ===== */
   .cal-header{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px 0;}
@@ -3972,7 +3970,7 @@ function renderStudents(){
     const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
-      <td><strong style="cursor:pointer;text-decoration:underline dotted;" onclick="goToStudentAttendance('${s.id}')" title="눌러서 출결 캘린더 보기">${escapeHtml(s.name)}</strong></td>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
@@ -4800,45 +4798,6 @@ function cancelMakeupById(makeupId){
   showToast('보강이 취소됐어요.');
 }
 
-
-function exportStudentAttendance(){
-  const studentId = document.getElementById('attHistoryStudent').value;
-  const stu = studentById(studentId);
-  if(!stu){ alert('학생을 먼저 선택해 주세요.'); return; }
-
-  const records = attendance.filter(a => a.studentId === studentId).sort((a,b)=> a.date.localeCompare(b.date));
-  if(!records.length){ alert(`${stu.name} 학생의 출결 기록이 없습니다.`); return; }
-
-  const rows = [];
-  rows.push([`${stu.name} 학생 출결 기록`]);
-  rows.push([`학년: ${stu.grade}`, `시간표: ${scheduleSummary(stu)}`]);
-  rows.push([]);
-  rows.push(['날짜','요일','상태','등원 시간','하원 시간','비고']);
-  records.forEach(r => {
-    const d = new Date(r.date + 'T00:00:00');
-    const weekday = d.toLocaleDateString('ko-KR', { weekday:'short' });
-    rows.push([r.date, weekday, r.status || '-', r.checkInTime || '-', r.checkOutTime || '-', r.memo || '']);
-  });
-
-  const present = records.filter(r=>r.status==='출석').length;
-  const late = records.filter(r=>r.status==='지각').length;
-  const absent = records.filter(r=>r.status==='결석').length;
-  rows.push([]);
-  rows.push(['요약', `출석 ${present}`, `지각 ${late}`, `결석 ${absent}`, `합계 ${records.length}`]);
-
-  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${stu.name}_출결기록.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`${stu.name} 학생의 출결 기록을 다운로드했습니다.`);
-}
-
 /* =========================================================
    성적 관리
 ========================================================= */
@@ -4846,11 +4805,6 @@ function populateStudentDropdowns(){
   const options = students.length
     ? students.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')
     : `<option value="">등록된 학생 없음</option>`;
-
-  const historySel = document.getElementById('attHistoryStudent');
-  const prevHistory = historySel.value;
-  historySel.innerHTML = `<option value="">학생을 선택하세요</option>` + options;
-  if(students.some(s=>s.id===prevHistory)) historySel.value = prevHistory;
 
   const filterSel = document.getElementById('scoreFilterStudent');
   const prevFilter = filterSel.value;
@@ -5232,7 +5186,6 @@ function init(){
   renderScheduleGrid();
   renderTeacherDaysPicker();
   populateStudentDropdowns();
-  renderAttCalendar();
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
