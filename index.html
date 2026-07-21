@@ -1194,8 +1194,9 @@
             </div>
             <div class="sms-layout-divider"></div>
             <div class="sms-layout-right">
-              <div class="field" style="margin-bottom:10px;">
-                <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
+              <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="flex:1;">
+                <select id="smsSchoolSelect" onchange="onSmsSchoolSelectChange()" style="width:150px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;background:var(--color-surface);"></select>
               </div>
 
               <div class="sms-filter-row">
@@ -1203,25 +1204,24 @@
                 <div id="smsGradePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
               </div>
               <div class="sms-filter-row">
-                <span class="sms-filter-label">학교</span>
-                <div id="smsSchoolPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-              </div>
-              <div class="sms-filter-row">
                 <span class="sms-filter-label">요일</span>
                 <div id="smsDayPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
-                <span class="sms-filter-label" style="width:auto;margin-left:12px;">출결</span>
+              </div>
+              <div class="sms-filter-row">
+                <span class="sms-filter-label">출결</span>
                 <div id="smsStatusPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
               </div>
               <div class="sms-filter-row" id="smsTimeFilterWrap" style="display:none;">
                 <span class="sms-filter-label">시간대</span>
                 <div id="smsTimePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
               </div>
-              <div class="sms-filter-row">
+
+              <div class="divider" style="margin:12px 0;"></div>
+              <div style="display:flex;align-items:center;gap:8px;">
                 <button class="btn btn-primary btn-sm" onclick="applySmsFilter()">🔍 필터 적용</button>
                 <button class="btn btn-ghost btn-sm" onclick="resetSmsFilter()">초기화</button>
+                <span class="sms-filter-summary" id="smsFilterSummary" style="margin-left:auto;margin-top:0;"></span>
               </div>
-
-              <div class="sms-filter-summary" id="smsFilterSummary"></div>
             </div>
           </div>
         </div>
@@ -1858,17 +1858,17 @@ function renderSmsGradePicker(containerEl, values, selectedArr, onToggleFnName){
 }
 
 function renderSmsSchoolPicker(){
-  const el = document.getElementById('smsSchoolPicker');
+  const el = document.getElementById('smsSchoolSelect');
   if(!el) return;
   const schools = [...new Set(students.map(s => (s.school||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-  if(!schools.length){ el.innerHTML = `<span class="cell-muted" style="font-size:11.5px;">등록된 학교가 없어요</span>`; return; }
-  el.innerHTML = schools.map(sc =>
-    `<button type="button" class="sms-chip school ${smsFilterSchools.includes(sc) ? 'active' : ''}" onclick="toggleSmsSchool('${escapeHtml(sc)}')">${escapeHtml(sc)}</button>`
+  const prev = smsFilterSchools[0] || '';
+  el.innerHTML = `<option value="">학교 전체</option>` + schools.map(sc =>
+    `<option value="${escapeHtml(sc)}" ${prev===sc?'selected':''}>${escapeHtml(sc)}</option>`
   ).join('');
 }
-function toggleSmsSchool(sc){
-  smsFilterSchools = smsFilterSchools.includes(sc) ? smsFilterSchools.filter(x=>x!==sc) : [...smsFilterSchools, sc];
-  renderSmsSchoolPicker();
+function onSmsSchoolSelectChange(){
+  const val = document.getElementById('smsSchoolSelect').value;
+  smsFilterSchools = val ? [val] : [];
   renderSmsFilterSummary();
 }
 
