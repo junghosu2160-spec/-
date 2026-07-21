@@ -67,6 +67,9 @@
   .top-greeting .sub{font-size:12px; color:var(--color-text-muted); margin-top:2px;}
   .logout-btn{font-size:12px; color:var(--color-text-muted); background:none; border:none; padding:4px 8px; font-weight:500;}
 
+  .announce-item{background:#FFF6DC; border:1px solid var(--color-accent); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px; color:#4A3A00; line-height:1.5;}
+  .announce-item .date{font-size:10.5px; color:#8A6400; opacity:0.8; margin-top:4px;}
+
   .card-title{font-size:14.5px; font-weight:800; margin-bottom:2px;}
   .card-sub{font-size:12px; color:var(--color-text-muted); margin-bottom:12px;}
 
@@ -142,6 +145,8 @@
 
   <!-- ===== 메인 화면 ===== -->
   <div id="appScreen">
+    <div id="announceBanner" style="margin-bottom:12px;"></div>
+
     <div class="top-greeting">
       <div>
         <h1 id="greetName">-</h1>
@@ -226,12 +231,15 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토'];
+const WEEKDAYS = ['월','화','수','목','금','토','일'];
 
 let currentStudent = null;
+let isAdminView = false;
 let attendance = [];
 let elemMakeupProgress = [];
 let parentMessages = [];
 let mathholicLinks = [];
+let announcements = [];
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
@@ -299,6 +307,21 @@ function logout(){
 }
 
 function tryAutoLogin(){
+  // 원장님 관리자 화면에서 iframe으로 열 때: ?admin=학생ID 로 로그인 없이 바로 진입
+  const params = new URLSearchParams(window.location.search);
+  const adminStudentId = params.get('admin');
+  if(adminStudentId){
+    db.ref('students/' + adminStudentId).once('value').then(snap => {
+      const s = snap.val();
+      if(s){
+        currentStudent = Object.assign({ id: adminStudentId }, s);
+        isAdminView = true;
+        startApp();
+      }
+    });
+    return;
+  }
+
   const saved = localStorage.getItem('parentPageAuth');
   if(!saved) return;
   try{
@@ -324,6 +347,9 @@ function startApp(){
   document.getElementById('greetSub').textContent = todayTime
     ? `오늘은 ${todayLbl}요일, ${todayTime} 수업이에요`
     : `오늘은 ${todayLbl}요일, 수업 없는 날이에요`;
+  if(isAdminView){
+    document.querySelector('.logout-btn').style.display = 'none';
+  }
   attachListeners();
 }
 
@@ -343,6 +369,10 @@ function attachListeners(){
   db.ref('mathholicLinks').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
     mathholicLinks = snapshotToArray(snap.val());
     renderReport();
+  });
+  db.ref('announcements').on('value', snap => {
+    announcements = snapshotToArray(snap.val());
+    renderAnnounceBanner();
   });
 }
 
@@ -511,6 +541,34 @@ function renderReport(){
   card.style.display = 'block';
   document.getElementById('reportMonthLabel').textContent = `${month.replace('-','년 ')}월 리포트`;
   document.getElementById('reportLink').href = rec.url;
+}
+
+/* ===== 공지사항 배너 ===== */
+function renderAnnounceBanner(){
+  const box = document.getElementById('announceBanner');
+  if(!box || !currentStudent) return;
+
+  const d14 = new Date(); d14.setDate(d14.getDate() - 14);
+  const cutoff = d14.getTime();
+
+  const mySchedule = currentStudent.schedule || {};
+  const list = announcements.filter(a => {
+    if(a.createdAt < cutoff) return false;
+    const grades = a.targetGrades || [];
+    const weekdays = a.targetWeekdays || [];
+    const schools = a.targetSchools || [];
+    if(grades.length && !grades.includes(currentStudent.grade)) return false;
+    if(weekdays.length && !weekdays.some(d => mySchedule[d])) return false;
+    if(schools.length && !schools.includes((currentStudent.school || '').trim())) return false;
+    return true;
+  }).sort((a,b) => b.createdAt - a.createdAt);
+
+  if(!list.length){ box.innerHTML = ''; return; }
+
+  box.innerHTML = list.map(a => {
+    const date = new Date(a.createdAt).toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
+    return `<div class="announce-item">${escapeHtml(a.message)}<div class="date">${date}</div></div>`;
+  }).join('');
 }
 
 tryAutoLogin();

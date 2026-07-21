@@ -940,6 +940,11 @@
           <div id="weeklyAbsentList"></div>
         </div>
 
+        <div class="card section-gap">
+          <div class="card-title">초등부 결석 · 보강 현황 <span class="hint">5분 단위로 채워가요</span></div>
+          <div id="elemMakeupList" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+        </div>
+
         <div class="grid grid-2 section-gap">
           <div class="card">
             <div class="card-title">선택 날짜 출결 통계 <span class="hint" id="attDonutDate"></span></div>
@@ -1286,6 +1291,30 @@
       <section class="view" id="view-studentapp">
 
         <div class="card">
+          <div class="card-title">공지사항 보내기 <span class="hint">학생페이지·학부모페이지 맨 위에 표시돼요 · 조건 비워두면 전체에게 보여요</span></div>
+          <div class="field">
+            <label>내용</label>
+            <textarea id="announceMessage" rows="2" placeholder="예: 이번 주 금요일은 학교 행사로 휴원합니다" style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13.5px;resize:vertical;"></textarea>
+          </div>
+          <div class="grid grid-3" style="gap:14px;">
+            <div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">학년 (선택 안 하면 전체)</div>
+              <div id="announceGradeChips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
+            <div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">요일 (선택 안 하면 전체)</div>
+              <div id="announceWeekdayChips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+            </div>
+            <div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">학교 (선택 안 하면 전체)</div>
+              <div id="announceSchoolChips" style="display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow-y:auto;"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:12px;" onclick="sendAnnouncement()">보내기</button>
+          <div id="announceList" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card section-gap">
           <div class="card-title">
             보강 시간대 관리 <span class="hint">참고 자료와 함께 정원을 정해보세요</span>
           </div>
@@ -1359,6 +1388,18 @@
         </div>
 
         <div class="card section-gap">
+          <div class="card-title">학부모 페이지 보기 <span class="hint">초등부 학생 이름을 누르면 그 학부모 화면이 그대로 보여요</span></div>
+          <div id="parentPageNameGroups"></div>
+          <div id="parentPageFrameWrap" style="display:none;margin-top:16px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-surface-alt);border-bottom:1px solid var(--color-border);">
+              <span id="parentPageFrameTitle" style="font-size:12.5px;font-weight:800;"></span>
+              <span class="link-btn" onclick="closeParentPageFrame()">닫기</span>
+            </div>
+            <iframe id="parentPageFrame" style="width:100%;height:900px;border:none;display:block;"></iframe>
+          </div>
+        </div>
+
+        <div class="card section-gap">
           <div class="card-title">학생 페이지 보기 <span class="hint">이름을 누르면 그 학생 화면이 그대로 보여요</span></div>
           <div id="studentPageNameGroups"></div>
           <div id="studentPageFrameWrap" style="display:none;margin-top:16px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
@@ -1375,24 +1416,7 @@
       <!-- ================= 학부모 소통 (초등부) ================= -->
       <section class="view" id="view-parentchat">
 
-        <div class="card">
-          <div class="card-title">초등부 결석 · 보강 현황 <span class="hint">결석한 날짜의 수업시간만큼 5분 단위로 채워가요</span></div>
-          <div id="elemMakeupList"></div>
-        </div>
-
-        <div class="card section-gap">
-          <div class="card-title">매쓰홀릭 월간평가 리포트 링크 <span class="hint">매쓰홀릭에서 URL 복사한 걸 여기 붙여넣으면 학부모님 화면에 버튼으로 떠요</span></div>
-          <div class="form-row">
-            <div class="field" style="flex:1;">
-              <label>학생 검색</label>
-              <input type="text" id="matholicStudentSearch" list="matholicStudentList" placeholder="이름 입력" oninput="renderMatholicLinkManager()">
-              <datalist id="matholicStudentList"></datalist>
-            </div>
-          </div>
-          <div id="matholicLinkList"></div>
-        </div>
-
-        <div class="grid grid-2 section-gap" style="align-items:start;">
+        <div class="grid grid-2" style="align-items:start;">
           <div class="card" style="max-height:520px;overflow-y:auto;">
             <div class="card-title">학부모 대화 목록</div>
             <div id="chatThreadList"></div>
@@ -1407,6 +1431,18 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">매쓰홀릭 월간평가 리포트 링크 <span class="hint">매쓰홀릭에서 URL 복사한 걸 여기 붙여넣으면 학부모님 화면에 버튼으로 떠요</span></div>
+          <div class="form-row">
+            <div class="field" style="flex:1;">
+              <label>학생 검색</label>
+              <input type="text" id="matholicStudentSearch" list="matholicStudentList" placeholder="이름 입력" oninput="renderMatholicLinkManager()">
+              <datalist id="matholicStudentList"></datalist>
+            </div>
+          </div>
+          <div id="matholicLinkList"></div>
         </div>
 
       </section>
@@ -1469,6 +1505,10 @@ let parentMessages = []; // {id, studentId, from:('parent'|'staff'), text, creat
 let mathholicLinks = []; // {id, studentId, month:'YYYY-MM', url}
 let activeChatStudentId = null;
 let elemPendingAdjust = {}; // {studentId_date: 현재 +/- 로 조정 중인 값(임시, 저장 전)}
+let announcements = [];
+let announceSelectedGrades = new Set();
+let announceSelectedWeekdays = new Set();
+let announceSelectedSchools = new Set();
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 const TEACHER_COLORS = ['#E4483A','#D9A404','#2E9E58','#0E9AAE','#3568D4','#7A4FE0','#D81B72','#57707F','#B85C00','#178A6B'];
@@ -1552,7 +1592,7 @@ db.ref('makeupSchedules').on('value', snap => {
 });
 db.ref('makeupDismissed').on('value', snap => {
   makeupDismissed = snap.val() || {};
-  if(currentView === 'attendance') renderWeeklyAbsentList();
+  if(currentView === 'attendance'){ renderWeeklyAbsentList(); renderElemMakeupList(); }
 });
 db.ref('autoAbsenceExcluded').on('value', snap => {
   autoAbsenceExcluded = snap.val() || {};
@@ -1596,11 +1636,11 @@ db.ref('absenceRequests').on('value', snap => {
 });
 db.ref('homework').on('value', snap => {
   homeworkItems = snapshotToArray(snap.val());
-  if(currentView === 'studentapp') renderStudentPageNameGroups();
+  if(currentView === 'studentapp'){ renderStudentPageNameGroups(); renderParentPageNameGroups(); }
 });
 db.ref('elemMakeupProgress').on('value', snap => {
   elemMakeupProgress = snapshotToArray(snap.val());
-  if(currentView === 'parentchat') renderElemMakeupList();
+  if(currentView === 'attendance') renderElemMakeupList();
 });
 db.ref('parentMessages').on('value', snap => {
   parentMessages = snapshotToArray(snap.val());
@@ -1609,6 +1649,10 @@ db.ref('parentMessages').on('value', snap => {
 db.ref('mathholicLinks').on('value', snap => {
   mathholicLinks = snapshotToArray(snap.val());
   if(currentView === 'parentchat') renderMatholicLinkManager();
+});
+db.ref('announcements').on('value', snap => {
+  announcements = snapshotToArray(snap.val());
+  if(currentView === 'studentapp') renderAnnounceList();
 });
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
@@ -2091,14 +2135,14 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); }
+  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderElemMakeupList(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
   if(view === 'students') renderStudents();
   if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
-  if(view === 'studentapp'){ renderMakeupSlotList(); renderRefTeacherCal(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); }
-  if(view === 'parentchat'){ renderElemMakeupList(); renderChatThreadList(); renderMatholicLinkManager(); }
+  if(view === 'studentapp'){ renderAnnounceChips(); renderAnnounceList(); renderMakeupSlotList(); renderRefTeacherCal(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); renderParentPageNameGroups(); }
+  if(view === 'parentchat'){ renderChatThreadList(); renderMatholicLinkManager(); }
 }
 
 /* =========================================================
@@ -4872,12 +4916,13 @@ function renderElemMakeupList(){
 
   const list = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강없음" 처리된 건 제외 (공휴일 등)
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu && (a.stu.grade || '').startsWith('초'))
     .sort((a,b) => b.date.localeCompare(a.date));
 
   if(!list.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">최근 결석한 초등부 학생이 없습니다.</div>`;
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;grid-column:1 / -1;">최근 결석한 초등부 학생이 없습니다.</div>`;
     return;
   }
 
@@ -4889,20 +4934,35 @@ function renderElemMakeupList(){
     const key = elemAbsenceKey(a.studentId, a.date);
     const step = elemPendingAdjust[key] || 5;
     const done = logged >= target;
+    const pct = target ? Math.round((logged / target) * 100) : 0;
+
+    if(done){
+      return `
+        <div style="background:var(--color-surface-alt);border-radius:10px;padding:10px 12px;opacity:0.7;">
+          <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
+          <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+          <div style="font-size:12px;color:var(--color-success);font-weight:700;">✓ 목표 ${target}분 · 완료</div>
+        </div>`;
+    }
+
     return `
-      <div class="weekly-absent-row ${done ? 'makeup-done' : ''}">
-        <div class="wa-name">
-          <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)}
-          <span class="cell-muted" style="font-size:12px;">${fmtDateKR2(a.date)} 결석 · 목표 ${target}분 중 ${logged}분 적립${done ? ' (완료)' : ''}</span>
-          ${a.memo ? `<div class="cell-muted" style="font-size:11.5px;margin-top:3px;">${escapeHtml(a.memo)}</div>` : ''}
+      <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;">
+        <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
+        <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+        ${a.memo ? `<div style="font-size:11px;color:#8A6400;background:#FFF6DC;border-radius:6px;padding:5px 7px;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.memo)}</div>` : ''}
+        <div style="font-size:11.5px;margin-bottom:5px;">목표 ${target}분 중 <b>${logged}분</b> 적립</div>
+        <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;margin-bottom:8px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--color-extra);"></div>
         </div>
-        ${!done ? `
-        <div style="display:flex;align-items:center;gap:6px;">
-          <button class="btn btn-ghost btn-sm" style="padding:4px 10px;" onclick="adjustElemStep('${key}',-5)">-</button>
-          <span style="font-size:13px;font-weight:800;width:36px;text-align:center;">${step}분</span>
-          <button class="btn btn-ghost btn-sm" style="padding:4px 10px;" onclick="adjustElemStep('${key}',5)">+</button>
-          <button class="btn btn-primary btn-sm" onclick="saveElemMakeup('${a.studentId}','${a.date}',${target})">반영</button>
-        </div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
+          <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="adjustElemStep('${key}',-5)">-</button>
+          <span style="font-size:12px;font-weight:800;width:30px;text-align:center;">${step}분</span>
+          <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="adjustElemStep('${key}',5)">+</button>
+          <button class="btn btn-primary btn-sm" style="padding:4px 9px;font-size:11px;" onclick="saveElemMakeup('${a.studentId}','${a.date}',${target})">반영</button>
+        </div>
+        <div style="text-align:center;margin-top:5px;">
+          <span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span>
+        </div>
       </div>`;
   }).join('');
 }
@@ -5796,6 +5856,122 @@ function renderConfirmedMakeupList(){
 }
 
 /* ===== 숙제 완료 월별 통계 ===== */
+function renderAnnounceChips(){
+  const gradeBox = document.getElementById('announceGradeChips');
+  const weekdayBox = document.getElementById('announceWeekdayChips');
+  const schoolBox = document.getElementById('announceSchoolChips');
+  if(!gradeBox || !weekdayBox || !schoolBox) return;
+
+  const chip = (label, selected, onclick) =>
+    `<span class="weekday-chip ${selected ? 'active' : ''}" style="cursor:pointer;" onclick="${onclick}">${escapeHtml(label)}</span>`;
+
+  gradeBox.innerHTML = GRADES.map(g =>
+    chip(g, announceSelectedGrades.has(g), `toggleAnnounceChip('grade','${g}')`)
+  ).join('');
+
+  weekdayBox.innerHTML = WEEKDAYS.map(d =>
+    chip(d, announceSelectedWeekdays.has(d), `toggleAnnounceChip('weekday','${d}')`)
+  ).join('');
+
+  const schools = [...new Set(students.map(s => (s.school || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ko'));
+  schoolBox.innerHTML = schools.map(sc =>
+    chip(sc, announceSelectedSchools.has(sc), `toggleAnnounceChip('school','${escapeHtml(sc)}')`)
+  ).join('') || `<span class="cell-muted" style="font-size:11.5px;">등록된 학교가 없어요</span>`;
+}
+
+function toggleAnnounceChip(type, value){
+  const set = type === 'grade' ? announceSelectedGrades : type === 'weekday' ? announceSelectedWeekdays : announceSelectedSchools;
+  if(set.has(value)) set.delete(value); else set.add(value);
+  renderAnnounceChips();
+}
+
+function sendAnnouncement(){
+  const message = document.getElementById('announceMessage').value.trim();
+  if(!message){ alert('공지 내용을 입력해 주세요.'); return; }
+  db.ref('announcements').push({
+    message,
+    targetGrades: [...announceSelectedGrades],
+    targetWeekdays: [...announceSelectedWeekdays],
+    targetSchools: [...announceSelectedSchools],
+    createdAt: Date.now()
+  });
+  document.getElementById('announceMessage').value = '';
+  announceSelectedGrades = new Set();
+  announceSelectedWeekdays = new Set();
+  announceSelectedSchools = new Set();
+  renderAnnounceChips();
+  showToast('공지사항을 보냈습니다.');
+}
+
+function renderAnnounceList(){
+  const box = document.getElementById('announceList');
+  if(!box) return;
+  const list = [...announcements].sort((a,b) => b.createdAt - a.createdAt).slice(0, 20);
+  if(!list.length){ box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">보낸 공지사항이 없습니다.</div>`; return; }
+
+  box.innerHTML = list.map(a => {
+    const tags = [
+      ...(a.targetGrades || []),
+      ...(a.targetWeekdays || []).map(d => d + '요일'),
+      ...(a.targetSchools || [])
+    ];
+    const tagLabel = tags.length ? tags.join(' · ') : '전체';
+    const date = new Date(a.createdAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-border);">
+        <div>
+          <div style="font-size:12.5px;color:var(--color-text);">${escapeHtml(a.message)}</div>
+          <div class="cell-muted" style="font-size:11px;margin-top:2px;">${escapeHtml(tagLabel)} · ${date}</div>
+        </div>
+        <span style="font-size:11px;color:var(--color-danger);cursor:pointer;flex-shrink:0;" onclick="deleteAnnouncement('${a.id}')">삭제</span>
+      </div>`;
+  }).join('');
+}
+
+function deleteAnnouncement(id){
+  if(!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+  db.ref('announcements/' + id).remove();
+}
+
+function renderParentPageNameGroups(){
+  const box = document.getElementById('parentPageNameGroups');
+  if(!box) return;
+  const elem = students.filter(s => (s.grade || '').startsWith('초')).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+
+  if(!elem.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">초등부 학생이 없습니다.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${elem.map(s => `
+        <span class="teacher-chip" id="parentPageChip_${s.id}" style="cursor:pointer;" onclick="openParentPageFrame('${s.id}','${escapeHtml(s.name)}')">${escapeHtml(s.name)}</span>
+      `).join('')}
+    </div>`;
+}
+
+let currentParentPageFrameId = null;
+function openParentPageFrame(studentId, name){
+  currentParentPageFrameId = studentId;
+  document.getElementById('parentPageFrameWrap').style.display = 'block';
+  document.getElementById('parentPageFrameTitle').textContent = `${name} 학생 학부모 화면`;
+  document.getElementById('parentPageFrame').src = `학부모페이지.html?admin=${studentId}`;
+  document.querySelectorAll('[id^="parentPageChip_"]').forEach(el => {
+    el.style.background = '';
+    el.style.color = '';
+  });
+  const chip = document.getElementById('parentPageChip_' + studentId);
+  if(chip){ chip.style.background = 'var(--color-primary)'; chip.style.color = '#fff'; }
+  document.getElementById('parentPageFrameWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function closeParentPageFrame(){
+  currentParentPageFrameId = null;
+  document.getElementById('parentPageFrameWrap').style.display = 'none';
+  document.getElementById('parentPageFrame').src = '';
+  document.querySelectorAll('[id^="parentPageChip_"]').forEach(el => { el.style.background = ''; el.style.color = ''; });
+}
+
 function renderStudentPageNameGroups(){
   const box = document.getElementById('studentPageNameGroups');
   if(!box) return;

@@ -67,6 +67,9 @@
   .top-greeting .sub{font-size:12px; color:var(--color-text-muted); margin-top:2px;}
   .logout-btn{font-size:12px; color:var(--color-text-muted); background:none; border:none; padding:4px 8px; font-weight:500;}
 
+  .announce-item{background:#FFF6DC; border:1px solid var(--color-accent); border-radius:10px; padding:10px 12px; margin-bottom:8px; font-size:13px; color:#4A3A00; line-height:1.5;}
+  .announce-item .date{font-size:10.5px; color:#8A6400; opacity:0.8; margin-top:4px;}
+
   .card-title{font-size:14.5px; font-weight:800; margin-bottom:2px;}
   .card-sub{font-size:12px; color:var(--color-text-muted); margin-bottom:12px;}
 
@@ -176,6 +179,8 @@
 
   <!-- ===== 메인 화면 ===== -->
   <div id="appScreen">
+    <div id="announceBanner" style="margin-bottom:12px;"></div>
+
     <div class="top-greeting">
       <div>
         <h1 id="greetName">-</h1>
@@ -264,7 +269,10 @@
 
     <!-- 내 성적 (중고등부만 표시) -->
     <div class="card" id="scoresCardWrap" style="display:none;">
-      <div class="card-title">내 성적</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <div class="card-title" style="margin:0;">성적</div>
+        <span id="scoresSemBadge" style="font-size:11px;font-weight:700;background:#FFF6DC;color:#8A6400;padding:3px 9px;border-radius:999px;">-</span>
+      </div>
       <div class="card-sub" id="scoresCardSub">-</div>
       <div id="scoresCard"></div>
     </div>
@@ -309,6 +317,7 @@ let absenceRequests = [];
 let studentGoal = { weeklyGoal: 5 };
 let scores = [];
 let subjectNamesData = { names: [] };
+let announcements = [];
 const EXAM_PERIODS = ['1학기 중간고사','1학기 기말고사','2학기 중간고사','2학기 기말고사'];
 
 let calYear = new Date().getFullYear();
@@ -426,6 +435,10 @@ function startApp(){
 }
 
 function attachListeners(){
+  db.ref('announcements').on('value', snap => {
+    announcements = snapshotToArray(snap.val());
+    renderAnnounceBanner();
+  });
   db.ref('attendance').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
     attendance = snapshotToArray(snap.val());
     renderAttCalendar();
@@ -912,7 +925,7 @@ function examRowHtml(subject, sem, isFinal){
 function subjectCardHtml(subject, sem, removable){
   const nameEsc = escapeHtml(subject).replace(/'/g, "\\'");
   return `
-    <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;margin-bottom:10px;">
+    <div style="background:#FFF6DC;border:1px solid var(--color-accent);border-radius:12px;padding:12px 13px;margin-bottom:10px;">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div style="font-size:14px;font-weight:800;">${escapeHtml(subject)}</div>
         ${removable ? `<span style="font-size:11px;color:var(--color-text-muted);cursor:pointer;" onclick="removeH23Subject('${nameEsc}')">삭제</span>` : ''}
@@ -923,38 +936,57 @@ function subjectCardHtml(subject, sem, removable){
 }
 
 function midScoresHtml(){
-  return EXAM_PERIODS.map(period => {
+  const sem = currentSemesterLabel();
+  const other = sem === '1학기' ? '2학기' : '1학기';
+  const semExams = EXAM_PERIODS.filter(p => p.startsWith(sem));
+  const otherExams = EXAM_PERIODS.filter(p => p.startsWith(other));
+
+  const row = (period, active) => {
     const sc = scoreOf('수학', period);
     const val = sc.score != null ? sc.score : '';
+    const label = period.replace(sem + ' ', '').replace(other + ' ', '');
+    if(active){
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#FFF6DC;border:1px solid var(--color-accent);border-radius:10px;padding:11px 13px;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;">${label}</span>
+        <input type="number" value="${val}" placeholder="점수" style="width:76px;text-align:right;background:#fff;"
+          onchange="saveScoreField('수학','${period}','score',this.value)">
+      </div>`;
+    }
     return `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--color-border);">
-      <span style="font-size:13px;">${period}</span>
-      <input type="number" value="${val}" placeholder="점수" style="width:90px;text-align:right;"
-        onchange="saveScoreField('수학','${period}','score',this.value)">
-    </div>`;
-  }).join('');
+      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--color-surface-alt);border-radius:10px;padding:9px 13px;margin-bottom:8px;opacity:0.65;">
+        <span style="font-size:12.5px;color:var(--color-text-muted);">${label}</span>
+        <input type="number" value="${val}" placeholder="점수" disabled style="width:76px;text-align:right;background:var(--color-surface-alt);color:var(--color-text-muted);">
+      </div>`;
+  };
+
+  return semExams.map(p => row(p, true)).join('') +
+    `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:700;margin:2px 2px 6px;">${other} (아직)</div>` +
+    otherExams.map(p => row(p, false)).join('');
 }
 
 function renderScores(){
   const wrap = document.getElementById('scoresCardWrap');
   const card = document.getElementById('scoresCard');
   const sub = document.getElementById('scoresCardSub');
+  const badge = document.getElementById('scoresSemBadge');
   if(!wrap || !card || !currentStudent) return;
 
   const group = studentGradeGroup();
   if(group === 'elem' || group === 'other'){ wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
   const sem = currentSemesterLabel();
+  if(badge) badge.textContent = `${new Date().getFullYear()} · ${sem}`;
 
   if(group === 'mid'){
-    sub.textContent = '수학 점수만 입력해요';
+    sub.textContent = '수학';
     card.innerHTML = midScoresHtml();
   }else if(group === 'h1'){
-    sub.textContent = `${sem} · 과목은 자동으로 정해져요`;
+    sub.textContent = h1SubjectName(sem);
     card.innerHTML = subjectCardHtml(h1SubjectName(sem), sem, false);
   }else{
     const names = subjectNamesData.names || [];
-    sub.textContent = `${sem} · 과목명 직접 입력 · 최대 2과목`;
+    sub.textContent = '과목명 직접 입력 · 최대 2과목';
     const disabled = names.length >= 2 ? 'disabled' : '';
     card.innerHTML = names.map(n => subjectCardHtml(n, sem, true)).join('') + `
       <div style="display:flex;gap:6px;margin-top:4px;">
@@ -966,6 +998,34 @@ function renderScores(){
       </div>
       <p class="hint">${names.length}/2 과목</p>`;
   }
+}
+
+/* ===== 공지사항 배너 ===== */
+function renderAnnounceBanner(){
+  const box = document.getElementById('announceBanner');
+  if(!box || !currentStudent) return;
+
+  const d14 = new Date(); d14.setDate(d14.getDate() - 14);
+  const cutoff = d14.getTime();
+
+  const mySchedule = currentStudent.schedule || {};
+  const list = announcements.filter(a => {
+    if(a.createdAt < cutoff) return false;
+    const grades = a.targetGrades || [];
+    const weekdays = a.targetWeekdays || [];
+    const schools = a.targetSchools || [];
+    if(grades.length && !grades.includes(currentStudent.grade)) return false;
+    if(weekdays.length && !weekdays.some(d => mySchedule[d])) return false;
+    if(schools.length && !schools.includes((currentStudent.school || '').trim())) return false;
+    return true;
+  }).sort((a,b) => b.createdAt - a.createdAt);
+
+  if(!list.length){ box.innerHTML = ''; return; }
+
+  box.innerHTML = list.map(a => {
+    const date = new Date(a.createdAt).toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
+    return `<div class="announce-item">${escapeHtml(a.message)}<div class="date">${date}</div></div>`;
+  }).join('');
 }
 
 tryAutoLogin();
