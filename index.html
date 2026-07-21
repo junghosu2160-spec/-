@@ -294,6 +294,20 @@
   }
   .weekday-chip.active{background:var(--color-primary);border-color:var(--color-primary);color:#fff;}
 
+  /* ===== 문자 발송 필터 (컴팩트) ===== */
+  .sms-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .sms-filter-row:last-child{margin-bottom:0;}
+  .sms-filter-label{font-size:11px;color:var(--color-text-muted);width:36px;flex-shrink:0;font-weight:700;}
+  .sms-chip{padding:4px 10px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--color-border);background:var(--color-surface-alt);color:var(--color-text-muted);white-space:nowrap;}
+  .sms-chip.active{outline:1.5px solid var(--color-primary-light);outline-offset:-1.5px;font-weight:800;color:var(--color-text);background:#fff;}
+  .sms-chip.ts .cnt{font-size:10px;opacity:.7;margin-left:2px;}
+  .sms-chip.ts.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sms-chip.school.active{background:#FFF6DC;border-color:var(--color-accent-dark);color:var(--color-accent-dark);}
+  .sms-filter-summary{margin-top:8px;padding:6px 10px;background:var(--color-surface-alt);border-radius:8px;font-size:12px;color:var(--color-text-muted);}
+  .sms-filter-summary b{color:var(--color-text);font-weight:800;}
+  .sms-headcount-toggle{font-size:12px;color:var(--color-text-muted);cursor:pointer;padding:4px 0;user-select:none;}
+  .sms-headcount-toggle:hover{color:var(--color-text);}
+
   .class-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:12px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
@@ -1168,36 +1182,44 @@
       <!-- ================= 문자 발송 ================= -->
       <section class="view" id="view-sms">
         <div class="card">
-          <div class="field" style="margin-bottom:14px;">
-            <label>이름으로 검색</label>
+          <div class="field" style="margin-bottom:12px;">
             <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
           </div>
 
-          <div class="form-row" style="margin-bottom:0;align-items:flex-start;">
-            <div class="field" style="flex:1;min-width:220px;">
-              <label>학년 (선택 안 하면 전체)</label>
-              <div class="weekday-picker" id="smsGradePicker"></div>
+          <div class="sms-filter-row">
+            <span class="sms-filter-label">학년</span>
+            <div id="smsGradePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div class="sms-filter-row">
+            <span class="sms-filter-label">학교</span>
+            <div id="smsSchoolPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div class="sms-filter-row">
+            <span class="sms-filter-label">요일</span>
+            <div id="smsDayPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div class="sms-filter-row" id="smsTimeFilterWrap" style="display:none;">
+            <span class="sms-filter-label">시간대</span>
+            <div id="smsTimePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+          </div>
+          <div class="sms-filter-row">
+            <span class="sms-filter-label">출결</span>
+            <div id="smsStatusPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+            <div style="margin-left:auto;display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="applySmsFilter()">🔍 필터 적용</button>
+              <button class="btn btn-ghost btn-sm" onclick="resetSmsFilter()">초기화</button>
             </div>
-            <div class="field" style="flex:1;min-width:220px;border-left:1px solid var(--color-border);padding-left:20px;">
-              <label>등원 요일 (선택 안 하면 전체)</label>
-              <div class="weekday-picker" id="smsDayPicker"></div>
+          </div>
 
-              <div id="smsTimeFilterWrap" style="display:none;margin-top:10px;">
-                <label style="font-size:12px;color:var(--color-text-muted);font-weight:700;display:block;margin-bottom:6px;">시간대 <span class="hint" id="smsTimeFilterHint"></span></label>
-                <div class="weekday-picker" id="smsTimePicker"></div>
-              </div>
+          <div class="sms-filter-summary" id="smsFilterSummary"></div>
+        </div>
 
-              <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
-                <div class="field" style="flex:1;margin-bottom:0;">
-                  <label>오늘 출결 상태 (선택 안 하면 전체)</label>
-                  <div class="weekday-picker" id="smsStatusPicker"></div>
-                </div>
-                <div class="form-actions" style="flex:0 0 auto;">
-                  <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
-                  <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
-                </div>
-              </div>
-            </div>
+        <div class="card section-gap">
+          <div class="sms-headcount-toggle" onclick="toggleSmsHeadcount()">
+            <span id="smsHeadcountToggleIcon">▸</span> 타임별 등원 인원 참고
+          </div>
+          <div id="smsHeadcountWrap" style="display:none;margin-top:8px;">
+            <div id="smsHeadcountRef" style="overflow-x:auto;"></div>
           </div>
         </div>
 
@@ -1803,15 +1825,17 @@ function bulkDeleteAllStudents(){
 const SMS_STATUS_OPTIONS = ['출석','지각','결석','미체크'];
 const SMS_GRADE_OPTIONS = ['초등','중1','중2','중3','고1','고2','고3','N수/기타'];
 let smsFilterGrades = [];
+let smsFilterSchools = [];  // 선택된 학교 (시험기간 등 특정 학교만 발송할 때)
 let smsFilterDays = [];
 let smsFilterStatus = [];
 let smsFilterTime = '';     // 선택된 시간대 (단일값, '' = 전체)
 let smsFilteredList = [];   // 필터에 걸린 학생 목록
 let smsSelectedKeys = new Set(); // 선택된 연락처 항목의 key
+let smsHeadcountOpen = false;
 
 function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
   containerEl.innerHTML = values.map(v => `
-    <button type="button" class="weekday-chip ${selectedArr.includes(v) ? 'active' : ''}" onclick="${onToggleFnName}('${v}')">${v}</button>
+    <button type="button" class="sms-chip ${selectedArr.includes(v) ? 'active' : ''}" onclick="${onToggleFnName}('${v}')">${v}</button>
   `).join('');
 }
 
@@ -1826,18 +1850,35 @@ function renderSmsGradePicker(containerEl, values, selectedArr, onToggleFnName){
   containerEl.innerHTML = values.map(v => {
     const isActive = selectedArr.includes(v);
     const c = smsGradeChipColor(v);
-    return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="${onToggleFnName}('${v}')">${v}</button>`;
+    return `<button type="button" class="sms-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="${onToggleFnName}('${v}')">${v}</button>`;
   }).join('');
+}
+
+function renderSmsSchoolPicker(){
+  const el = document.getElementById('smsSchoolPicker');
+  if(!el) return;
+  const schools = [...new Set(students.map(s => (s.school||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  if(!schools.length){ el.innerHTML = `<span class="cell-muted" style="font-size:11.5px;">등록된 학교가 없어요</span>`; return; }
+  el.innerHTML = schools.map(sc =>
+    `<button type="button" class="sms-chip school ${smsFilterSchools.includes(sc) ? 'active' : ''}" onclick="toggleSmsSchool('${escapeHtml(sc)}')">${escapeHtml(sc)}</button>`
+  ).join('');
+}
+function toggleSmsSchool(sc){
+  smsFilterSchools = smsFilterSchools.includes(sc) ? smsFilterSchools.filter(x=>x!==sc) : [...smsFilterSchools, sc];
+  renderSmsSchoolPicker();
+  renderSmsFilterSummary();
 }
 
 function renderSmsFilterPickers(){
   renderSmsGradePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
+  renderSmsSchoolPicker();
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
 }
 function toggleSmsGrade(g){
   smsFilterGrades = smsFilterGrades.includes(g) ? smsFilterGrades.filter(x=>x!==g) : [...smsFilterGrades, g];
   renderSmsFilterPickers();
+  renderSmsFilterSummary();
 }
 function toggleSmsDay(d){
   smsFilterDays = smsFilterDays.includes(d) ? smsFilterDays.filter(x=>x!==d) : [...smsFilterDays, d];
@@ -1846,12 +1887,12 @@ function toggleSmsDay(d){
   const dayEl = document.getElementById('smsDayPicker');
   if(dayEl) renderTogglePicker(dayEl, WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderSmsTimePicker();
+  renderSmsFilterSummary();
 }
 
 function renderSmsTimePicker(){
   const wrap = document.getElementById('smsTimeFilterWrap');
   const picker = document.getElementById('smsTimePicker');
-  const hint = document.getElementById('smsTimeFilterHint');
   if(!wrap || !picker) return;
 
   // 선택된 요일이 정확히 하나일 때만 시간대 칩 표시
@@ -1862,9 +1903,10 @@ function renderSmsTimePicker(){
   }
 
   const day = smsFilterDays[0];
-  // 그 요일에 등원하는 중·고등부 시간대 목록 + 학생 수
+  // 그 요일에 등원하는 중·고등부 시간대 목록 + 학생 수 (초등부는 반이 따로 없어 제외)
   const timeCounts = {};
   students.forEach(s => {
+    if((s.grade||'').startsWith('초')) return;
     const t = getDayTime(s, day);
     if(!t) return;
     if(!timeCounts[t]) timeCounts[t] = 0;
@@ -1877,12 +1919,11 @@ function renderSmsTimePicker(){
     return;
   }
 
-  if(hint) hint.textContent = `— ${day}요일 수업반`;
-  wrap.style.display = 'block';
+  wrap.style.display = 'flex';
   picker.innerHTML = [
-    `<button type="button" class="weekday-chip ${smsFilterTime==='' ? 'active' : ''}" onclick="toggleSmsTime('')">전체</button>`,
+    `<button type="button" class="sms-chip ts ${smsFilterTime==='' ? 'active' : ''}" onclick="toggleSmsTime('')">전체</button>`,
     ...times.map(t =>
-      `<button type="button" class="weekday-chip ${smsFilterTime===t ? 'active' : ''}" onclick="toggleSmsTime('${t}')">${t}반 (${timeCounts[t]}명)</button>`
+      `<button type="button" class="sms-chip ts ${smsFilterTime===t ? 'active' : ''}" onclick="toggleSmsTime('${t}')">${t}<span class="cnt">${timeCounts[t]}</span></button>`
     )
   ].join('');
 }
@@ -1895,10 +1936,35 @@ function toggleSmsTime(t){
 function toggleSmsStatus(s){
   smsFilterStatus = smsFilterStatus.includes(s) ? smsFilterStatus.filter(x=>x!==s) : [...smsFilterStatus, s];
   renderSmsFilterPickers();
+  renderSmsFilterSummary();
+}
+
+function renderSmsFilterSummary(){
+  const el = document.getElementById('smsFilterSummary');
+  if(!el) return;
+  const parts = [];
+  if(smsFilterGrades.length) parts.push(smsFilterGrades.join('·'));
+  if(smsFilterSchools.length) parts.push(smsFilterSchools.join('·'));
+  if(smsFilterDays.length) parts.push(smsFilterDays.join('·') + '요일');
+  if(smsFilterTime) parts.push(smsFilterTime);
+  if(smsFilterStatus.length) parts.push(smsFilterStatus.join('·'));
+  el.innerHTML = parts.length
+    ? `📨 <b>${parts.join(' · ')}</b> 대상으로 필터링 중`
+    : `📨 전체 학생 대상 (조건 없음)`;
+}
+
+function toggleSmsHeadcount(){
+  smsHeadcountOpen = !smsHeadcountOpen;
+  const wrap = document.getElementById('smsHeadcountWrap');
+  const icon = document.getElementById('smsHeadcountToggleIcon');
+  if(wrap) wrap.style.display = smsHeadcountOpen ? 'block' : 'none';
+  if(icon) icon.textContent = smsHeadcountOpen ? '▾' : '▸';
+  if(smsHeadcountOpen) renderTimetableHeadcount('smsHeadcountRef');
 }
 
 function resetSmsFilter(){
   smsFilterGrades = [];
+  smsFilterSchools = [];
   smsFilterDays = [];
   smsFilterStatus = [];
   smsFilterTime = '';
@@ -1934,6 +2000,7 @@ function applySmsFilter(){
   smsFilteredList = students.filter(s => {
     if(keyword && !s.name.toLowerCase().includes(keyword)) return false;
     if(smsFilterGrades.length && !smsFilterGrades.some(g => smsGradeMatches(s.grade, g))) return false;
+    if(smsFilterSchools.length && !smsFilterSchools.includes((s.school||'').trim())) return false;
     if(smsFilterDays.length){
       const hasDay = smsFilterDays.some(d => getDayTime(s, d));
       if(!hasDay) return false;
@@ -1957,6 +2024,7 @@ function applySmsFilter(){
     if(s.parentPhone && s.parentPhone.trim()) smsSelectedKeys.add(`${s.id}_parent`);
   });
   smsShowOthers = false;
+  renderSmsFilterSummary();
   renderSmsStudentList();
 }
 
