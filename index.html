@@ -4507,6 +4507,8 @@ function renderAttendance(){
         <div class="att-makeup-toggle" onclick="toggleAttMakeupCollapse()">
           <span>${attMakeupCollapsed ? '▸' : '▾'}</span> 예정 없음 (임시·보강) ${hiddenCount}명 ${attMakeupCollapsed ? '보기' : '숨기기'}
         </div>` : ''}`;
+    // 화면이 다시 그려져도 보강관리 패널이 열려있던 상태를 그대로 유지
+    renderElemMakeupPanel();
   }
 
   renderWeeklyAbsentList();
@@ -4576,7 +4578,7 @@ function renderWeeklyAbsentList(){
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
     .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강 안함" 처리된 건 목록에서 제외
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
-    .filter(a => a.stu)
+    .filter(a => a.stu && !(a.stu.grade || '').startsWith('초')) // 초등부는 보강관리 팝업에서 따로 관리하므로 제외
     .map(a => {
       const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
       // 보강 날짜가 이미 지났는데 그날 출석/지각 기록이 없다면 = 안 온 것 → 다시 잡을 수 있게 미예약 상태로 취급
@@ -5437,7 +5439,7 @@ function renderElemMakeupPopup(){
         <div class="elem-makeup-popup-sub">진행 중인 보강이 없어요 · 새로 등록해요</div>
         <div class="emp-setting-box">
           <div class="emp-setting-row">
-            <label class="emp-setting-label">결석 날짜</label>
+            <label class="emp-setting-label">보강 대상일</label>
             <input type="date" id="popupNewDate-${studentId}" value="${todayStr()}" class="emp-date-input">
           </div>
           <div class="emp-setting-row">
@@ -5467,7 +5469,7 @@ function renderElemMakeupPopup(){
   const settingBox = `
     <div class="emp-setting-box">
       <div class="emp-setting-row">
-        <label class="emp-setting-label">결석 날짜</label>
+        <label class="emp-setting-label">보강 대상일</label>
         <span class="emp-date-fixed">${fmtDateKR2(date)}</span>
       </div>
       <div class="emp-setting-row">
