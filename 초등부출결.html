@@ -591,22 +591,54 @@ function renderElemAbsenceList(){
     const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
     const lastParentMsg = [...msgs].reverse().find(m => m.from === 'parent');
 
+    const progressId = progress ? progress.id : null;
+    const remaining = target - logged;
+    const pct = target ? Math.min(100, Math.round((logged/target)*100)) : 0;
+
     return `
       <div style="background:#FFF6DC;border:1px solid var(--color-accent);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
-        <div style="font-size:13px;font-weight:800;color:var(--color-text);margin-bottom:4px;">${escapeHtml(a.stu.name)} · ${fmtDateKR3(a.date)} 결석</div>
-        ${a.memo ? `<div style="font-size:12.5px;color:#4A3A00;margin-bottom:8px;">${escapeHtml(a.memo)}</div>` : ''}
-
-        <div style="display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:8px;padding:9px 12px;margin-bottom:8px;">
-          <span style="font-size:12.5px;color:var(--color-text);">보강 목표 ${target}분 중 ${logged}분 적립${done ? ' (완료)' : ''}</span>
-          ${!done ? `
-          <div style="display:flex;align-items:center;gap:6px;">
-            <button onclick="adjustElemStep('${key}',-5)" style="background:var(--color-surface-alt);border:1px solid var(--color-border);color:var(--color-text);width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;">-</button>
-            <span style="font-size:13px;font-weight:800;width:32px;text-align:center;">${step}분</span>
-            <button onclick="adjustElemStep('${key}',5)" style="background:var(--color-surface-alt);border:1px solid var(--color-border);color:var(--color-text);width:26px;height:26px;padding:0;border-radius:6px;font-size:14px;">+</button>
-            <button class="btn btn-primary" style="padding:6px 10px;font-size:11.5px;" onclick="saveElemMakeup('${a.studentId}','${a.date}',${target})">반영</button>
-          </div>` : ''}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <div>
+            <div style="font-size:13px;font-weight:800;color:var(--color-text);">${escapeHtml(a.stu.name)} · ${fmtDateKR3(a.date)} 결석</div>
+            ${a.memo ? `<div style="font-size:12px;color:#4A3A00;margin-top:2px;">${escapeHtml(a.memo)}</div>` : ''}
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#fff;border-radius:7px;padding:4px 8px;flex-shrink:0;">
+            <span style="font-size:11px;color:var(--color-text-muted);">목표</span>
+            <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${target}" min="5" max="300"
+              style="width:44px;border:1px solid var(--color-border);border-radius:5px;padding:2px 4px;font-size:13px;font-weight:800;text-align:center;background:#fff;">
+            <span style="font-size:11px;color:var(--color-text-muted);">분</span>
+            <button onclick="changeElemTargetByInput('${a.studentId}','${a.date}')"
+              style="font-size:11px;padding:2px 7px;border:1px solid var(--color-border);border-radius:5px;background:var(--color-surface-alt);cursor:pointer;">변경</button>
+          </div>
         </div>
-        ${!done ? `<div style="text-align:right;margin:-4px 0 8px;"><span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>` : ''}
+
+        <div style="height:5px;background:#fff;border-radius:99px;overflow:hidden;margin-bottom:4px;">
+          <div style="width:${pct}%;height:100%;background:#5DCAA5;border-radius:99px;"></div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:8px;">
+          <b style="color:var(--color-text);">${logged}분</b> 완료${done ? ' · 완료!' : ` · ${remaining}분 남음`}
+        </div>
+
+        ${!done ? `
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',10)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+10분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',15)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+15분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',20)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+20분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',30)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+30분</button>
+          ${remaining > 0 && remaining !== 10 && remaining !== 15 && remaining !== 20 && remaining !== 30 ? `<button onclick="quickElemMakeup('${a.studentId}','${a.date}',${remaining})" style="padding:5px 10px;border:1px solid #9FE1CB;border-radius:7px;background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;cursor:pointer;">+${remaining}분 완료</button>` : ''}
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${remaining}" min="1" max="300"
+            style="width:52px;border:1px solid var(--color-border);border-radius:7px;padding:5px 4px;font-size:14px;font-weight:800;text-align:center;background:#fff;">
+          <span style="font-size:12px;color:var(--color-text-muted);">분 반영</span>
+          <button onclick="directElemMakeup('${a.studentId}','${a.date}')"
+            style="margin-left:auto;padding:6px 14px;border-radius:7px;border:none;background:#161616;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">반영</button>
+        </div>` : `
+        <div style="display:flex;gap:6px;margin-bottom:6px;">
+          <button onclick="resetElemMakeup('${progressId}','${a.studentId}','${a.date}')"
+            style="font-size:11.5px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface-alt);cursor:pointer;">↩ 되돌리기</button>
+        </div>`}
+        ${!done ? `<div style="text-align:right;"><span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>` : ''}
 
         ${msgs.length ? `
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
@@ -628,6 +660,62 @@ function adjustElemStep(key, delta){
   const cur = elemPendingAdjust[key] || 5;
   elemPendingAdjust[key] = Math.max(5, cur + delta);
   renderElemAbsenceList();
+}
+
+function quickElemMakeup(studentId, date, minutes){
+  const existing = getElemProgress(studentId, date);
+  const target = existing ? (existing.targetMinutes || 60) : 60;
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+}
+
+function directElemMakeup(studentId, date){
+  const inputEl = document.getElementById(`direct-elem-${studentId}-${date}`);
+  if(!inputEl) return;
+  const minutes = parseInt(inputEl.value, 10);
+  if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  const target = existing ? (existing.targetMinutes || 60) : 60;
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+}
+
+function changeElemTargetByInput(studentId, date){
+  const inputEl = document.getElementById(`target-elem-${studentId}-${date}`);
+  if(!inputEl) return;
+  const newTarget = parseInt(inputEl.value, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+}
+
+function resetElemMakeup(progressId, studentId, date){
+  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?
+적립된 기록이 모두 지워져요.')) return;
+  if(progressId && progressId !== 'null'){
+    db.ref('elemMakeupProgress/' + progressId).remove();
+  } else {
+    const prog = getElemProgress(studentId, date);
+    if(prog) db.ref('elemMakeupProgress/' + prog.id).remove();
+  }
 }
 
 function dismissMakeup(studentId, date){

@@ -911,6 +911,13 @@
             <span class="cell-muted" id="bulkImportFileName" style="font-size:12px;"></span>
           </div>
         </div>
+
+        <div class="card section-gap">
+          <div class="toolbar" style="margin-bottom:10px;">
+            <div class="card-title" style="margin:0;">🗑 휴지통 <span class="hint">삭제한 학생 — 복원하거나 완전삭제할 수 있어요</span></div>
+          </div>
+          <div id="trashBinList"></div>
+        </div>
       </section>
 
       <!-- ================= 출결 관리 ================= -->
@@ -2273,7 +2280,7 @@ function switchView(view){
   if(view === 'dashboard') renderDashboard();
   if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderElemMakeupList(); renderManualMakeupStudentList(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
-  if(view === 'students'){ renderStudents(); renderScheduleGrid(); }
+  if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); }
   if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
@@ -3471,12 +3478,59 @@ function cancelStudentEdit(){
 function deleteStudent(id){
   const stu = studentById(id);
   if(!stu) return;
-  if(!confirm(`'${stu.name}' 학생을 삭제하시겠습니까?\n관련된 출결/성적 기록도 함께 삭제됩니다.`)) return;
+  if(!confirm(`'${stu.name}' 학생을 휴지통으로 이동할까요?\n출결·성적 기록은 보존되며, 휴지통에서 복원할 수 있어요.`)) return;
+  const deletedAt = Date.now();
+  db.ref('deletedStudents/' + id).set({ ...stu, deletedAt });
   db.ref('students/' + id).remove();
+  if(editingStudentId === id) cancelStudentEdit();
+  showToast(`'${stu.name}' 학생이 휴지통으로 이동됐어요.`);
+}
+
+let deletedStudents = [];
+db.ref('deletedStudents').on('value', snap => {
+  const val = snap.val() || {};
+  deletedStudents = Object.entries(val).map(([id, d]) => ({ ...d, id }));
+  if(currentView === 'students') renderTrashBin();
+});
+
+function renderTrashBin(){
+  const box = document.getElementById('trashBinList');
+  if(!box) return;
+  if(!deletedStudents.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">휴지통이 비어있어요.</div>`;
+    return;
+  }
+  box.innerHTML = deletedStudents
+    .sort((a,b) => (b.deletedAt||0) - (a.deletedAt||0))
+    .map(s => {
+      const deletedDate = s.deletedAt ? new Date(s.deletedAt).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}) : '-';
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:6px;background:var(--color-surface-alt);">
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:13px;">${escapeHtml(s.name)}</div>
+          <div class="cell-muted" style="font-size:11.5px;">${escapeHtml(s.grade)} · ${escapeHtml(s.school||'')} · ${deletedDate} 삭제</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="restoreStudent('${s.id}')">복원</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="permanentDeleteStudent('${s.id}','${escapeHtml(s.name)}')">완전삭제</button>
+      </div>`;
+    }).join('');
+}
+
+function restoreStudent(id){
+  const stu = deletedStudents.find(s => s.id === id);
+  if(!stu) return;
+  const { deletedAt, ...stuData } = stu;
+  db.ref('students/' + id).set(stuData);
+  db.ref('deletedStudents/' + id).remove();
+  showToast(`'${stu.name}' 학생이 복원됐어요. 출결·성적 기록도 그대로예요!`);
+}
+
+function permanentDeleteStudent(id, name){
+  if(!confirm(`'${name}' 학생을 완전히 삭제할까요?\n출결·성적 기록까지 모두 지워지고 되돌릴 수 없어요.`)) return;
+  db.ref('deletedStudents/' + id).remove();
   attendance.filter(a => a.studentId === id).forEach(a => db.ref('attendance/' + a.id).remove());
   scores.filter(s => s.studentId === id).forEach(s => db.ref('scores/' + s.id).remove());
-  if(editingStudentId === id) cancelStudentEdit();
-  showToast('학생이 삭제되었습니다.');
+  showToast(`'${name}' 학생이 완전히 삭제됐어요.`);
 }
 
 function parseBulkImportRow(line){
@@ -5314,11 +5368,13 @@ function renderElemMakeupList(){
 
     const progressId = progress ? progress.id : null;
 
+    const remaining = target - logged;
+
     if(done){
       return `
         <div style="background:var(--color-surface-alt);border-radius:10px;padding:10px 12px;">
           <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
-          <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+          <div class="cell-muted" style="font-size:11px;margin-bottom:4px;">${fmtDateKR2(a.date)} 결석</div>
           <div style="font-size:12px;color:var(--color-success);font-weight:700;margin-bottom:6px;">✓ 목표 ${target}분 · 완료</div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;">
             <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="resetElemMakeup('${progressId}','${a.studentId}','${a.date}')">↩ 되돌리기</button>
@@ -5329,25 +5385,38 @@ function renderElemMakeupList(){
 
     return `
       <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:4px;">
           <div>
             <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
-            <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+            <div class="cell-muted" style="font-size:11px;">${fmtDateKR2(a.date)} 결석</div>
           </div>
-          <button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0;" onclick="changeElemTarget('${a.studentId}','${a.date}',${target})">목표 ${target}분 ✏</button>
+          <div style="display:flex;align-items:center;gap:3px;flex-shrink:0;">
+            <span style="font-size:11px;color:var(--color-text-muted);">목표</span>
+            <input type="number" id="idx-target-${a.studentId}-${a.date}" value="${target}" min="5" max="300"
+              style="width:44px;border:1px solid var(--color-border);border-radius:5px;padding:2px 4px;font-size:12px;font-weight:800;text-align:center;background:var(--color-surface);">
+            <span style="font-size:11px;color:var(--color-text-muted);">분</span>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:2px 6px;" onclick="changeElemTargetIdx('${a.studentId}','${a.date}')">변경</button>
+          </div>
         </div>
-        ${a.memo ? `<div style="font-size:11px;color:#8A6400;background:#FFF6DC;border-radius:6px;padding:5px 7px;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.memo)}</div>` : ''}
-        <div style="font-size:11.5px;margin-bottom:5px;"><b>${logged}분</b> 적립 중</div>
-        <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;margin-bottom:8px;overflow:hidden;">
-          <div style="width:${pct}%;height:100%;background:var(--color-extra);"></div>
+        ${a.memo ? `<div style="font-size:11px;color:#8A6400;background:#FFF6DC;border-radius:6px;padding:4px 7px;margin-bottom:5px;">${escapeHtml(a.memo)}</div>` : ''}
+        <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;overflow:hidden;margin-bottom:3px;">
+          <div style="width:${pct}%;height:100%;background:var(--color-extra);border-radius:99px;"></div>
         </div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:5px;">
-          <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="adjustElemStep('${key}',-5)">-</button>
-          <span style="font-size:12px;font-weight:800;width:30px;text-align:center;">${step}분</span>
-          <button class="btn btn-ghost btn-sm" style="padding:3px 8px;" onclick="adjustElemStep('${key}',5)">+</button>
-          <button class="btn btn-primary btn-sm" style="padding:4px 9px;font-size:11px;" onclick="saveElemMakeup('${a.studentId}','${a.date}',${target})">반영</button>
+        <div class="cell-muted" style="font-size:11px;margin-bottom:7px;"><b style="color:var(--color-text);">${logged}분</b> 완료 · ${remaining}분 남음</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px;font-weight:700;" onclick="quickElemMakeupIdx('${a.studentId}','${a.date}',10,${target})">+10분</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px;font-weight:700;" onclick="quickElemMakeupIdx('${a.studentId}','${a.date}',15,${target})">+15분</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px;font-weight:700;" onclick="quickElemMakeupIdx('${a.studentId}','${a.date}',20,${target})">+20분</button>
+          <button class="btn btn-ghost btn-sm" style="font-size:11.5px;font-weight:700;" onclick="quickElemMakeupIdx('${a.studentId}','${a.date}',30,${target})">+30분</button>
+          ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-primary btn-sm" style="font-size:11.5px;" onclick="quickElemMakeupIdx('${a.studentId}','${a.date}',${remaining},${target})">+${remaining}분 완료</button>` : ''}
         </div>
-        <div style="text-align:center;margin-top:5px;">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:5px;">
+          <input type="number" id="idx-direct-${a.studentId}-${a.date}" value="${remaining}" min="1" max="300"
+            style="width:52px;border:1px solid var(--color-border);border-radius:6px;padding:4px 4px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
+          <span class="cell-muted" style="font-size:11.5px;">분 반영</span>
+          <button class="btn btn-primary btn-sm" style="margin-left:auto;font-size:11.5px;" onclick="directElemMakeupIdx('${a.studentId}','${a.date}',${target})">반영</button>
+        </div>
+        <div style="text-align:center;">
           <span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span>
         </div>
       </div>`;
@@ -5358,6 +5427,52 @@ function adjustElemStep(key, delta){
   const cur = elemPendingAdjust[key] || 5;
   elemPendingAdjust[key] = Math.max(5, cur + delta);
   renderElemMakeupList();
+}
+
+function quickElemMakeupIdx(studentId, date, minutes, target){
+  const existing = getElemProgress(studentId, date);
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+  showToast(`${minutes}분 반영했어요.`);
+}
+
+function directElemMakeupIdx(studentId, date, target){
+  const inputEl = document.getElementById(`idx-direct-${studentId}-${date}`);
+  if(!inputEl) return;
+  const minutes = parseInt(inputEl.value, 10);
+  if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+  showToast(`${minutes}분 반영했어요.`);
+}
+
+function changeElemTargetIdx(studentId, date){
+  const inputEl = document.getElementById(`idx-target-${studentId}-${date}`);
+  if(!inputEl) return;
+  const newTarget = parseInt(inputEl.value, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+  showToast(`목표 시간을 ${newTarget}분으로 변경했어요.`);
 }
 
 // 보강 완료 상태 되돌리기 (적립 분 초기화)
