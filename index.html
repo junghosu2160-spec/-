@@ -465,14 +465,17 @@
   .elem-makeup-btn{margin-left:auto;padding:4px 11px;border-radius:16px;font-size:11px;font-weight:700;background:var(--color-success-soft);color:var(--color-success);border:1px solid #9FE1CB;cursor:pointer;}
   .elem-makeup-btn:hover{filter:brightness(0.96);}
   .elem-makeup-panel{margin-bottom:10px;}
-  .elem-makeup-name-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid var(--color-border);margin-bottom:5px;background:var(--color-surface-alt);}
-  .elem-makeup-name-row:hover{background:var(--color-surface);}
+  .elem-makeup-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  @media(max-width:640px){.elem-makeup-grid{grid-template-columns:1fr;}}
+  .elem-makeup-name-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid var(--color-border);background:var(--color-surface-alt);}
+  .elem-makeup-name-row:hover{background:var(--color-surface);filter:brightness(0.97);}
   .elem-makeup-name-row .mn-name{font-weight:800;font-size:12.5px;}
-  .elem-makeup-name-row .mn-remain{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;font-weight:700;}
-  .elem-makeup-name-row .mn-remain.none{background:var(--color-surface-alt);color:var(--color-text-muted);font-weight:600;}
-  .elem-makeup-name-row .mn-arrow{color:var(--color-text-muted);font-size:12px;}
+  .elem-makeup-name-row .mn-grade{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:8px;}
+  .elem-makeup-name-row .mn-remain{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;font-weight:700;white-space:nowrap;}
+  .elem-makeup-name-row .mn-remain.none{background:rgba(0,0,0,0.05);color:var(--color-text-muted);font-weight:600;}
+  .elem-makeup-name-row .mn-arrow{color:var(--color-text-muted);font-size:12px;flex-shrink:0;}
   .elem-makeup-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px;}
-  .elem-makeup-popup-box{background:var(--color-surface);border-radius:14px;padding:18px 20px;width:320px;max-width:100%;box-shadow:var(--shadow-md);}
+  .elem-makeup-popup-box{background:var(--color-surface);border-radius:14px;padding:20px 24px;width:440px;max-width:100%;box-shadow:var(--shadow-md);}
   .elem-makeup-popup-title{font-size:14.5px;font-weight:800;margin-bottom:2px;}
   .elem-makeup-popup-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;}
   .elem-makeup-popup-close{float:right;font-size:12px;color:var(--color-text-muted);cursor:pointer;}
@@ -5374,19 +5377,20 @@ function renderElemMakeupPanel(){
     box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;padding:6px 2px;">학생이 없습니다.</div>`;
     return;
   }
-  box.innerHTML = students.map(s => {
+  box.innerHTML = `<div class="elem-makeup-grid">` + students.map(s => {
     const active = findActiveElemMakeup(s.id);
     const remain = active ? Math.max((active.targetMinutes||0) - (active.loggedMinutes||0), 0) : 0;
     const badge = active
       ? `<span class="mn-remain">${remain}분 남음</span>`
       : `<span class="mn-remain none">보강 없음</span>`;
+    const gc = GRADE_COLORS[s.grade] || { bg:'#ECECEC', text:'#666666' };
     return `<div class="elem-makeup-name-row" onclick="openElemMakeupPopup('${s.id}',${active ? `'${active.date}'` : 'null'})">
       <span class="mn-name">${escapeHtml(s.name)}</span>
-      <span class="cell-muted" style="font-size:11px;">${escapeHtml(s.grade)}</span>
+      <span class="mn-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(s.grade)}</span>
       ${badge}
       <span class="mn-arrow">›</span>
     </div>`;
-  }).join('');
+  }).join('') + `</div>`;
 }
 
 function openElemMakeupPopup(studentId, date){
@@ -5491,13 +5495,13 @@ function renderElemMakeupPopup(){
         </div>
         <div class="emp-bar-track"><div class="emp-bar-fill" style="width:${pct}%;"></div></div>
       </div>
-      <div class="emp-add-label">보강 시간 추가</div>
+      <div class="emp-add-label">보강 진행</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',10,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+10분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',15,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+15분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',20,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+20분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',30,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+30분</button>
-        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-primary btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();">+${remaining}분 완료</button>` : ''}
+        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-ghost btn-sm" style="border-color:var(--color-success);color:var(--color-success);" onclick="quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();">+${remaining}분 완료</button>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
         <input type="number" id="popupDirect-${studentId}-${date}" value="${remaining}" min="1" max="300" onfocus="this.select()" style="width:52px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
@@ -5524,8 +5528,18 @@ function registerElemMakeupPopup(studentId){
   if(isNaN(target) || target < 5){ alert('5분 이상 입력해 주세요.'); return; }
   const date = dateEl.value;
   const existing = getElemProgress(studentId, date);
+
+  // 같은 날짜에 이미 진행된 기록(적립분)이 있으면 확인 후 새로 시작
+  if(existing && (existing.loggedMinutes || 0) > 0){
+    const ok = confirm(`이 날짜(${fmtDateKR2(date)})에 이미 ${existing.loggedMinutes}분 적립된 기록이 있어요.\n처음부터 새로 등록할까요? (기존 적립 기록은 지워져요)`);
+    if(!ok) return;
+  }
+
   if(existing){
-    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: target });
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: target, loggedMinutes: 0, log: [] });
+    existing.targetMinutes = target;
+    existing.loggedMinutes = 0;
+    existing.log = [];
   } else {
     const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: 0, log: [], createdAt: Date.now() });
     elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: 0, log: [] });
