@@ -476,6 +476,23 @@
   .elem-makeup-popup-title{font-size:14.5px;font-weight:800;margin-bottom:2px;}
   .elem-makeup-popup-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;}
   .elem-makeup-popup-close{float:right;font-size:12px;color:var(--color-text-muted);cursor:pointer;}
+  .emp-setting-box{background:var(--color-surface-alt);border-radius:10px;padding:12px 14px;margin-top:12px;}
+  .emp-setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;}
+  .emp-setting-row + .emp-setting-row{border-top:1px solid var(--color-border);}
+  .emp-setting-label{font-size:12px;font-weight:700;color:var(--color-text-muted);flex-shrink:0;}
+  .emp-date-input{padding:6px 9px;border:1px solid var(--color-border);border-radius:7px;font-size:13px;font-weight:700;background:var(--color-surface);}
+  .emp-date-fixed{font-size:13px;font-weight:800;color:var(--color-text);}
+  .emp-target-input{width:56px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:14px;font-weight:800;text-align:center;background:var(--color-surface);}
+  .emp-unit{font-size:12px;color:var(--color-text-muted);}
+  .emp-progress-section{margin-top:14px;}
+  .emp-progress-title{font-size:11px;font-weight:800;color:var(--color-text-muted);letter-spacing:0.02em;margin-bottom:8px;}
+  .emp-progress-numbers{font-size:13px;color:var(--color-text-muted);margin-bottom:6px;}
+  .emp-progress-numbers .emp-logged{font-size:19px;font-weight:800;color:var(--color-text);}
+  .emp-progress-numbers .emp-remain{font-weight:700;color:var(--color-warning-dark, #C98A2E);}
+  .emp-bar-track{height:8px;background:var(--color-surface-alt);border-radius:99px;overflow:hidden;}
+  .emp-bar-fill{height:100%;background:var(--color-extra);border-radius:99px;transition:width .2s;}
+  .emp-done-badge{background:var(--color-success-soft);color:var(--color-success);font-weight:800;font-size:14px;padding:10px 12px;border-radius:8px;text-align:center;}
+  .emp-add-label{font-size:11px;font-weight:800;color:var(--color-text-muted);margin:12px 0 6px;}
   .elem-card{
     padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
     transition:filter .1s ease;user-select:none;
@@ -5411,16 +5428,20 @@ function renderElemMakeupPopup(){
         <span class="elem-makeup-popup-close" onclick="closeElemMakeupPopup()">닫기 ✕</span>
         <div class="elem-makeup-popup-title">${escapeHtml(stu.name)}</div>
         <div class="elem-makeup-popup-sub">진행 중인 보강이 없어요 · 새로 등록해요</div>
-        <div style="margin:12px 0 10px;">
-          <label style="font-size:11px;color:var(--color-text-muted);display:block;margin-bottom:4px;">보강(결석) 날짜</label>
-          <input type="date" id="popupNewDate-${studentId}" value="${todayStr()}" style="width:100%;padding:7px 9px;border:1px solid var(--color-border);border-radius:7px;font-size:13px;box-sizing:border-box;">
+        <div class="emp-setting-box">
+          <div class="emp-setting-row">
+            <label class="emp-setting-label">결석 날짜</label>
+            <input type="date" id="popupNewDate-${studentId}" value="${todayStr()}" class="emp-date-input">
+          </div>
+          <div class="emp-setting-row">
+            <label class="emp-setting-label">보강 시간</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" id="popupNewTarget-${studentId}" value="60" min="5" max="300" onfocus="this.select()" class="emp-target-input">
+              <span class="emp-unit">분</span>
+            </div>
+          </div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:16px;">
-          <label style="font-size:11px;color:var(--color-text-muted);">목표</label>
-          <input type="number" id="popupNewTarget-${studentId}" value="60" min="5" max="300" onfocus="this.select()" style="width:56px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:13px;font-weight:800;text-align:center;">
-          <span style="font-size:11px;color:var(--color-text-muted);">분</span>
-        </div>
-        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerElemMakeupPopup('${studentId}')">보강 등록</button>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;" onclick="registerElemMakeupPopup('${studentId}')">보강 등록</button>
       </div>`;
     return;
   }
@@ -5436,22 +5457,41 @@ function renderElemMakeupPopup(){
   const done = logged >= target;
   const progressId = progress ? progress.id : null;
 
+  const settingBox = `
+    <div class="emp-setting-box">
+      <div class="emp-setting-row">
+        <label class="emp-setting-label">결석 날짜</label>
+        <span class="emp-date-fixed">${fmtDateKR2(date)}</span>
+      </div>
+      <div class="emp-setting-row">
+        <label class="emp-setting-label">보강 시간</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="popupTarget-${studentId}-${date}" value="${target}" min="5" max="300" onfocus="this.select()" class="emp-target-input" ${done ? 'disabled' : ''}>
+          <span class="emp-unit">분</span>
+          ${!done ? `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;font-size:11.5px;" onclick="changeElemTargetPopup('${studentId}','${date}')">변경</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+
   const bodyHtml = done ? `
-      <div style="font-size:12.5px;color:var(--color-success);font-weight:700;margin:10px 0;">✓ 목표 ${target}분 · 완료</div>
-      <div style="display:flex;gap:6px;">
+      ${settingBox}
+      <div class="emp-progress-section">
+        <div class="emp-progress-title">진행 현황</div>
+        <div class="emp-done-badge">✓ 목표 ${target}분 · 보강 완료!</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
         <button class="btn btn-ghost btn-sm" onclick="resetElemMakeup('${progressId}','${studentId}','${date}');renderElemMakeupPopup();renderElemMakeupPanel();">↩ 되돌리기</button>
         <button class="btn btn-ghost btn-sm" onclick="closeElemMakeupPopup();renderElemMakeupPanel();">닫기</button>
       </div>` : `
-      <div style="display:flex;align-items:center;gap:4px;margin:10px 0;padding:6px 8px;background:var(--color-surface-alt);border-radius:8px;">
-        <span style="font-size:11px;color:var(--color-text-muted);">목표</span>
-        <input type="number" id="popupTarget-${studentId}-${date}" value="${target}" min="5" max="300" onfocus="this.select()" style="width:44px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
-        <span style="font-size:11px;color:var(--color-text-muted);">분</span>
-        <button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px;" onclick="changeElemTargetPopup('${studentId}','${date}')">변경</button>
+      ${settingBox}
+      <div class="emp-progress-section">
+        <div class="emp-progress-title">진행 현황</div>
+        <div class="emp-progress-numbers">
+          <span class="emp-logged">${logged}분</span> 완료 <span class="emp-remain">· ${remaining}분 남음</span>
+        </div>
+        <div class="emp-bar-track"><div class="emp-bar-fill" style="width:${pct}%;"></div></div>
       </div>
-      <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;overflow:hidden;margin-bottom:4px;">
-        <div style="width:${pct}%;height:100%;background:var(--color-extra);border-radius:99px;"></div>
-      </div>
-      <div class="cell-muted" style="font-size:11.5px;margin-bottom:10px;"><b style="color:var(--color-text);">${logged}분</b> 완료 · ${remaining}분 남음</div>
+      <div class="emp-add-label">보강 시간 추가</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',10,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+10분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',15,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+15분</button>
@@ -5472,7 +5512,6 @@ function renderElemMakeupPopup(){
     <div class="elem-makeup-popup-box">
       <span class="elem-makeup-popup-close" onclick="closeElemMakeupPopup()">닫기 ✕</span>
       <div class="elem-makeup-popup-title">${escapeHtml(stu.name)}</div>
-      <div class="elem-makeup-popup-sub">${fmtDateKR2(date)} 결석</div>
       ${bodyHtml}
     </div>`;
 }
