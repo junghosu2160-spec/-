@@ -708,8 +708,7 @@ function changeElemTargetByInput(studentId, date){
 }
 
 function resetElemMakeup(progressId, studentId, date){
-  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?
-적립된 기록이 모두 지워져요.')) return;
+  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?\n적립된 기록이 모두 지워져요.')) return;
   if(progressId && progressId !== 'null'){
     db.ref('elemMakeupProgress/' + progressId).remove();
   } else {
