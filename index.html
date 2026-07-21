@@ -4336,10 +4336,13 @@ function elementaryCardHtml(s, date){
 }
 
 function renderElementaryBundleHtml(list, date){
-  if(!list.length) return '';
-  const sorted = [...list].sort(compareByGradeThenName);
-  elemMakeupPanelStudentIds = sorted.map(s => s.id);
+  const allElem = students.filter(s => (s.grade || '').startsWith('초'));
+  if(!allElem.length) return '';
+  // 보강관리 명단은 "오늘 등원 예정" 필터와 무관하게 학원 전체 초등부 학생을 대상으로 함
+  elemMakeupPanelStudentIds = allElem.map(s => s.id);
   elemMakeupPanelDate = date;
+
+  const sorted = [...list].sort(compareByGradeThenName);
   return `
     <div class="att-group">
       <div class="att-group-title" style="color:var(--color-success);">
@@ -4347,7 +4350,7 @@ function renderElementaryBundleHtml(list, date){
         <button type="button" class="elem-makeup-btn" onclick="toggleElemMakeupPanel()">📋 보강관리</button>
       </div>
       <div id="elemMakeupPanel" class="elem-makeup-panel" style="display:none;"></div>
-      <div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>
+      ${sorted.length ? `<div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>` : `<div class="cell-muted" style="font-size:12.5px;">이 날짜에 등원 예정인 초등부 학생이 없습니다.</div>`}
       <p class="hint" style="margin-top:8px;margin-bottom:0;">카드를 누르면 출석→지각→결석→대기중 순서로 바뀌어요. 초등부 선생님 페이지와 실시간으로 같이 반영돼요.</p>
     </div>`;
 }
