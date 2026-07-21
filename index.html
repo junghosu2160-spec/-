@@ -367,9 +367,19 @@
   .teacher-chip{
     display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;
     font-size:11.5px;font-weight:700;border:1px solid var(--color-border);background:#fff;color:var(--color-text-muted);
-    cursor:pointer;transition:opacity .12s ease;
+    cursor:default;transition:opacity .12s ease;
   }
   .teacher-chip.hidden-teacher{opacity:0.35;}
+  .teacher-chip .tc-exclude{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;border-radius:50%;font-size:9px;font-weight:900;
+    background:var(--color-surface-alt);color:var(--color-text-muted);
+    cursor:pointer;margin-left:2px;border:1px solid var(--color-border);line-height:1;
+    transition:background .1s,color .1s;
+  }
+  .teacher-chip .tc-exclude:hover{background:var(--color-danger-soft);color:var(--color-danger);border-color:var(--color-danger);}
+  .teacher-chip.hidden-teacher .tc-exclude{background:var(--color-success-soft);color:var(--color-success);border-color:var(--color-success);}
+  .teacher-chip.hidden-teacher .tc-exclude:hover{background:var(--color-success);color:#fff;}
   .event-type-toggle{cursor:pointer;user-select:none;transition:opacity .12s ease;}
   .event-type-toggle.hidden-type{opacity:0.35;text-decoration:line-through;}
   .school-period-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:6px;font-size:12.5px;}
@@ -1641,6 +1651,8 @@ function snapshotToArray(snapVal){
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val());
   refreshCurrentView();
+  // 학생 시간표 칩 목록을 최신 데이터로 갱신 (학생 등록 폼이 열려있을 때 반영)
+  if(document.getElementById('stuScheduleGrid')) renderScheduleGrid();
 });
 db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
@@ -1853,7 +1865,6 @@ function renderSmsFilterPickers(){
   renderSmsGradePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
-  renderSmsTimePicker();
 }
 function toggleSmsGrade(g){
   smsFilterGrades = smsFilterGrades.includes(g) ? smsFilterGrades.filter(x=>x!==g) : [...smsFilterGrades, g];
@@ -1862,7 +1873,9 @@ function toggleSmsGrade(g){
 function toggleSmsDay(d){
   smsFilterDays = smsFilterDays.includes(d) ? smsFilterDays.filter(x=>x!==d) : [...smsFilterDays, d];
   smsFilterTime = '';
-  renderSmsFilterPickers();
+  // Day 칩만 다시 그리고 (전체 picker 재렌더 없이) 시간대 칩 바로 갱신
+  const dayEl = document.getElementById('smsDayPicker');
+  if(dayEl) renderTogglePicker(dayEl, WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderSmsTimePicker();
 }
 
@@ -2260,8 +2273,8 @@ function switchView(view){
   if(view === 'dashboard') renderDashboard();
   if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderElemMakeupList(); renderManualMakeupStudentList(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
-  if(view === 'students') renderStudents();
-  if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
+  if(view === 'students'){ renderStudents(); renderScheduleGrid(); }
+  if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
   if(view === 'studentapp'){ renderAnnounceChips(); renderAnnounceList(); renderMakeupSlotList(); renderRefTeacherCal(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); renderParentPageNameGroups(); }
@@ -3079,16 +3092,24 @@ function renderTeacherLegend(){
     if(allBtn) allBtn.style.display = 'none';
     return;
   }
-  if(allBtn){
-    allBtn.style.display = 'inline-flex';
-    const allHidden = teachers.every(t => hiddenTeacherIds.includes(t.id));
-    allBtn.textContent = allHidden ? '전체 보이기' : '전체 숨기기';
-  }
-  box.innerHTML = teachers.map(t => `
-    <button type="button" class="teacher-chip ${hiddenTeacherIds.includes(t.id) ? 'hidden-teacher' : ''}" onclick="toggleTeacherVisibility('${t.id}')">
-      <span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}
-    </button>
-  `).join('');
+  if(allBtn) allBtn.style.display = 'none';
+  const someHidden = hiddenTeacherIds.length > 0;
+  box.innerHTML =
+    (someHidden ? `<button type="button" class="teacher-chip" style="cursor:pointer;border-color:var(--color-primary);color:var(--color-primary);" onclick="restoreAllTeachers()">전체 보기</button>` : '') +
+    teachers.map(t => {
+      const isHidden = hiddenTeacherIds.includes(t.id);
+      return `<span class="teacher-chip ${isHidden ? 'hidden-teacher' : ''}">
+        <span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}
+        <span class="tc-exclude" title="${isHidden ? '다시 보기' : '숨기기'}" onclick="toggleTeacherVisibility('${t.id}')">${isHidden ? '✓' : '×'}</span>
+      </span>`;
+    }).join('');
+}
+
+function restoreAllTeachers(){
+  hiddenTeacherIds = [];
+  localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  renderTeacherLegend();
+  renderBigCalendar();
 }
 
 function toggleTeacherVisibility(id){
@@ -5291,21 +5312,32 @@ function renderElemMakeupList(){
     const done = logged >= target;
     const pct = target ? Math.round((logged / target) * 100) : 0;
 
+    const progressId = progress ? progress.id : null;
+
     if(done){
       return `
-        <div style="background:var(--color-surface-alt);border-radius:10px;padding:10px 12px;opacity:0.7;">
+        <div style="background:var(--color-surface-alt);border-radius:10px;padding:10px 12px;">
           <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
           <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
-          <div style="font-size:12px;color:var(--color-success);font-weight:700;">✓ 목표 ${target}분 · 완료</div>
+          <div style="font-size:12px;color:var(--color-success);font-weight:700;margin-bottom:6px;">✓ 목표 ${target}분 · 완료</div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="resetElemMakeup('${progressId}','${a.studentId}','${a.date}')">↩ 되돌리기</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="changeElemTarget('${a.studentId}','${a.date}',${target})">목표시간 변경</button>
+          </div>
         </div>`;
     }
 
     return `
       <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:10px;padding:10px 12px;">
-        <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
-        <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;">
+          <div>
+            <div style="font-size:12.5px;font-weight:800;">${escapeHtml(a.stu.name)}</div>
+            <div class="cell-muted" style="font-size:11px;margin-bottom:6px;">${fmtDateKR2(a.date)} 결석</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;flex-shrink:0;" onclick="changeElemTarget('${a.studentId}','${a.date}',${target})">목표 ${target}분 ✏</button>
+        </div>
         ${a.memo ? `<div style="font-size:11px;color:#8A6400;background:#FFF6DC;border-radius:6px;padding:5px 7px;margin-bottom:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(a.memo)}</div>` : ''}
-        <div style="font-size:11.5px;margin-bottom:5px;">목표 ${target}분 중 <b>${logged}분</b> 적립</div>
+        <div style="font-size:11.5px;margin-bottom:5px;"><b>${logged}분</b> 적립 중</div>
         <div style="height:5px;background:var(--color-surface-alt);border-radius:99px;margin-bottom:8px;overflow:hidden;">
           <div style="width:${pct}%;height:100%;background:var(--color-extra);"></div>
         </div>
@@ -5326,6 +5358,33 @@ function adjustElemStep(key, delta){
   const cur = elemPendingAdjust[key] || 5;
   elemPendingAdjust[key] = Math.max(5, cur + delta);
   renderElemMakeupList();
+}
+
+// 보강 완료 상태 되돌리기 (적립 분 초기화)
+function resetElemMakeup(progressId, studentId, date){
+  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?\n적립된 기록이 모두 지워져요.')) return;
+  if(progressId && progressId !== 'null'){
+    db.ref('elemMakeupProgress/' + progressId).remove();
+  } else {
+    const prog = getElemProgress(studentId, date);
+    if(prog) db.ref('elemMakeupProgress/' + prog.id).remove();
+  }
+  showToast('보강 기록을 초기화했어요.');
+}
+
+// 목표 시간 수동 변경
+function changeElemTarget(studentId, date, currentTarget){
+  const input = prompt(`목표 시간을 몇 분으로 바꿀까요?\n현재: ${currentTarget}분`, currentTarget);
+  if(!input) return;
+  const newTarget = parseInt(input, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상으로 입력해 주세요.'); return; }
+  const prog = getElemProgress(studentId, date);
+  if(prog){
+    db.ref('elemMakeupProgress/' + prog.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+  showToast(`목표 시간을 ${newTarget}분으로 변경했어요.`);
 }
 
 function saveElemMakeup(studentId, date, target){
