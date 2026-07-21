@@ -2478,8 +2478,8 @@ function renderTimetableHeadcount(targetId){
       ${allDays.map((d,i) => {
         const n = countAt(secondary, d, t);
         const extra = extraCountAt(weekDates[i], t);
-        const total = n + extra;
-        return `<td>${total ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}','${weekDates[i]}')">${total}</button>` : `<span class="tc-empty">-</span>`}</td>`;
+        const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}','${weekDates[i]}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`).join('');
 
@@ -2489,8 +2489,8 @@ function renderTimetableHeadcount(targetId){
       ${allDays.map((d,i) => {
         const n = countDay(middleSchool, d);
         const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('중'));
-        const total = n + extra;
-        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
+        const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}','${weekDates[i]}')">${label}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
@@ -2500,8 +2500,8 @@ function renderTimetableHeadcount(targetId){
       ${allDays.map((d,i) => {
         const n = countDay(highSchool, d);
         const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('고') || g === 'N수/기타');
-        const total = n + extra;
-        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
+        const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}','${weekDates[i]}')">${label}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
@@ -2511,8 +2511,8 @@ function renderTimetableHeadcount(targetId){
       ${allDays.map((d,i) => {
         const n = countDay(secondary, d);
         const extra = extraCountDayForGrade(weekDates[i], g => !g.startsWith('초'));
-        const total = n + extra;
-        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
+        const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}','${weekDates[i]}')">${label}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
@@ -5182,7 +5182,6 @@ function init(){
   renderScheduleGrid();
   renderTeacherDaysPicker();
   populateStudentDropdowns();
-  renderAttCalendar();
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
