@@ -488,16 +488,20 @@
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   .event-type-tag.기타{background:#E7EBEF;color:#475569;}
   /* ===== 요일별 개인 시간표 입력 ===== */
-  .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
+  .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
   .schedule-cell{display:flex;flex-direction:column;gap:4px;align-items:stretch;}
-  .schedule-cell .sc-day{font-size:11.5px;font-weight:800;color:var(--color-text-muted);text-align:center;}
-  .schedule-cell input[type="hidden"]{}
-  .schedule-cell input{
-    width:100%;padding:8px 2px;border:1px solid var(--color-border);border-radius:8px;
-    font-size:12px;text-align:center;background:var(--color-surface);color:var(--color-text);outline:none;
-  }
-  .schedule-cell input:focus{border-color:var(--color-primary-light);box-shadow:0 0 0 3px var(--color-primary-soft);}
-  .schedule-cell input:not(:placeholder-shown){border-color:var(--color-accent-dark);background:#FFFCF2;}
+  .schedule-cell .sc-day{font-size:12px;font-weight:800;color:var(--color-text-muted);text-align:center;padding-bottom:5px;border-bottom:1px solid var(--color-border);margin-bottom:2px;}
+  .schedule-cell input[type="hidden"]{display:none;}
+  .sc-time-chip{display:block;width:100%;padding:5px 2px;text-align:center;font-size:12px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:pointer;transition:all .12s;line-height:1.3;}
+  .sc-time-chip:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sc-time-chip.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);font-weight:700;}
+  .sc-time-chip.custom-active{background:#E8F8EF;border-color:#5CC893;color:#1E7A4A;font-weight:700;}
+  .sc-custom-btn{display:block;width:100%;padding:4px 2px;text-align:center;font-size:11px;border:1px dashed var(--color-border);border-radius:7px;background:transparent;color:var(--color-text-muted);cursor:pointer;}
+  .sc-custom-btn:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sc-custom-row{display:flex;gap:3px;margin-top:2px;}
+  .sc-custom-row select{flex:1;font-size:11px;padding:4px 2px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface);color:var(--color-text);min-width:0;}
+  .sc-dur-select{width:100%;font-size:11.5px;padding:5px 4px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-muted);margin-top:2px;}
+  .sc-dur-select.set{color:var(--color-text);border-color:var(--color-primary-light);}
   @media(max-width:640px){ .schedule-grid{grid-template-columns:repeat(4,1fr);} }
 
   .sched-chip{
@@ -664,14 +668,14 @@
             <div class="sub">명 등록</div>
           </div>
           <div class="card stat-card">
-            <div class="label">오늘 출석</div>
+            <div class="label">오늘 출결 현황</div>
             <div class="value success" id="statTodayPresent">0</div>
-            <div class="sub" id="statTodayPresentSub">전체 0명 중</div>
+            <div class="sub" id="statTodayPresentSub">출석 0 · 지각 0</div>
           </div>
           <div class="card stat-card">
-            <div class="label">오늘 결석 · 지각</div>
+            <div class="label">오늘 결석</div>
             <div class="value danger" id="statTodayAbsent">0</div>
-            <div class="sub" id="statTodayAbsentSub">결석 0 · 지각 0</div>
+            <div class="sub" id="statTodayAbsentSub">미체크 0명 포함</div>
           </div>
         </div>
 
@@ -706,13 +710,21 @@
             <div class="card-title" style="margin-bottom:8px;">초등부 선생님 전달사항 <span class="hint">선생님이 남긴 특이사항</span></div>
             <div id="teacherDailyNotesList"></div>
             <div class="divider"></div>
-            <div class="card-title" style="margin-bottom:8px;">초등부 선생님께 전달 <span class="hint">선생님 페이지 맨 위에 바로 보여요</span></div>
+            <div class="card-title" style="margin-bottom:8px;">초등부 선생님께 전달 <span class="hint">초등부 선생님 페이지 맨 위에 보여요</span></div>
             <textarea id="directorNoteTextarea" placeholder="예: 오늘 김민준 학부모님이 상담 요청하셨어요. 하원 시 안내 부탁드려요." style="width:100%;min-height:70px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;"></textarea>
             <div class="form-actions" style="margin-top:8px;">
               <button class="btn btn-primary" onclick="sendDirectorNote()">보내기</button>
               <button class="btn btn-ghost" onclick="clearDirectorNote()">지우기</button>
             </div>
             <div class="cell-muted" id="directorNoteSavedMsg" style="font-size:11px;margin-top:6px;display:none;">✓ 전달했습니다.</div>
+            <div class="divider"></div>
+            <div class="card-title" style="margin-bottom:8px;">중고등부 선생님께 전달 <span class="hint">중고등부 선생님 페이지 맨 위에 보여요</span></div>
+            <textarea id="directorNoteMHTextarea" placeholder="예: 오늘 자습 감독 잘 부탁드려요." style="width:100%;min-height:70px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;"></textarea>
+            <div class="form-actions" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="sendDirectorNoteMH()">보내기</button>
+              <button class="btn btn-ghost" onclick="clearDirectorNoteMH()">지우기</button>
+            </div>
+            <div class="cell-muted" id="directorNoteMHSavedMsg" style="font-size:11px;margin-top:6px;display:none;">✓ 전달했습니다.</div>
           </div>
           <div class="card">
             <div class="toolbar" style="margin-bottom:0;">
@@ -1110,6 +1122,11 @@
             <div class="field" style="flex:1;min-width:220px;border-left:1px solid var(--color-border);padding-left:20px;">
               <label>등원 요일 (선택 안 하면 전체)</label>
               <div class="weekday-picker" id="smsDayPicker"></div>
+
+              <div id="smsTimeFilterWrap" style="display:none;margin-top:10px;">
+                <label style="font-size:12px;color:var(--color-text-muted);font-weight:700;display:block;margin-bottom:6px;">시간대 <span class="hint" id="smsTimeFilterHint"></span></label>
+                <div class="weekday-picker" id="smsTimePicker"></div>
+              </div>
 
               <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
                 <div class="field" style="flex:1;margin-bottom:0;">
@@ -1781,6 +1798,7 @@ const SMS_GRADE_OPTIONS = ['초등','중1','중2','중3','고1','고2','고3','N
 let smsFilterGrades = [];
 let smsFilterDays = [];
 let smsFilterStatus = [];
+let smsFilterTime = '';     // 선택된 시간대 (단일값, '' = 전체)
 let smsFilteredList = [];   // 필터에 걸린 학생 목록
 let smsSelectedKeys = new Set(); // 선택된 연락처 항목의 key
 
@@ -1809,6 +1827,7 @@ function renderSmsFilterPickers(){
   renderSmsGradePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
+  renderSmsTimePicker();
 }
 function toggleSmsGrade(g){
   smsFilterGrades = smsFilterGrades.includes(g) ? smsFilterGrades.filter(x=>x!==g) : [...smsFilterGrades, g];
@@ -1816,7 +1835,54 @@ function toggleSmsGrade(g){
 }
 function toggleSmsDay(d){
   smsFilterDays = smsFilterDays.includes(d) ? smsFilterDays.filter(x=>x!==d) : [...smsFilterDays, d];
+  smsFilterTime = '';
   renderSmsFilterPickers();
+  renderSmsTimePicker();
+}
+
+function renderSmsTimePicker(){
+  const wrap = document.getElementById('smsTimeFilterWrap');
+  const picker = document.getElementById('smsTimePicker');
+  const hint = document.getElementById('smsTimeFilterHint');
+  if(!wrap || !picker) return;
+
+  // 선택된 요일이 정확히 하나일 때만 시간대 칩 표시
+  if(smsFilterDays.length !== 1){
+    wrap.style.display = 'none';
+    smsFilterTime = '';
+    return;
+  }
+
+  const day = smsFilterDays[0];
+  // 그 요일에 등원하는 중·고등부 시간대 목록 + 학생 수
+  const timeCounts = {};
+  students.forEach(s => {
+    const t = getDayTime(s, day);
+    if(!t) return;
+    if(!timeCounts[t]) timeCounts[t] = 0;
+    timeCounts[t]++;
+  });
+  const times = Object.keys(timeCounts).sort();
+
+  if(!times.length){
+    wrap.style.display = 'none';
+    return;
+  }
+
+  if(hint) hint.textContent = `— ${day}요일 수업반`;
+  wrap.style.display = 'block';
+  picker.innerHTML = [
+    `<button type="button" class="weekday-chip ${smsFilterTime==='' ? 'active' : ''}" onclick="toggleSmsTime('')">전체</button>`,
+    ...times.map(t =>
+      `<button type="button" class="weekday-chip ${smsFilterTime===t ? 'active' : ''}" onclick="toggleSmsTime('${t}')">${t}반 (${timeCounts[t]}명)</button>`
+    )
+  ].join('');
+}
+
+function toggleSmsTime(t){
+  smsFilterTime = t;
+  renderSmsTimePicker();
+  applySmsFilter();
 }
 function toggleSmsStatus(s){
   smsFilterStatus = smsFilterStatus.includes(s) ? smsFilterStatus.filter(x=>x!==s) : [...smsFilterStatus, s];
@@ -1827,8 +1893,10 @@ function resetSmsFilter(){
   smsFilterGrades = [];
   smsFilterDays = [];
   smsFilterStatus = [];
+  smsFilterTime = '';
   document.getElementById('smsSearchInput').value = '';
   renderSmsFilterPickers();
+  renderSmsTimePicker();
   applySmsFilter();
 }
 
@@ -1861,6 +1929,11 @@ function applySmsFilter(){
     if(smsFilterDays.length){
       const hasDay = smsFilterDays.some(d => getDayTime(s, d));
       if(!hasDay) return false;
+    }
+    // 시간대 필터: 요일 하나 + 시간대 선택 시 그 반만
+    if(smsFilterTime && smsFilterDays.length === 1){
+      const t = getDayTime(s, smsFilterDays[0]);
+      if(t !== smsFilterTime) return false;
     }
     if(smsFilterStatus.length){
       const rec = getAttendanceRecord(s.id, today);
@@ -2232,10 +2305,10 @@ function renderDashboard(){
   const absent = todayRecords.filter(a => a.status === '결석').length;
   const unchecked = expectedToday.length - todayRecords.length;
 
-  document.getElementById('statTodayPresent').textContent = present;
-  document.getElementById('statTodayPresentSub').textContent = `오늘 등원 예정 ${expectedToday.length}명 중`;
-  document.getElementById('statTodayAbsent').textContent = absent + late;
-  document.getElementById('statTodayAbsentSub').textContent = `결석 ${absent} · 지각 ${late}`;
+  document.getElementById('statTodayPresent').textContent = present + late;
+  document.getElementById('statTodayPresentSub').textContent = `출석 ${present} · 지각 ${late}`;
+  document.getElementById('statTodayAbsent').textContent = absent;
+  document.getElementById('statTodayAbsentSub').textContent = `등원 예정 ${expectedToday.length}명 중`;
 
   renderDonut(document.getElementById('dashDonut'), [
     {label:'출석', value:present, color:'var(--color-success)'},
@@ -2259,6 +2332,7 @@ function renderDashboard(){
   renderWeeklyCounselList();
   renderTeacherDailyNotes();
   loadDirectorNote();
+  loadDirectorNoteMH();
 
   renderDashCalendar();
 }
@@ -2528,6 +2602,30 @@ function loadDirectorNote(){
   db.ref('directorNotes/' + todayStr()).once('value').then(snap => {
     const data = snap.val();
     const ta = document.getElementById('directorNoteTextarea');
+    if(ta) ta.value = (data && data.note) || '';
+  });
+}
+
+function sendDirectorNoteMH(){
+  const note = document.getElementById('directorNoteMHTextarea').value.trim();
+  if(!note){ alert('내용을 입력해 주세요.'); return; }
+  db.ref('directorNotesMH/' + todayStr()).set({ date: todayStr(), note, updatedAt: Date.now() });
+  const msg = document.getElementById('directorNoteMHSavedMsg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  showToast('중고등부 선생님 페이지에 전달했습니다.');
+}
+
+function clearDirectorNoteMH(){
+  db.ref('directorNotesMH/' + todayStr()).remove();
+  document.getElementById('directorNoteMHTextarea').value = '';
+  showToast('전달사항을 지웠습니다.');
+}
+
+function loadDirectorNoteMH(){
+  db.ref('directorNotesMH/' + todayStr()).once('value').then(snap => {
+    const data = snap.val();
+    const ta = document.getElementById('directorNoteMHTextarea');
     if(ta) ta.value = (data && data.note) || '';
   });
 }
@@ -3125,30 +3223,28 @@ function renderScheduleGrid(){
   const grid = document.getElementById('stuScheduleGrid');
   if(!grid) return;
   const durations = [30,40,45,50,60,70,80,90,100,120];
-  // 기존 시간표에서 사용 중인 시간 목록 추출
   const existingTimes = [...new Set(
     students.flatMap(s => WEEKDAYS.map(d => s.schedule && s.schedule[d]).filter(Boolean))
   )].sort();
   grid.innerHTML = WEEKDAYS.map(d => `
     <div class="schedule-cell">
       <span class="sc-day">${d}</span>
-      <select id="stuSchedPick-${d}" onchange="applySchedPick('${d}')" style="font-size:11.5px;padding:4px 6px;margin-bottom:3px;width:100%;">
-        <option value="">-- 선택 --</option>
-        ${existingTimes.map(t => `<option value="${t}">${t}</option>`).join('')}
-        <option value="__custom__">직접 입력</option>
-      </select>
-      <div id="stuSchedCustom-${d}" style="display:none;display:flex;gap:2px;align-items:center;margin-bottom:3px;">
-        <select id="stuSchedH-${d}" style="font-size:11.5px;padding:4px 4px;flex:1;" onchange="applySchedCustom('${d}')">
+      <input type="hidden" id="stuSched-${d}">
+      <div id="stuChips-${d}">
+        ${existingTimes.map(t => `<button type="button" class="sc-time-chip" onclick="selectSchedChip('${d}','${t}')">${t}</button>`).join('')}
+        <button type="button" class="sc-custom-btn" onclick="toggleSchedCustom('${d}')">+ 직접 입력</button>
+      </div>
+      <div id="stuSchedCustom-${d}" style="display:none;" class="sc-custom-row">
+        <select id="stuSchedH-${d}" onchange="applySchedCustom('${d}')">
           <option value="">시</option>
           ${Array.from({length:14},(_,i)=>i+9).map(h=>`<option value="${String(h).padStart(2,'0')}">${h}시</option>`).join('')}
         </select>
-        <select id="stuSchedM-${d}" style="font-size:11.5px;padding:4px 4px;flex:1;" onchange="applySchedCustom('${d}')">
+        <select id="stuSchedM-${d}" onchange="applySchedCustom('${d}')">
           <option value="">분</option>
           ${['00','10','20','30','40','50'].map(m=>`<option value="${m}">${m}분</option>`).join('')}
         </select>
       </div>
-      <input type="hidden" id="stuSched-${d}">
-      <select id="stuSchedDur-${d}" style="font-size:11.5px;padding:4px 6px;width:100%;">
+      <select id="stuSchedDur-${d}" class="sc-dur-select">
         <option value="">수업시간</option>
         ${durations.map(m => `<option value="${m}">${m}분</option>`).join('')}
       </select>
@@ -3156,25 +3252,64 @@ function renderScheduleGrid(){
   `).join('');
 }
 
-function applySchedPick(d){
-  const pick = document.getElementById(`stuSchedPick-${d}`).value;
-  const customDiv = document.getElementById(`stuSchedCustom-${d}`);
-  const hidden = document.getElementById(`stuSched-${d}`);
-  if(pick === '__custom__'){
-    customDiv.style.display = 'flex';
+function selectSchedChip(d, time){
+  const hidden = document.getElementById('stuSched-' + d);
+  const customDiv = document.getElementById('stuSchedCustom-' + d);
+  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
+  const alreadyActive = hidden.value === time;
+  // 토글: 이미 선택된 거 다시 누르면 해제
+  chips.forEach(c => c.classList.remove('active','custom-active'));
+  if(alreadyActive){
     hidden.value = '';
   } else {
-    customDiv.style.display = 'none';
-    hidden.value = pick;
+    hidden.value = time;
+    chips.forEach(c => { if(c.textContent.trim() === time) c.classList.add('active'); });
   }
+  if(customDiv) customDiv.style.display = 'none';
+  updateSchedDurHighlight(d);
+}
+
+function toggleSchedCustom(d){
+  const customDiv = document.getElementById('stuSchedCustom-' + d);
+  const hidden = document.getElementById('stuSched-' + d);
+  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
+  const isOpen = customDiv.style.display !== 'none';
+  if(isOpen){
+    customDiv.style.display = 'none';
+    hidden.value = '';
+    chips.forEach(c => c.classList.remove('active','custom-active'));
+  } else {
+    chips.forEach(c => c.classList.remove('active','custom-active'));
+    hidden.value = '';
+    customDiv.style.display = 'flex';
+  }
+  updateSchedDurHighlight(d);
 }
 
 function applySchedCustom(d){
-  const h = document.getElementById(`stuSchedH-${d}`).value;
-  const m = document.getElementById(`stuSchedM-${d}`).value;
-  const hidden = document.getElementById(`stuSched-${d}`);
-  if(h && m) hidden.value = `${h}:${m}`;
-  else hidden.value = '';
+  const h = document.getElementById('stuSchedH-' + d).value;
+  const m = document.getElementById('stuSchedM-' + d).value;
+  const hidden = document.getElementById('stuSched-' + d);
+  const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
+  if(h && m){
+    hidden.value = `${h}:${m}`;
+    chips.forEach(c => c.classList.remove('active','custom-active'));
+    // 직접입력 버튼에도 시각적 표시
+    const customBtn = document.querySelector(`#stuChips-${d} .sc-custom-btn`);
+    if(customBtn){ customBtn.style.borderColor='#5CC893'; customBtn.style.color='#1E7A4A'; }
+  } else {
+    hidden.value = '';
+  }
+  updateSchedDurHighlight(d);
+}
+
+function updateSchedDurHighlight(d){
+  const hidden = document.getElementById('stuSched-' + d);
+  const durSel = document.getElementById('stuSchedDur-' + d);
+  if(durSel){
+    if(hidden && hidden.value) durSel.classList.add('set');
+    else durSel.classList.remove('set');
+  }
 }
 
 function readScheduleFromForm(){
@@ -3195,30 +3330,40 @@ function fillScheduleForm(schedule, scheduleDuration){
     const val = (schedule && schedule[d]) || '';
     const hidden = document.getElementById('stuSched-' + d);
     if(hidden) hidden.value = val;
-    const pickEl = document.getElementById('stuSchedPick-' + d);
+
+    // 모든 칩 초기화
+    const chips = document.querySelectorAll(`#stuChips-${d} .sc-time-chip`);
+    chips.forEach(c => c.classList.remove('active','custom-active'));
     const customDiv = document.getElementById('stuSchedCustom-' + d);
-    if(pickEl){
-      // 기존 시간표에 있는 값이면 선택, 없으면 직접입력 모드
-      const hasOption = val && [...pickEl.options].some(o => o.value === val);
-      if(!val){
-        pickEl.value = '';
-        if(customDiv) customDiv.style.display = 'none';
-      } else if(hasOption){
-        pickEl.value = val;
-        if(customDiv) customDiv.style.display = 'none';
-      } else {
-        pickEl.value = '__custom__';
+    const customBtn = document.querySelector(`#stuChips-${d} .sc-custom-btn`);
+    if(customBtn){ customBtn.style.borderColor=''; customBtn.style.color=''; }
+
+    if(val){
+      // 칩 중에 일치하는 게 있으면 active
+      let matched = false;
+      chips.forEach(c => { if(c.textContent.trim() === val){ c.classList.add('active'); matched = true; } });
+      if(!matched){
+        // 직접입력 모드로
         if(customDiv) customDiv.style.display = 'flex';
-        // 시/분 분리해서 세팅
         const parts = val.split(':');
         const hEl = document.getElementById('stuSchedH-' + d);
         const mEl = document.getElementById('stuSchedM-' + d);
         if(hEl && parts[0]) hEl.value = parts[0];
         if(mEl && parts[1]) mEl.value = parts[1];
+        if(customBtn){ customBtn.style.borderColor='#5CC893'; customBtn.style.color='#1E7A4A'; }
+      } else {
+        if(customDiv) customDiv.style.display = 'none';
       }
+    } else {
+      if(customDiv) customDiv.style.display = 'none';
     }
+
     const durEl = document.getElementById('stuSchedDur-' + d);
-    if(durEl) durEl.value = (scheduleDuration && scheduleDuration[d]) || '';
+    if(durEl){
+      durEl.value = (scheduleDuration && scheduleDuration[d]) || '';
+      if(val && durEl.value) durEl.classList.add('set');
+      else durEl.classList.remove('set');
+    }
   });
 }
 
