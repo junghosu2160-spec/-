@@ -69,8 +69,8 @@
   .stu-name{flex:1 1 130px;display:flex;align-items:center;gap:8px;}
   .stu-name strong{font-size:14px;}
   .badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--color-surface-alt);color:var(--color-text-muted);}
-  .time-box{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-text-muted);}
-  .time-box input[type=time]{border:1px solid var(--color-border);border-radius:6px;padding:5px 6px;font-size:12px;width:88px;}
+  .time-box{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--color-text-muted);}
+  .time-box input[type=time]{border:1px solid var(--color-border);border-radius:5px;padding:2px 4px;font-size:11px;width:64px;}
   .btn{
     padding:8px 14px;border-radius:8px;border:1px solid transparent;font-size:12.5px;font-weight:700;
     cursor:pointer;transition:filter .12s ease;
@@ -124,6 +124,41 @@
   .work-cal-legend{display:flex;align-items:center;gap:6px;margin-top:10px;}
   .work-cal-legend .dot{width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:1px solid #C0DD97;flex-shrink:0;}
   .work-cal-legend span{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-count{font-size:11px;color:var(--color-text-muted);font-weight:700;margin-bottom:8px;}
+  .elem-mk-row{border:1px solid var(--color-border);border-radius:10px;margin-bottom:6px;overflow:hidden;background:var(--color-surface);}
+  .elem-mk-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--color-surface-alt);}
+  .elem-mk-name{font-weight:800;font-size:13px;}
+  .elem-mk-grade{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-remain{margin-left:auto;font-size:11px;font-weight:700;background:#FEF2E9;color:#BA7517;padding:2px 9px;border-radius:12px;}
+  .elem-mk-head i{font-size:14px;color:var(--color-text-muted);}
+  .elem-mk-body{padding:12px;border-top:1px solid var(--color-border);}
+  .elem-mk-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;}
+  .elem-mk-progress-box{background:var(--color-surface-alt);border-radius:8px;padding:8px 10px;margin-bottom:10px;}
+  .elem-mk-bar{height:5px;background:var(--color-surface);border-radius:99px;overflow:hidden;margin-bottom:4px;}
+  .elem-mk-bar-fill{height:100%;background:#5DCAA5;border-radius:99px;}
+  .elem-mk-progress-txt{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-progress-txt b{color:var(--color-text);}
+  .elem-mk-add-box{background:#EAF4FF;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .elem-mk-deduct-box{background:#FBEAF0;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .elem-mk-sec-label{font-size:11px;font-weight:800;margin-bottom:6px;}
+  .elem-mk-sec-label.add{color:#1A5FA8;}
+  .elem-mk-sec-label.deduct{color:#993556;}
+  .elem-mk-btn-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .elem-mk-btn{padding:4px 9px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid transparent;background:#fff;}
+  .elem-mk-btn.add{border-color:#BFE0FB;color:#1A5FA8;}
+  .elem-mk-btn.deduct{border-color:#F4C0D1;color:#993556;}
+  .elem-mk-btn.deduct-done{border-color:#9FE1CB;background:#E1F5EE;color:#085041;}
+  .elem-mk-btn.apply{background:#161616;color:#fff;margin-left:auto;}
+  .elem-mk-input{width:42px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;}
+  .elem-mk-dismiss{text-align:right;margin-bottom:10px;}
+  .elem-mk-dismiss span{font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;}
+  .elem-mk-chat{display:flex;flex-direction:column;gap:6px;background:var(--color-surface-alt);border-radius:8px;padding:8px 10px;margin-bottom:8px;max-height:160px;overflow-y:auto;}
+  .elem-mk-chat-empty{font-size:11.5px;color:var(--color-text-muted);text-align:center;padding:6px 0;}
+  .elem-mk-bubble{font-size:12px;padding:6px 10px;border-radius:8px;max-width:80%;line-height:1.4;}
+  .elem-mk-bubble.parent{align-self:flex-start;background:#fff;border:1px solid var(--color-border);}
+  .elem-mk-bubble.staff{align-self:flex-end;background:var(--color-primary);color:#fff;}
+  .elem-mk-reply-row{display:flex;gap:6px;}
+  .elem-mk-reply-input{flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;}
 </style>
 </head>
 <body>
@@ -165,6 +200,11 @@
   </div>
 
   <div id="directorNoteBanner" style="display:none;"></div>
+
+  <div class="card" id="elemAbsenceCard" style="display:none;">
+    <div class="card-title">📋 보강관리</div>
+    <div id="elemAbsenceList"></div>
+  </div>
 
   <div class="work-cal-card">
     <div class="work-cal-header">
@@ -221,6 +261,10 @@ let students = [];
 let attendance = [];
 let wcTeachers = [];
 let wcExceptions = [];
+let elemMakeupProgress = [];
+let parentMessages = [];
+let elemPendingAdjust = {};
+let makeupDismissed = {};
 
 /* ===== 출근 달력 ===== */
 let workCalYear = new Date().getFullYear();
@@ -325,10 +369,24 @@ db.ref('teacherExceptions').on('value', snap => {
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val()).sort((a,b)=> a.name.localeCompare(b.name,'ko'));
   renderList();
+  renderElemAbsenceList();
 });
 db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
   renderList();
+  renderElemAbsenceList();
+});
+db.ref('elemMakeupProgress').on('value', snap => {
+  elemMakeupProgress = snapshotToArray(snap.val());
+  renderElemAbsenceList();
+});
+db.ref('parentMessages').on('value', snap => {
+  parentMessages = snapshotToArray(snap.val());
+  renderElemAbsenceList();
+});
+db.ref('makeupDismissed').on('value', snap => {
+  makeupDismissed = snap.val() || {};
+  renderElemAbsenceList();
 });
 db.ref('.info/connected').on('value', snap => {
   const el = document.getElementById('syncStatus');
@@ -384,6 +442,9 @@ function weekdayLabelOf(dateStr){
 function getDayTime(student, dayLabel){
   return (student.schedule && student.schedule[dayLabel]) || null;
 }
+function getDayDuration(student, dayLabel){
+  return (student.scheduleDuration && student.scheduleDuration[dayLabel]) || 60;
+}
 function escapeHtml(str){
   return String(str ?? '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
@@ -405,12 +466,19 @@ setInterval(() => { tickDate(); if(!document.getElementById('searchInput').value
 function checkIn(studentId){
   const stu = students.find(s => s.id === studentId);
   if(!stu) return;
+  const rec = getTodayRecord(studentId);
+
+  // 이미 등원 체크된 상태에서 다시 누르면 취소 (하원 기록도 같이 지움)
+  if(rec && rec.checkInTime){
+    db.ref('attendance/' + rec.id).update({ checkInTime: '', checkOutTime: '', status: '' });
+    return;
+  }
+
   const date = todayStr();
   const time = nowTimeStr();
   const weekday = weekdayLabelOf(date);
   const scheduled = getDayTime(stu, weekday);
   const status = (!scheduled || time <= scheduled) ? '출석' : '지각';
-  const rec = getTodayRecord(studentId);
   if(rec){
     db.ref('attendance/' + rec.id).update({ status, checkInTime: time });
   }else{
@@ -420,18 +488,29 @@ function checkIn(studentId){
 
 function checkOut(studentId){
   const rec = getTodayRecord(studentId);
-  const time = nowTimeStr();
-  if(rec){
-    db.ref('attendance/' + rec.id).update({ checkOutTime: time });
-  }else{
-    db.ref('attendance').push({ studentId, date: todayStr(), status:'출석', checkInTime: time, checkOutTime: time, memo:'' });
+  if(!rec) return;
+
+  // 이미 하원 체크된 상태에서 다시 누르면 취소
+  if(rec.checkOutTime){
+    db.ref('attendance/' + rec.id).update({ checkOutTime: '' });
+    return;
   }
+
+  const time = nowTimeStr();
+  db.ref('attendance/' + rec.id).update({ checkOutTime: time });
 }
 
 function markAbsent(studentId){
   const rec = getTodayRecord(studentId);
+
+  // 이미 결석 상태에서 다시 누르면 취소 (대기중으로)
+  if(rec && rec.status === '결석'){
+    db.ref('attendance/' + rec.id).update({ status: '', checkInTime: '', checkOutTime: '' });
+    return;
+  }
+
   if(rec){
-    db.ref('attendance/' + rec.id).update({ status:'결석' });
+    db.ref('attendance/' + rec.id).update({ status:'결석', checkInTime:'', checkOutTime:'' });
   }else{
     db.ref('attendance').push({ studentId, date: todayStr(), status:'결석', checkInTime:'', checkOutTime:'', memo:'' });
   }
@@ -466,6 +545,10 @@ function rowHtml(stu){
   else if(rec && rec.checkInTime){ rowClass = 'checked-in'; statusTag = status === '지각' ? `<span class="status-tag 지각">지각</span>` : `<span class="status-tag 등원">등원 완료</span>`; }
   else if(rec && status){ rowClass = 'checked-in'; statusTag = `<span class="status-tag 등원">${escapeHtml(status)} 처리됨 (시간 미기록)</span>`; }
 
+  const checkedIn = !!(rec && rec.checkInTime);
+  const checkedOut = !!(rec && rec.checkOutTime);
+  const isAbsent = status === '결석';
+
   return `
     <div class="stu-row ${rowClass}">
       <div class="stu-name">
@@ -478,9 +561,9 @@ function rowHtml(stu){
         하원 <input type="time" value="${rec && rec.checkOutTime ? rec.checkOutTime : ''}" onchange="editCheckOutTime('${stu.id}', this.value)">
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        ${!rec || !rec.checkInTime ? `<button class="btn btn-success" onclick="checkIn('${stu.id}')">등원 체크</button>` : ''}
-        ${rec && rec.checkInTime && !rec.checkOutTime ? `<button class="btn btn-primary" onclick="checkOut('${stu.id}')">하원 체크</button>` : ''}
-        ${status !== '결석' ? `<button class="btn btn-danger-outline" onclick="markAbsent('${stu.id}')">결석 처리</button>` : ''}
+        <button class="btn ${checkedIn ? 'btn-ghost' : 'btn-success'}" onclick="checkIn('${stu.id}')">${checkedIn ? '↩ 등원 취소' : '등원 체크'}</button>
+        ${checkedIn ? `<button class="btn ${checkedOut ? 'btn-ghost' : 'btn-primary'}" onclick="checkOut('${stu.id}')">${checkedOut ? '↩ 하원 취소' : '하원 체크'}</button>` : ''}
+        <button class="btn ${isAbsent ? 'btn-ghost' : 'btn-danger-outline'}" onclick="markAbsent('${stu.id}')">${isAbsent ? '↩ 결석 취소' : '결석 처리'}</button>
         ${stu.memo && stu.memo.trim() ? `<span class="memo-pin">📌 ${escapeHtml(stu.memo)}</span>` : ''}
       </div>
     </div>`;
@@ -520,6 +603,225 @@ function renderList(){
   }
 
   box.innerHTML = list.map(rowHtml).join('');
+}
+
+/* ===== 결석 학생 · 학부모님 전달사항 · 보강 진행(5분 단위) ===== */
+function elemAbsenceKey(studentId, date){ return studentId + '_' + date; }
+
+function getElemProgress(studentId, date){
+  return elemMakeupProgress.find(p => p.studentId === studentId && p.date === date);
+}
+
+function fmtDateKR3(dateStr){
+  const [y,m,d] = dateStr.split('-');
+  return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
+}
+
+let elemPanelOpenKey = null; // 지금 펼쳐진 학생_날짜 key (한 번에 하나만 펼침)
+
+function toggleElemPanel(key){
+  elemPanelOpenKey = (elemPanelOpenKey === key) ? null : key;
+  renderElemAbsenceList();
+}
+
+function renderElemAbsenceList(){
+  const card = document.getElementById('elemAbsenceCard');
+  const box = document.getElementById('elemAbsenceList');
+  if(!card || !box) return;
+
+  const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  const start = `${d30.getFullYear()}-${String(d30.getMonth()+1).padStart(2,'0')}-${String(d30.getDate()).padStart(2,'0')}`;
+  const end = todayStr();
+
+  // 1) 최근 결석 중 아직 "보강없음" 처리 안 된 것들
+  const absenceDates = attendance
+    .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`])
+    .map(a => ({ ...a, stu: students.find(s => s.id === a.studentId) }))
+    .filter(a => a.stu && isElementary(a.stu));
+
+  // 2) 원장님이 별도로 등록해준 보강 중 아직 안 끝난 것들 (결석 기록과 무관하게)
+  const progressOnly = elemMakeupProgress
+    .filter(p => (p.loggedMinutes || 0) < (p.targetMinutes || 60))
+    .filter(p => !absenceDates.some(a => a.studentId === p.studentId && a.date === p.date))
+    .map(p => ({ studentId: p.studentId, date: p.date, memo:'', stu: students.find(s => s.id === p.studentId) }))
+    .filter(p => p.stu && isElementary(p.stu));
+
+  const list = [...absenceDates, ...progressOnly]
+    .map(a => {
+      const weekday = weekdayLabelOf(a.date);
+      const progress = getElemProgress(a.studentId, a.date);
+      const target = progress && progress.targetMinutes ? progress.targetMinutes : getDayDuration(a.stu, weekday);
+      const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+      return { ...a, target, logged, remaining: target - logged, done: logged >= target };
+    })
+    .filter(a => !a.done) // 보강 다 끝난 건 목록에서 제외 - "보강 남은 애들"만 보여줌
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  if(!list.length){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  box.innerHTML = `<div class="elem-mk-count">보강 남은 학생 ${list.length}명</div>` + list.map(a => {
+    const key = elemAbsenceKey(a.studentId, a.date);
+    const isOpen = elemPanelOpenKey === key;
+    const progress = getElemProgress(a.studentId, a.date);
+    const progressId = progress ? progress.id : null;
+    const pct = a.target ? Math.min(100, Math.round((a.logged / a.target) * 100)) : 0;
+
+    const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
+
+    return `
+      <div class="elem-mk-row">
+        <div class="elem-mk-head" onclick="toggleElemPanel('${key}')">
+          <span class="elem-mk-name">${escapeHtml(a.stu.name)}</span>
+          <span class="elem-mk-grade">${escapeHtml(a.stu.grade)}</span>
+          <span class="elem-mk-remain">${a.remaining}분 남음</span>
+          <span style="font-size:11px;color:var(--color-text-muted);">${isOpen ? '▾' : '▸'}</span>
+        </div>
+        ${isOpen ? `
+        <div class="elem-mk-body">
+          <div class="elem-mk-sub">${fmtDateKR3(a.date)} 결석${a.memo ? ` · ${escapeHtml(a.memo)}` : ''}</div>
+
+          <div class="elem-mk-progress-box">
+            <div class="elem-mk-bar"><div class="elem-mk-bar-fill" style="width:${pct}%;"></div></div>
+            <div class="elem-mk-progress-txt"><b>${a.logged}분</b> 완료 · 목표 ${a.target}분</div>
+          </div>
+
+          <div class="elem-mk-add-box">
+            <div class="elem-mk-sec-label add">보강 시간 추가</div>
+            <div class="elem-mk-btn-row">
+              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},10)">+10분</button>
+              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},20)">+20분</button>
+              <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${a.target}" min="5" max="300" class="elem-mk-input">
+              <button class="elem-mk-btn add" onclick="changeElemTargetByInput('${a.studentId}','${a.date}')">변경</button>
+            </div>
+          </div>
+
+          <div class="elem-mk-deduct-box">
+            <div class="elem-mk-sec-label deduct">보강 시간 차감</div>
+            <div class="elem-mk-btn-row">
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',10)">-10분</button>
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',15)">-15분</button>
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',20)">-20분</button>
+              ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})">-${a.remaining}분 완료</button>` : ''}
+              <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${a.remaining}" min="1" max="300" class="elem-mk-input">
+              <button class="elem-mk-btn apply" onclick="directElemMakeup('${a.studentId}','${a.date}')">반영</button>
+            </div>
+          </div>
+
+          <div class="elem-mk-dismiss"><span onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>
+
+          <div class="elem-mk-sec-label" style="margin-top:12px;">학부모 메시지</div>
+          <div class="elem-mk-chat">
+            ${msgs.length ? msgs.map(m => `<div class="elem-mk-bubble ${m.from}">${escapeHtml(m.text)}</div>`).join('') : `<div class="elem-mk-chat-empty">주고받은 메시지가 없어요.</div>`}
+          </div>
+          <div class="elem-mk-reply-row">
+            <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." class="elem-mk-reply-input">
+            <button class="elem-mk-btn apply" onclick="sendElemReply('${a.studentId}')">답장</button>
+          </div>
+        </div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function adjustElemStep(key, delta){
+  const cur = elemPendingAdjust[key] || 5;
+  elemPendingAdjust[key] = Math.max(5, cur + delta);
+  renderElemAbsenceList();
+}
+
+function quickElemMakeup(studentId, date, minutes){
+  const existing = getElemProgress(studentId, date);
+  const target = existing ? (existing.targetMinutes || 60) : 60;
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+}
+
+function directElemMakeup(studentId, date){
+  const inputEl = document.getElementById(`direct-elem-${studentId}-${date}`);
+  if(!inputEl) return;
+  const minutes = parseInt(inputEl.value, 10);
+  if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  const target = existing ? (existing.targetMinutes || 60) : 60;
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+}
+
+function changeElemTargetByInput(studentId, date){
+  const inputEl = document.getElementById(`target-elem-${studentId}-${date}`);
+  if(!inputEl) return;
+  const newTarget = parseInt(inputEl.value, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+}
+
+// 오늘 결석한 시간 이외에 추가로 목표 시간을 늘림 (예: +10분, +20분)
+function addElemTarget(studentId, date, currentTarget, addMinutes){
+  const newTarget = currentTarget + addMinutes;
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+}
+
+function resetElemMakeup(progressId, studentId, date){
+  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?\n적립된 기록이 모두 지워져요.')) return;
+  if(progressId && progressId !== 'null'){
+    db.ref('elemMakeupProgress/' + progressId).remove();
+  } else {
+    const prog = getElemProgress(studentId, date);
+    if(prog) db.ref('elemMakeupProgress/' + prog.id).remove();
+  }
+}
+
+function dismissMakeup(studentId, date){
+  db.ref(`makeupDismissed/${studentId}_${date}`).set(true);
+}
+
+function saveElemMakeup(studentId, date, target){
+  const key = elemAbsenceKey(studentId, date);
+  const step = elemPendingAdjust[key] || 5;
+  const existing = getElemProgress(studentId, date);
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + step, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes: step, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+  }else{
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+  }
+  delete elemPendingAdjust[key];
+}
+
+function sendElemReply(studentId){
+  const input = document.getElementById('reply-' + studentId);
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('parentMessages').push({ studentId, from: 'staff', text, createdAt: Date.now(), read: true });
+  input.value = '';
 }
 </script>
 </body>

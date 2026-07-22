@@ -381,7 +381,7 @@ db.ref('.info/connected').on('value', snap => {
 });
 
 /* ===== 원장님 전달사항 배너 (읽기 전용) ===== */
-db.ref('directorNotes/' + todayStr()).on('value', snap => {
+db.ref('directorNotesMH/' + todayStr()).on('value', snap => {
   const data = snap.val();
   const note = data && (typeof data === 'string' ? data : data.note);
   const banner = document.getElementById('directorNoteBanner');
