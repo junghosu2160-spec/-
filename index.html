@@ -496,6 +496,22 @@
   .emp-bar-fill{height:100%;background:var(--color-extra);border-radius:99px;transition:width .2s;}
   .emp-done-badge{background:var(--color-success-soft);color:var(--color-success);font-weight:800;font-size:14px;padding:10px 12px;border-radius:8px;text-align:center;}
   .emp-add-label{font-size:11px;font-weight:800;color:var(--color-text-muted);margin:12px 0 6px;}
+
+  /* ===== 결석→보강예약 주단위 묶음 ===== */
+  .week-bundle{border:1px solid var(--color-border);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+  .week-bundle-head{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;background:var(--color-surface-alt);}
+  .week-bundle-title{font-size:13px;font-weight:800;}
+  .week-bundle-range{font-size:11px;color:var(--color-text-muted);}
+  .week-bundle-count{margin-left:auto;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;}
+  .week-bundle-arrow{font-size:11px;color:var(--color-text-muted);}
+  .week-bundle-body{padding:10px 12px;border-top:1px solid var(--color-border);}
+  .wk-name-wrap{display:flex;flex-wrap:wrap;gap:6px;}
+  .wk-name-tag{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;border:1px solid var(--color-border);background:var(--color-surface-alt);cursor:pointer;}
+  .wk-name-tag.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);}
+  .wk-name-tag.flag{border-color:#F4C0D1;}
+  .wk-name-tag .wk-tag-grade{font-size:10px;font-weight:700;padding:0 5px;border-radius:8px;background:rgba(0,0,0,.06);}
+  .wk-name-tag .wk-tag-date{font-size:10.5px;color:var(--color-text-muted);font-weight:600;}
+  .wk-name-tag.flag .wk-tag-date{color:#993556;}
   .elem-card{
     padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
     transition:filter .1s ease;user-select:none;
@@ -633,6 +649,7 @@
   .att-row-main{flex:1 1 180px;min-width:160px;display:flex;align-items:center;gap:8px;}
   .att-row-main strong{font-size:13.5px;}
   .att-overdue-tag{font-size:11px;font-weight:800;color:var(--color-danger);background:#fff;padding:2px 8px;border-radius:999px;}
+  .makeup-time-tag{font-size:10.5px;font-weight:800;color:var(--color-primary);background:var(--color-primary-soft);padding:2px 8px;border-radius:999px;}
   .att-time-info{display:flex;gap:10px;font-size:12px;color:var(--color-text-muted);flex:0 0 auto;}
   .att-memo-input{flex:1 1 140px;min-width:120px;padding:7px 10px;font-size:12.5px;}
   .avg-mini{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--color-border);}
@@ -4201,11 +4218,12 @@ function compareByGradeThenName(a, b){
 }
 
 // 보강 예약을 포함해 해당 날짜의 실제 등원 시각을 계산 ('MAKEUP' = 정규 일정은 없지만 보강으로 예약된 날)
+// 보강으로 오는 학생은 구체적인 시간이 설정돼 있어도 항상 'MAKEUP' 그룹으로 묶어서, 정규수업 학생과 섞이지 않고 "🗓 보강 예정"에 모이게 함
 function getEffectiveDayTime(s, weekday, date){
   const normal = getDayTime(s, weekday);
   if(normal) return normal;
   const makeup = makeupSchedules.find(m => m.studentId === s.id && m.date === date);
-  if(makeup) return makeup.time || 'MAKEUP'; // 시간까지 설정된 보강이면 그 시간으로, 아니면 임시 'MAKEUP' 그룹으로
+  if(makeup) return 'MAKEUP';
   // 학생 페이지 결석 보강 확정 또는 원장님이 등록한 추가보강도 그 날 출결 화면에 자동으로 나타나게 함
   const extra = absenceRequests.find(r =>
     r.studentId === s.id && r.status === 'confirmed' &&
@@ -4213,6 +4231,20 @@ function getEffectiveDayTime(s, weekday, date){
      (r.type !== 'extra_makeup' && studentMakeupSlots.some(sl => sl.id === r.makeupSlotId && sl.date === date)))
   );
   if(extra) return 'MAKEUP';
+  return null;
+}
+
+// "🗓 보강 예정" 그룹 안에서 실제로 설정된 시간이 있으면 그 시간을 카드에 표시하기 위한 조회
+function getMakeupSetTime(s, date){
+  const makeup = makeupSchedules.find(m => m.studentId === s.id && m.date === date);
+  if(makeup && makeup.time) return makeup.time;
+  const extraReq = absenceRequests.find(r => r.studentId === s.id && r.status === 'confirmed' && r.type === 'extra_makeup' && r.extraDate === date);
+  if(extraReq && extraReq.extraTime) return extraReq.extraTime;
+  const slotReq = absenceRequests.find(r => r.studentId === s.id && r.status === 'confirmed' && r.type !== 'extra_makeup');
+  if(slotReq){
+    const slot = studentMakeupSlots.find(sl => sl.id === slotReq.makeupSlotId && sl.date === date);
+    if(slot && slot.time) return slot.time;
+  }
   return null;
 }
 
@@ -4247,12 +4279,14 @@ function attRowHtml(s, date, isToday, nowTime, t){
   const status = rec ? rec.status : null;
   const overdue = isToday && t !== '99:99' && t !== 'MAKEUP' && !rec && nowTime > t;
   const scheduleDays = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).join('·');
+  const makeupSetTime = t === 'MAKEUP' ? getMakeupSetTime(s, date) : null;
   return `
     <div class="att-row ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}">
       <div class="att-row-main">
         <strong>${escapeHtml(s.name)}</strong>
         ${gradeBadge(s.grade)}
         ${scheduleDays ? `<span class="cell-muted" style="font-size:10.5px;font-weight:400;">${escapeHtml(scheduleDays)}</span>` : ''}
+        ${makeupSetTime ? `<span class="makeup-time-tag">🗓 ${escapeHtml(makeupSetTime)}</span>` : ''}
         ${overdue ? `<span class="att-overdue-tag">⏳ 미출석</span>` : ''}
       </div>
       <div class="status-group">
@@ -4537,6 +4571,20 @@ function renderAttendance(){
 /* =========================================================
    이번 주 결석 → 보강 예약
 ========================================================= */
+let weeklyAbsentOpenWeeks = null; // null이면 아직 초기화 안 됨 (첫 렌더 시 이번 주만 열어둠)
+let weeklyAbsentOpenId = null; // 지금 폼이 펼쳐진 결석 건의 id (한 번에 하나만)
+
+function toggleWeeklyAbsentWeek(weekKey){
+  if(weeklyAbsentOpenWeeks.has(weekKey)) weeklyAbsentOpenWeeks.delete(weekKey);
+  else weeklyAbsentOpenWeeks.add(weekKey);
+  renderWeeklyAbsentList();
+}
+
+function toggleWeeklyAbsentRow(id){
+  weeklyAbsentOpenId = (weeklyAbsentOpenId === id) ? null : id;
+  renderWeeklyAbsentList();
+}
+
 function getThisWeekRange(){
   const today = new Date();
   const day = today.getDay(); // 0=일
@@ -4547,6 +4595,15 @@ function getThisWeekRange(){
   sunday.setDate(monday.getDate() + 6);
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   return { start: fmt(monday), end: fmt(sunday) };
+}
+
+// 주어진 날짜가 속한 주의 월요일 날짜 문자열을 반환
+function mondayOfWeek(dateStr){
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay();
+  const offset = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + offset);
+  return dateToStr(d);
 }
 
 function toggleDoneMakeupSection(){
@@ -4584,23 +4641,22 @@ function renderWeeklyAbsentList(){
   const box = document.getElementById('weeklyAbsentList');
   if(!box) return;
 
-  // 보강 예약 안 한 결석은 주가 바뀌어도 계속 남아있도록 최근 60일까지 넉넉히 확인
+  // 보강 예약 안 한 결석은 주가 바뀌어도 계속 남아있도록 최근 60일까지 넉넉히 확인 (미래 날짜로 미리 입력한 결석도 포함)
   const today = new Date();
   const lookbackStart = new Date(today);
   lookbackStart.setDate(today.getDate() - 60);
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const start = fmt(lookbackStart);
-  const end = todayStr();
 
   const absences = attendance
-    .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
+    .filter(a => a.status === '결석' && a.date >= start) // 미래 날짜 제한 없음 - 방학 등 미리 입력한 결석도 바로 보강 잡을 수 있게
     .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강 안함" 처리된 건 목록에서 제외
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu && !(a.stu.grade || '').startsWith('초')) // 초등부는 보강관리 팝업에서 따로 관리하므로 제외
     .map(a => {
       const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
       // 보강 날짜가 이미 지났는데 그날 출석/지각 기록이 없다면 = 안 온 것 → 다시 잡을 수 있게 미예약 상태로 취급
-      const makeupNoShow = !!makeup && makeup.date < end &&
+      const makeupNoShow = !!makeup && makeup.date < todayStr() &&
         !attendance.some(x => x.studentId === a.studentId && x.date === makeup.date && (x.status === '출석' || x.status === '지각'));
       // 학생페이지/직원관리에서 새 보강 시스템으로 이미 예약된 경우도 "예약 완료"로 인식
       const newBooked = !makeup && hasAnyUpcomingMakeup(a.studentId, a.date);
@@ -4627,6 +4683,7 @@ function renderWeeklyAbsentList(){
   // 목록에서 사라진 항목은 선택 상태에서도 정리
   const visibleIds = new Set(absences.map(a => a.id));
   selectedAbsenceIds.forEach(id => { if(!visibleIds.has(id)) selectedAbsenceIds.delete(id); });
+  if(weeklyAbsentOpenId && !visibleIds.has(weeklyAbsentOpenId)) weeklyAbsentOpenId = null;
 
   const rowHtml = a => {
     const inputId = `makeupDate-${a.id}`;
@@ -4685,19 +4742,55 @@ function renderWeeklyAbsentList(){
   const needsTimePastDone = needsTimeAll.filter(a => makeupAlreadyAttended(a.stu.id, a.makeupDate));
   const done = absences.filter(a => a.alreadyMakeup && !needsTimeAll.includes(a));
 
-  const byGrade = (list, renderFn) => {
+  // 미예약 결석을 주(월~일) 단위로 묶어서, 이름 태그만 보여주고 클릭하면 그 학생 폼이 펼쳐지는 방식
+  const byWeek = (list, renderFn) => {
+    if(!list.length) return `<div class="cell-muted" style="font-size:13px;">보강 예약이 필요한 학생이 없습니다.</div>`;
+    const thisMonday = mondayOfWeek(todayStr());
     const groups = {};
     list.forEach(a => {
-      const g = a.stu.grade;
-      if(!groups[g]) groups[g] = [];
-      groups[g].push(a);
+      const wk = mondayOfWeek(a.date);
+      if(!groups[wk]) groups[wk] = [];
+      groups[wk].push(a);
     });
-    return Object.keys(groups)
-      .sort((a,b)=> GRADES.indexOf(a) - GRADES.indexOf(b))
-      .map(g => {
-        const rows = groups[g].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
-        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(renderFn).join('')}`;
+    const weekKeys = Object.keys(groups).sort((a,b) => b.localeCompare(a)); // 최근 주 먼저
+
+    // 최초 렌더 시엔 "이번 주"만 펼쳐둠
+    if(weeklyAbsentOpenWeeks === null){
+      weeklyAbsentOpenWeeks = new Set([thisMonday]);
+    }
+
+    return weekKeys.map(wk => {
+      const rows = groups[wk].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
+      const sunday = addDaysStr(wk, 6);
+      const label = wk === thisMonday ? '이번 주' : (wk === addDaysStr(thisMonday, -7) ? '지난 주' : `${wk.slice(5).replace('-','/')} 주`);
+      const rangeLabel = `${wk.slice(5).replace('-','/')}~${sunday.slice(5).replace('-','/')}`;
+      const isOpen = weeklyAbsentOpenWeeks.has(wk);
+      const hasPriorMakeupFn = a => !a.alreadyMakeup && !a.expiredMakeupId && makeupSchedules.some(m => m.studentId === a.stu.id && m.note !== `${a.date} 결석 보강`);
+
+      const tagsHtml = rows.map(a => {
+        const flagged = hasPriorMakeupFn(a);
+        const isRowOpen = weeklyAbsentOpenId === a.id;
+        return `<span class="wk-name-tag ${flagged ? 'flag' : ''} ${isRowOpen ? 'active' : ''}" onclick="toggleWeeklyAbsentRow('${a.id}')">
+          ${escapeHtml(a.stu.name)}<span class="wk-tag-grade">${escapeHtml(a.stu.grade)}</span><span class="wk-tag-date">${a.date.slice(5).replace('-','/')}${flagged ? ' ⚠재결석' : ''}</span>
+        </span>`;
       }).join('');
+
+      const openRowHtml = rows.filter(a => weeklyAbsentOpenId === a.id).map(renderFn).join('');
+
+      return `
+        <div class="week-bundle">
+          <div class="week-bundle-head" onclick="toggleWeeklyAbsentWeek('${wk}')">
+            <span class="week-bundle-title">${label}</span>
+            <span class="week-bundle-range">${rangeLabel}</span>
+            <span class="week-bundle-count">미예약 ${rows.length}명</span>
+            <span class="week-bundle-arrow">${isOpen ? '▾' : '▸'}</span>
+          </div>
+          ${isOpen ? `<div class="week-bundle-body">
+            <div class="wk-name-wrap">${tagsHtml}</div>
+            ${openRowHtml}
+          </div>` : ''}
+        </div>`;
+    }).join('');
   };
 
   let html = `
@@ -4708,7 +4801,7 @@ function renderWeeklyAbsentList(){
       </label>
       <button class="btn btn-danger-outline btn-sm" id="bulkDeleteAbsencesBtn" onclick="bulkDeleteSelectedAbsences()" style="display:none;">🗑 선택 삭제 (<span id="selectedAbsenceCountLabel">0</span>)</button>
     </div>`;
-  html += byGrade(pending, rowHtml);
+  html += byWeek(pending, rowHtml);
   if(needsTime.length){
     html += `<div class="sms-group-title" style="margin-top:16px;color:var(--color-warning-dark,#C98A2E);">
       ⏰ 시간 설정 필요 (${needsTime.length}건) <span class="hint">날짜만 잡힌 보강이에요 · 시간을 설정하면 캘린더·학생관리에 표시돼요</span>
