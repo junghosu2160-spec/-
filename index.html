@@ -294,6 +294,37 @@
   }
   .weekday-chip.active{background:var(--color-primary);border-color:var(--color-primary);color:#fff;}
 
+  /* ===== 문자 발송 필터 (컴팩트) ===== */
+  .sms-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .sms-filter-row:last-child{margin-bottom:0;}
+  .sms-filter-label{font-size:11px;color:var(--color-text-muted);width:36px;flex-shrink:0;font-weight:700;}
+  .sms-chip{padding:5px 12px;border-radius:16px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid transparent;background:var(--color-surface-alt);color:var(--color-text-muted);white-space:nowrap;transition:all .1s;}
+  .sms-chip.active{background:var(--color-primary);color:#fff;font-weight:800;border-color:transparent;}
+  .sms-chip.active::before{content:'✓ ';}
+  .sms-chip.ts .cnt{font-size:10px;opacity:.85;margin-left:2px;}
+  .sms-chip.ts.active{background:var(--color-primary);}
+  .sms-filter-summary{margin-top:8px;padding:6px 10px;background:var(--color-surface-alt);border-radius:8px;font-size:12px;color:var(--color-text-muted);}
+  .sms-filter-summary b{color:var(--color-text);font-weight:800;}
+  .sms-layout{display:flex;gap:20px;align-items:flex-start;}
+  .sms-layout-left{flex:0 0 auto;}
+  .sms-layout-divider{width:1px;background:var(--color-border);align-self:stretch;}
+  /* 받는사람 태그 리스트 */
+  .sms-send-toggle{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:14px;font-size:11.5px;font-weight:700;border:1px solid var(--color-border);cursor:pointer;background:var(--color-surface-alt);color:var(--color-text-muted);}
+  .sms-send-toggle.on{background:var(--color-primary);color:#fff;border-color:var(--color-primary);}
+  .sms-tag-scroll{max-height:160px;overflow-y:auto;padding:2px;}
+  .sms-tag-group-title{font-size:10.5px;font-weight:800;color:var(--color-text-muted);margin:8px 0 4px;width:100%;}
+  .sms-tag-group-title:first-child{margin-top:0;}
+  .sms-tag-wrap{display:flex;flex-wrap:wrap;gap:5px;}
+  .sms-tag{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:14px;font-size:11.5px;cursor:pointer;border:1px solid var(--color-border);background:var(--color-surface-alt);color:var(--color-text-muted);white-space:nowrap;}
+  .sms-tag.on{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);font-weight:700;}
+  .sms-tag .g{font-size:9.5px;padding:0 5px;border-radius:8px;background:rgba(0,0,0,.06);}
+  .sms-tag.on .g{background:rgba(0,0,0,.08);}
+  .sms-tag.no-contact{opacity:.4;cursor:default;}
+  .sms-list-footer{margin-top:8px;font-size:11px;color:var(--color-text-muted);}
+  .sms-list-footer a{color:var(--color-primary-light);text-decoration:underline;cursor:pointer;}
+  .sms-layout-right{flex:1;min-width:260px;}
+  @media(max-width:900px){ .sms-layout{flex-direction:column;} .sms-layout-divider{display:none;width:100%;height:1px;} }
+
   .class-item{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     padding:12px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
@@ -367,9 +398,19 @@
   .teacher-chip{
     display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;
     font-size:11.5px;font-weight:700;border:1px solid var(--color-border);background:#fff;color:var(--color-text-muted);
-    cursor:pointer;transition:opacity .12s ease;
+    cursor:default;transition:opacity .12s ease;
   }
   .teacher-chip.hidden-teacher{opacity:0.35;}
+  .teacher-chip .tc-exclude{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;border-radius:50%;font-size:9px;font-weight:900;
+    background:var(--color-surface-alt);color:var(--color-text-muted);
+    cursor:pointer;margin-left:2px;border:1px solid var(--color-border);line-height:1;
+    transition:background .1s,color .1s;
+  }
+  .teacher-chip .tc-exclude:hover{background:var(--color-danger-soft);color:var(--color-danger);border-color:var(--color-danger);}
+  .teacher-chip.hidden-teacher .tc-exclude{background:var(--color-success-soft);color:var(--color-success);border-color:var(--color-success);}
+  .teacher-chip.hidden-teacher .tc-exclude:hover{background:var(--color-success);color:#fff;}
   .event-type-toggle{cursor:pointer;user-select:none;transition:opacity .12s ease;}
   .event-type-toggle.hidden-type{opacity:0.35;text-decoration:line-through;}
   .school-period-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:6px;font-size:12.5px;}
@@ -421,6 +462,40 @@
   }
   .elem-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
   @media(max-width:880px){.elem-card-grid{grid-template-columns:repeat(2,1fr);}}
+  .elem-makeup-btn{margin-left:auto;padding:4px 11px;border-radius:16px;font-size:11px;font-weight:700;background:var(--color-success-soft);color:var(--color-success);border:1px solid #9FE1CB;cursor:pointer;}
+  .elem-makeup-btn:hover{filter:brightness(0.96);}
+  .elem-makeup-panel{margin-bottom:10px;}
+  .elem-makeup-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  @media(max-width:640px){.elem-makeup-grid{grid-template-columns:1fr;}}
+  .elem-makeup-name-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid var(--color-border);background:var(--color-surface-alt);}
+  .elem-makeup-name-row:hover{background:var(--color-surface);filter:brightness(0.97);}
+  .elem-makeup-name-row .mn-name{font-weight:800;font-size:12.5px;}
+  .elem-makeup-name-row .mn-grade{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:8px;}
+  .elem-makeup-name-row .mn-remain{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;font-weight:700;white-space:nowrap;}
+  .elem-makeup-name-row .mn-remain.none{background:rgba(0,0,0,0.05);color:var(--color-text-muted);font-weight:600;}
+  .elem-makeup-name-row .mn-arrow{color:var(--color-text-muted);font-size:12px;flex-shrink:0;}
+  .elem-makeup-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px;}
+  .elem-makeup-popup-box{background:var(--color-surface);border-radius:14px;padding:20px 24px;width:440px;max-width:100%;box-shadow:var(--shadow-md);}
+  .elem-makeup-popup-title{font-size:14.5px;font-weight:800;margin-bottom:2px;}
+  .elem-makeup-popup-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;}
+  .elem-makeup-popup-close{float:right;font-size:12px;color:var(--color-text-muted);cursor:pointer;}
+  .emp-setting-box{background:var(--color-surface-alt);border-radius:10px;padding:12px 14px;margin-top:12px;}
+  .emp-setting-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0;}
+  .emp-setting-row + .emp-setting-row{border-top:1px solid var(--color-border);}
+  .emp-setting-label{font-size:12px;font-weight:700;color:var(--color-text-muted);flex-shrink:0;}
+  .emp-date-input{padding:6px 9px;border:1px solid var(--color-border);border-radius:7px;font-size:13px;font-weight:700;background:var(--color-surface);}
+  .emp-date-fixed{font-size:13px;font-weight:800;color:var(--color-text);}
+  .emp-target-input{width:56px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:14px;font-weight:800;text-align:center;background:var(--color-surface);}
+  .emp-unit{font-size:12px;color:var(--color-text-muted);}
+  .emp-progress-section{margin-top:14px;}
+  .emp-progress-title{font-size:11px;font-weight:800;color:var(--color-text-muted);letter-spacing:0.02em;margin-bottom:8px;}
+  .emp-progress-numbers{font-size:13px;color:var(--color-text-muted);margin-bottom:6px;}
+  .emp-progress-numbers .emp-logged{font-size:19px;font-weight:800;color:var(--color-text);}
+  .emp-progress-numbers .emp-remain{font-weight:700;color:var(--color-warning-dark, #C98A2E);}
+  .emp-bar-track{height:8px;background:var(--color-surface-alt);border-radius:99px;overflow:hidden;}
+  .emp-bar-fill{height:100%;background:var(--color-extra);border-radius:99px;transition:width .2s;}
+  .emp-done-badge{background:var(--color-success-soft);color:var(--color-success);font-weight:800;font-size:14px;padding:10px 12px;border-radius:8px;text-align:center;}
+  .emp-add-label{font-size:11px;font-weight:800;color:var(--color-text-muted);margin:12px 0 6px;}
   .elem-card{
     padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
     transition:filter .1s ease;user-select:none;
@@ -454,10 +529,29 @@
     margin-top:14px;
   }
   .teacher-item{
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius-md);
-    margin-bottom:8px;background:var(--color-surface-alt);
+    border:1px solid var(--color-border);border-radius:var(--radius-md);
+    margin-bottom:8px;background:var(--color-surface);overflow:hidden;
   }
+  .teacher-item-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 14px;cursor:pointer;background:var(--color-surface-alt);
+    transition:background .12s;
+  }
+  .teacher-item-header:hover{background:var(--color-surface);}
+  .teacher-item-header.open{background:var(--color-surface);}
+  .teacher-item-chevron{font-size:11px;color:var(--color-text-muted);transition:transform .15s;margin-left:4px;flex-shrink:0;}
+  .teacher-item-chevron.open{transform:rotate(180deg);}
+  .teacher-mini-cal{padding:12px 14px;border-top:1px solid var(--color-border);background:var(--color-surface);}
+  .teacher-mini-cal-nav{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .teacher-mini-cal-nav span{font-size:12.5px;font-weight:800;flex:1;text-align:center;color:var(--color-text);}
+  .teacher-mini-cal-nav button{font-size:12px;padding:2px 8px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-surface-alt);color:var(--color-text-muted);cursor:pointer;}
+  .teacher-mini-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .teacher-mini-cal-grid .mc-wday{font-size:10px;color:var(--color-text-muted);text-align:center;padding:2px 0;font-weight:700;}
+  .teacher-mini-cal-grid .mc-day{font-size:11.5px;text-align:center;padding:4px 2px;border-radius:5px;color:var(--color-text-muted);}
+  .teacher-mini-cal-grid .mc-day.work{font-weight:800;color:#fff;}
+  .teacher-mini-cal-grid .mc-day.today-ring{outline:2px solid var(--color-primary);outline-offset:-1px;border-radius:5px;}
+  .teacher-cal-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .teacher-cal-summary span{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--color-surface-alt);color:var(--color-text-muted);border:1px solid var(--color-border);}
   .cal-num{position:relative;}
   .cal-cell.has-event-시험 .cal-num::after,
   .cal-cell.has-event-상담 .cal-num::after,
@@ -487,17 +581,28 @@
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
   .event-type-tag.기타{background:#E7EBEF;color:#475569;}
-  /* ===== 요일별 개인 시간표 입력 ===== */
-  .schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;}
-  .schedule-cell{display:flex;flex-direction:column;gap:5px;align-items:center;}
-  .schedule-cell .sc-day{font-size:11.5px;font-weight:800;color:var(--color-text-muted);}
-  .schedule-cell input{
-    width:100%;padding:8px 2px;border:1px solid var(--color-border);border-radius:8px;
-    font-size:12px;text-align:center;background:var(--color-surface);color:var(--color-text);outline:none;
-  }
-  .schedule-cell input:focus{border-color:var(--color-primary-light);box-shadow:0 0 0 3px var(--color-primary-soft);}
-  .schedule-cell input:not(:placeholder-shown){border-color:var(--color-accent-dark);background:#FFFCF2;}
-  @media(max-width:640px){ .schedule-grid{grid-template-columns:repeat(4,1fr);} }
+  /* ===== 요일별 개인 시간표 입력 (탭 방식) ===== */
+  .sched-day-tabs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+  .sched-day-tab{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--color-border);color:var(--color-text-muted);background:var(--color-surface-alt);transition:all .1s;}
+  .sched-day-tab:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sched-day-tab.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sched-day-tab.has-time{border-color:#5CC893;color:#0F6E56;}
+  .sched-day-tab.has-time.active{background:#E1F5EE;border-color:#5CC893;color:#085041;}
+  .sched-panel{background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;}
+  .sched-panel-label{font-size:11.5px;color:var(--color-text-muted);font-weight:700;margin-bottom:10px;}
+  .sched-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+  .sc-time-chip{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--color-border);color:var(--color-text-muted);background:var(--color-surface);transition:all .1s;}
+  .sc-time-chip:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sc-time-chip.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);font-weight:700;}
+  .sc-custom-btn{padding:7px 12px;border-radius:8px;font-size:12.5px;border:1px dashed var(--color-border);background:transparent;color:var(--color-text-muted);cursor:pointer;}
+  .sc-custom-btn:hover{border-color:var(--color-primary-light);color:var(--color-primary);}
+  .sc-custom-row{display:flex;gap:5px;align-items:center;margin-bottom:10px;}
+  .sc-custom-row select{font-size:13px;padding:6px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text);}
+  .sc-dur-select{font-size:13px;padding:6px 10px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);color:var(--color-text-muted);}
+  .sc-dur-select.set{color:var(--color-text);border-color:var(--color-primary-light);}
+  .sched-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .sched-sum-chip{font-size:11.5px;padding:3px 9px;border-radius:6px;background:var(--color-surface);border:1px solid var(--color-border);color:var(--color-text);}
+  .sched-sum-chip span{color:var(--color-text-muted);margin-right:2px;}
 
   .sched-chip{
     display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;
@@ -507,12 +612,12 @@
   /* ===== 출결 체크: 시간대별 그룹 ===== */
   .att-group{margin-bottom:18px;}
   .att-group:last-child{margin-bottom:0;}
-  .att-columns{display:grid;grid-template-columns:1fr 1fr;gap:22px;}
+  .att-columns{display:grid;grid-template-columns:1fr;gap:0;}
   .att-column-title{
     font-size:14px;font-weight:800;margin-bottom:12px;padding-bottom:8px;
     border-bottom:2px solid var(--color-primary);
   }
-  @media(max-width:900px){ .att-columns{grid-template-columns:1fr;} }
+  @media(min-width:1400px){ .att-columns{grid-template-columns:1fr 1fr;gap:22px;} }
   .att-group-title{
     display:flex;align-items:center;gap:8px;
     font-size:13px;font-weight:800;color:var(--color-primary-light);
@@ -633,6 +738,9 @@
       <button class="nav-item" data-view="studentapp" onclick="switchView('studentapp')">
         <span class="nav-icon">📱</span><span>학생 개별관리</span>
       </button>
+      <button class="nav-item" data-view="parentchat" onclick="switchView('parentchat')">
+        <span class="nav-icon">💬</span><span>학부모 소통</span>
+      </button>
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
@@ -656,18 +764,18 @@
         <div class="grid grid-3">
           <div class="card stat-card">
             <div class="label">전체 학생 수</div>
-            <div class="value" id="statTotalStudents">0</div>
-            <div class="sub">명 등록</div>
+            <div class="value" id="statTotalStudents" onclick="switchView('students')" style="cursor:pointer;" title="학생 관리로 이동">0</div>
+            <div class="sub" onclick="switchView('students')" style="cursor:pointer;color:var(--color-primary-light);">학생 관리 →</div>
           </div>
           <div class="card stat-card">
-            <div class="label">오늘 출석</div>
+            <div class="label">오늘 출결 현황</div>
             <div class="value success" id="statTodayPresent">0</div>
-            <div class="sub" id="statTodayPresentSub">전체 0명 중</div>
+            <div class="sub" id="statTodayPresentSub">출석 0 · 지각 0</div>
           </div>
           <div class="card stat-card">
-            <div class="label">오늘 결석 · 지각</div>
+            <div class="label">오늘 결석</div>
             <div class="value danger" id="statTodayAbsent">0</div>
-            <div class="sub" id="statTodayAbsentSub">결석 0 · 지각 0</div>
+            <div class="sub" id="statTodayAbsentSub">미체크 0명 포함</div>
           </div>
         </div>
 
@@ -680,21 +788,16 @@
               </div>
               <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
               <div style="flex:0 0 auto;">
-                <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">학년별 학생 수</div>
-                <div class="donut-wrap donut-wrap-compact" id="gradeDonut"></div>
-              </div>
-              <div style="width:1px;background:var(--color-border);align-self:stretch;"></div>
-              <div style="flex:0 0 auto;">
                 <div class="card-title" style="font-size:12.5px;color:var(--color-text-muted);">타임별 등원 인원</div>
                 <div style="display:flex;gap:12px;align-items:flex-start;">
-                  <div id="timetableHeadcount" style="flex:0 0 280px;"></div>
+                  <div id="timetableHeadcount" style="flex:0 0 auto;"></div>
                 </div>
               </div>
             </div>
             <div id="todayTeachersLine" style="margin-top:12px;"></div>
             <div class="divider"></div>
             <div class="toolbar" style="margin:0 0 8px 0;">
-              <div class="card-title" style="margin:0;">이번 주 상담일정</div>
+              <div class="card-title" style="margin:0;">이번 주 일정</div>
               <span class="cell-muted" id="weeklyCounselProgress" style="font-size:12px;font-weight:700;"></span>
             </div>
             <div id="weeklyCounselList"></div>
@@ -702,13 +805,21 @@
             <div class="card-title" style="margin-bottom:8px;">초등부 선생님 전달사항 <span class="hint">선생님이 남긴 특이사항</span></div>
             <div id="teacherDailyNotesList"></div>
             <div class="divider"></div>
-            <div class="card-title" style="margin-bottom:8px;">초등부 선생님께 전달 <span class="hint">선생님 페이지 맨 위에 바로 보여요</span></div>
+            <div class="card-title" style="margin-bottom:8px;">초등부 선생님께 전달 <span class="hint">초등부 선생님 페이지 맨 위에 보여요</span></div>
             <textarea id="directorNoteTextarea" placeholder="예: 오늘 김민준 학부모님이 상담 요청하셨어요. 하원 시 안내 부탁드려요." style="width:100%;min-height:70px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;"></textarea>
             <div class="form-actions" style="margin-top:8px;">
               <button class="btn btn-primary" onclick="sendDirectorNote()">보내기</button>
               <button class="btn btn-ghost" onclick="clearDirectorNote()">지우기</button>
             </div>
             <div class="cell-muted" id="directorNoteSavedMsg" style="font-size:11px;margin-top:6px;display:none;">✓ 전달했습니다.</div>
+            <div class="divider"></div>
+            <div class="card-title" style="margin-bottom:8px;">중고등부 선생님께 전달 <span class="hint">중고등부 선생님 페이지 맨 위에 보여요</span></div>
+            <textarea id="directorNoteMHTextarea" placeholder="예: 오늘 자습 감독 잘 부탁드려요." style="width:100%;min-height:70px;padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:13.5px;line-height:1.6;resize:vertical;font-family:inherit;"></textarea>
+            <div class="form-actions" style="margin-top:8px;">
+              <button class="btn btn-primary" onclick="sendDirectorNoteMH()">보내기</button>
+              <button class="btn btn-ghost" onclick="clearDirectorNoteMH()">지우기</button>
+            </div>
+            <div class="cell-muted" id="directorNoteMHSavedMsg" style="font-size:11px;margin-top:6px;display:none;">✓ 전달했습니다.</div>
           </div>
           <div class="card">
             <div class="toolbar" style="margin-bottom:0;">
@@ -780,7 +891,12 @@
           </div>
           <div class="field" style="margin-bottom:14px;">
             <div style="display:flex;align-items:flex-end;gap:10px;">
-              <div class="schedule-grid" id="stuScheduleGrid" style="flex:1;"></div>
+              <div style="flex:1;">
+                <div class="sched-day-tabs" id="schedDayTabs"></div>
+                <div class="sched-panel" id="schedPanel"></div>
+                <div class="sched-summary" id="schedSummary"></div>
+                <div id="stuScheduleGrid" style="display:none;"></div>
+              </div>
               <button class="btn btn-primary" id="stuSubmitBtn" onclick="submitStudent()" style="flex:0 0 auto;">학생 등록</button>
             </div>
           </div>
@@ -866,118 +982,166 @@
             <span class="cell-muted" id="bulkImportFileName" style="font-size:12px;"></span>
           </div>
         </div>
+
+        <div class="card section-gap">
+          <div class="toolbar" style="margin-bottom:10px;">
+            <div class="card-title" style="margin:0;">🗑 휴지통 <span class="hint">삭제한 학생 — 복원하거나 완전삭제할 수 있어요</span></div>
+          </div>
+          <div id="trashBinList"></div>
+        </div>
       </section>
 
       <!-- ================= 출결 관리 ================= -->
       <section class="view" id="view-attendance">
-        <div class="card" id="todayAbsentAlertCard" style="display:none;background:var(--color-danger-soft);border-color:var(--color-danger);">
-          <div class="card-title" style="color:var(--color-danger);">🔴 오늘 결석 → 보강 필요한 학생</div>
+
+        <div class="card section-gap">
+          <div class="card-title">
+            보강 시간대 관리 <span class="hint">참고 자료와 함께 정원을 정해보세요</span>
+          </div>
+          <div class="grid grid-3" style="align-items:start;gap:14px;">
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">보강 정원 달력</div>
+              <div class="toolbar" style="margin-bottom:8px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
+                <span id="slotCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
+              </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="cal-grid" id="slotCalGrid"></div>
+            </div>
+
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">이번 주 타임별 등원 인원 <span class="hint">숫자 클릭 시 명단</span></div>
+              <div id="slotHeadcountRef" style="overflow-x:auto;"></div>
+            </div>
+
+            <div>
+              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">선생님 출근 캘린더</div>
+              <div class="toolbar" style="margin-bottom:8px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(-1)">‹</button>
+                <span id="refTeacherCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(1)">›</button>
+              </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="bigcal-grid" id="refTeacherCalGrid" style="gap:3px;"></div>
+            </div>
+          </div>
+
+          <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-top:16px;">
+            <div id="slotEditorTitle" style="font-weight:800;font-size:16px;margin-bottom:4px;"></div>
+            <p class="cell-muted" style="font-size:12.5px;margin:0 0 12px;">이날 출근하는 선생님을 참고해서 시간대별 정원을 정해보세요.</p>
+
+            <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div>
+
+            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 14px;">
+              <div id="slotInputRows"></div>
+            </div>
+
+            <div class="form-row" style="margin-top:14px;">
+              <div class="field" style="flex:1;">
+                <label>새 시간대 (선택)</label>
+                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
+              </div>
+              <div class="field" style="flex:0 0 100px;">
+                <label>정원</label>
+                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:15px;padding:12px;" onclick="saveSlotEditor()">저장</button>
+          </div>
+        </div>
+
+        <div class="card" id="todayAbsentAlertCard" style="display:none;background:var(--color-danger-soft);border-color:var(--color-danger);padding:10px 14px;">
+          <div style="font-size:12.5px;font-weight:800;color:var(--color-danger);">🔴 오늘 결석 → 보강 필요한 학생</div>
           <div id="todayAbsentAlertList"></div>
         </div>
 
-        <div class="card section-gap">
-          <div class="card-title">결석 아닌 학생 추가보강 등록 <span class="hint">보강 시간대 또는 정규수업 시간에 추가할 수 있어요</span></div>
-          <div class="form-row">
-            <div class="field" style="flex:1;">
-              <label>날짜</label>
-              <input type="date" id="extraMakeupDate" onchange="renderExtraMakeupSection()">
-            </div>
-            <div class="field" style="flex:1.2;">
-              <label>시간대 선택</label>
-              <select id="extraMakeupSlotSelect"></select>
-            </div>
-            <div class="field" style="flex:1.2;">
-              <label>학생 검색</label>
-              <input type="text" id="extraMakeupStudentSearch" list="extraMakeupStudentList" placeholder="이름 입력">
-              <datalist id="extraMakeupStudentList"></datalist>
-            </div>
-            <div class="form-actions" style="align-self:flex-end;">
-              <button class="btn btn-primary btn-sm" onclick="addExtraMakeup()">추가보강 등록</button>
-            </div>
-          </div>
-          <div id="extraMakeupListForDate"></div>
-        </div>
-
-        <div class="card section-gap">
-          <div class="toolbar" style="margin-bottom:10px;">
-            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-              <div class="card-title" style="margin:0;">오늘의 출결 체크</div>
-              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
-                <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
-                등원 예정만
-              </label>
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:relative;">
-              <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:130px;">
-              <button type="button" class="btn btn-ghost btn-sm" id="attDatePickerBtn" onclick="toggleAttDatePopup()" style="display:flex;align-items:center;gap:6px;">
-                📅 <span id="attDatePickerLabel">-</span>
-              </button>
-              <input type="date" id="attDate" onchange="renderAttendance()" style="display:none;">
+        <div class="card section-gap" style="padding:10px 14px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;position:relative;">
+            <button type="button" class="btn btn-ghost btn-sm" id="attDatePickerBtn" onclick="toggleAttDatePopup()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
+              📅 <span id="attDatePickerLabel">-</span>
+            </button>
+            <input type="date" id="attDate" onchange="renderAttendance()" style="display:none;">
+            <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:120px;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
+              <input type="checkbox" id="attTodayOnlyToggle" checked onchange="renderAttendance()">
+              등원 예정만
+            </label>
+            <div id="attTimeFilterChips" class="weekday-picker" style="margin:0;"></div>
+            <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
               <input type="month" id="exportMonthInput" style="min-width:120px;">
               <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
-              <div id="attDatePopup" style="display:none;position:absolute;top:36px;right:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
-                <div class="cal-header" style="margin-bottom:6px;">
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
-                  <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
-                  <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(1)">›</button>
-                </div>
-                <div class="cal-weekdays">
-                  <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-                </div>
-                <div class="cal-grid" id="attDatePopupGrid"></div>
+            </div>
+            <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
+              <div class="cal-header" style="margin-bottom:6px;">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
+                <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
+                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(1)">›</button>
               </div>
+              <div class="cal-weekdays">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+              </div>
+              <div class="cal-grid" id="attDatePopupGrid"></div>
             </div>
           </div>
-          <div id="attTimeFilterChips" class="weekday-picker" style="margin-bottom:14px;"></div>
-          <div id="attGroups"></div>
         </div>
 
-        <div class="card section-gap">
-          <div class="card-title">결석 → 보강 예약 <span class="hint">보강 예약 안 한 학생은 계속 남아있어요 · 예약하면 그 날 출결 화면에 자동으로 나타나요</span></div>
-          <div id="weeklyAbsentList"></div>
-        </div>
-
-        <div class="grid grid-2 section-gap">
-          <div class="card">
-            <div class="card-title">선택 날짜 출결 통계 <span class="hint" id="attDonutDate"></span></div>
-            <div class="donut-wrap" id="attDonut"></div>
+        <div class="grid grid-2 section-gap" style="align-items:start;">
+          <!-- 왼쪽: 출결 체크 -->
+          <div>
+            <div class="card">
+              <div id="attGroups"></div>
+            </div>
           </div>
+
+          <!-- 오른쪽: 보강 예약 + 추가보강 -->
           <div class="card">
-            <div class="toolbar" style="margin-bottom:0;">
-              <div class="card-title" style="margin:0;">학생별 출결 이력</div>
-            </div>
-            <div class="form-row" style="margin-bottom:10px;">
-              <div class="field" style="flex:1.4;">
-                <label>학생 선택</label>
-                <select id="attHistoryStudent" onchange="onHistoryStudentChange()"></select>
+            <div class="card-title">결석 → 보강 예약 <span class="hint">날짜+시간까지 정해야 캘린더·학생관리에 나타나요</span></div>
+
+            <div id="manualMakeupToggleWrap" style="margin-bottom:10px;">
+              <div style="font-size:12px;color:var(--color-text-muted);cursor:pointer;padding:5px 0;border-bottom:1px solid var(--color-border);" onclick="toggleManualMakeupPanel()">
+                <span id="manualMakeupToggleIcon">▸</span> 수동 보강 추가 (월중 입학 등)
               </div>
-              <div class="form-actions" style="align-self:flex-end;">
-                <button class="btn btn-ghost btn-sm" onclick="exportStudentAttendance()">📥 이 학생 출결 다운로드</button>
+              <div id="manualMakeupPanel" style="display:none;margin-top:8px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                  <div class="field" style="flex:1.2;min-width:120px;margin:0;">
+                    <label style="font-size:11.5px;">학생</label>
+                    <input type="text" id="manualMakeupStudent" list="manualMakeupStudentList" placeholder="이름 입력" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
+                    <datalist id="manualMakeupStudentList"></datalist>
+                  </div>
+                  <div class="field" style="flex:1;min-width:110px;margin:0;">
+                    <label style="font-size:11.5px;">보강 날짜</label>
+                    <input type="date" id="manualMakeupDate" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;" onchange="renderManualMakeupTimeOptions()">
+                  </div>
+                  <div class="field" style="flex:1;min-width:120px;margin:0;">
+                    <label style="font-size:11.5px;">시간대</label>
+                    <select id="manualMakeupTime" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;"><option value="">날짜 먼저 선택</option></select>
+                  </div>
+                  <div class="field" style="flex:1.2;min-width:130px;margin:0;">
+                    <label style="font-size:11.5px;">메모 (선택)</label>
+                    <input type="text" id="manualMakeupNote" placeholder="예: 월중 입학 보강" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;width:100%;">
+                  </div>
+                  <button class="btn btn-primary btn-sm" onclick="addManualMakeup()" style="flex:0 0 auto;white-space:nowrap;">보강 추가</button>
+                </div>
               </div>
             </div>
 
-            <div class="cal-header">
-              <div style="display:flex;align-items:center;gap:6px;">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(-1)">‹</button>
-                <div class="cal-month-label" id="calMonthLabel">-</div>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="calShiftMonth(1)">›</button>
-              </div>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="calGoToday()">오늘</button>
-            </div>
-            <div class="cal-weekdays">
-              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-            <div class="cal-legend">
-              <span><i class="dot status-출석"></i>출석</span>
-              <span><i class="dot status-지각"></i>지각</span>
-              <span><i class="dot status-결석"></i>결석</span>
-              <span><i class="dot ring"></i>등원 기록 있음</span>
-            </div>
+            <div id="weeklyAbsentList"></div>
 
-            <div class="history-box">
-              <h4>최근 출결 기록 (최신순 10건)</h4>
-              <div id="attHistoryList"></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--color-border);">
+              <div class="card-title" style="margin-bottom:8px;">추가보강 등록 <span class="hint">결석 아닌 학생</span></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+                <input type="date" id="extraMakeupDate" onchange="renderExtraMakeupSection()" style="flex:1;min-width:110px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <select id="extraMakeupSlotSelect" style="flex:1;min-width:110px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"></select>
+                <input type="text" id="extraMakeupStudentSearch" list="extraMakeupStudentList" placeholder="이름 입력" style="flex:1;min-width:100px;padding:7px 8px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+                <datalist id="extraMakeupStudentList"></datalist>
+                <button class="btn btn-primary btn-sm" onclick="addExtraMakeup()">등록</button>
+              </div>
+              <div id="extraMakeupListForDate"></div>
             </div>
           </div>
         </div>
@@ -1065,54 +1229,54 @@
       <!-- ================= 문자 발송 ================= -->
       <section class="view" id="view-sms">
         <div class="card">
-          <div class="field" style="margin-bottom:14px;">
-            <label>이름으로 검색</label>
-            <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="width:100%;">
-          </div>
-
-          <div class="form-row" style="margin-bottom:0;align-items:flex-start;">
-            <div class="field" style="flex:1;min-width:220px;">
-              <label>학년 (선택 안 하면 전체)</label>
-              <div class="weekday-picker" id="smsGradePicker"></div>
+          <div class="sms-layout">
+            <div class="sms-layout-left">
+              <div class="sms-filter-label" style="width:auto;margin-bottom:6px;">타임별 등원 인원</div>
+              <div id="smsHeadcountRef" style="overflow-x:auto;"></div>
             </div>
-            <div class="field" style="flex:1;min-width:220px;border-left:1px solid var(--color-border);padding-left:20px;">
-              <label>등원 요일 (선택 안 하면 전체)</label>
-              <div class="weekday-picker" id="smsDayPicker"></div>
+            <div class="sms-layout-divider"></div>
+            <div class="sms-layout-right">
+              <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <input type="text" class="search-input" id="smsSearchInput" placeholder="학생 이름 검색" oninput="applySmsFilter()" style="flex:1;">
+                <select id="smsSchoolSelect" onchange="onSmsSchoolSelectChange()" style="width:150px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;background:var(--color-surface);"></select>
+              </div>
 
-              <div class="toolbar" style="margin:14px 0 0 0;align-items:flex-end;">
-                <div class="field" style="flex:1;margin-bottom:0;">
-                  <label>오늘 출결 상태 (선택 안 하면 전체)</label>
-                  <div class="weekday-picker" id="smsStatusPicker"></div>
-                </div>
-                <div class="form-actions" style="flex:0 0 auto;">
-                  <button class="btn btn-primary" onclick="applySmsFilter()">🔍 필터 적용</button>
-                  <button class="btn btn-ghost" onclick="resetSmsFilter()">초기화</button>
+              <div class="sms-filter-row">
+                <span class="sms-filter-label">학년</span>
+                <div id="smsGradePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+              </div>
+              <div class="sms-filter-row">
+                <span class="sms-filter-label">요일</span>
+                <div id="smsDayPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+              </div>
+              <div class="sms-filter-row">
+                <span class="sms-filter-label">출결</span>
+                <div id="smsStatusPicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+              </div>
+              <div class="sms-filter-row" id="smsTimeFilterWrap" style="display:none;">
+                <span class="sms-filter-label">시간대</span>
+                <div id="smsTimePicker" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+              </div>
+
+              <div class="divider" style="margin:12px 0;"></div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="applySmsFilter()">🔍 필터 적용</button>
+                <button class="btn btn-ghost btn-sm" onclick="resetSmsFilter()">초기화</button>
+                <span class="sms-filter-summary" id="smsFilterSummary" style="margin-left:auto;margin-top:0;"></span>
+              </div>
+
+              <div class="divider" style="margin:12px 0;"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span class="sms-filter-label" style="width:auto;font-size:12px;font-weight:800;color:var(--color-text);">받는 사람 명단 <span class="hint" id="smsListHint"></span></span>
+                <div style="display:flex;gap:6px;">
+                  <button type="button" class="sms-send-toggle on" id="smsToggleStudentBtn" onclick="toggleSmsSendType('stu')">✓ 학생</button>
+                  <button type="button" class="sms-send-toggle on" id="smsToggleParentBtn" onclick="toggleSmsSendType('parent')">✓ 학부모</button>
                 </div>
               </div>
+              <div id="smsStudentList" class="sms-tag-scroll"></div>
+              <div class="sms-list-footer" id="smsListFooter"></div>
             </div>
           </div>
-        </div>
-
-        <div class="card section-gap">
-          <div class="toolbar">
-            <div class="card-title" style="margin:0;">받는 사람 명단 <span class="hint" id="smsListHint"></span></div>
-          </div>
-          <div class="sms-header-row">
-            <div class="sms-name-col cell-muted">이름</div>
-            <div class="sms-contact-col">
-              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
-                <input type="checkbox" id="smsSelectAllStudent" onchange="toggleAllSmsType('stu')" style="width:16px;height:16px;">
-                학생 전체
-              </label>
-            </div>
-            <div class="sms-contact-col parent">
-              <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;cursor:pointer;">
-                <input type="checkbox" id="smsSelectAllParent" onchange="toggleAllSmsType('parent')" style="width:16px;height:16px;">
-                학부모 전체
-              </label>
-            </div>
-          </div>
-          <div id="smsStudentList"></div>
         </div>
 
         <div class="card section-gap">
@@ -1283,65 +1447,29 @@
       <section class="view" id="view-studentapp">
 
         <div class="card">
-          <div class="card-title">
-            보강 시간대 관리 <span class="hint">참고 자료와 함께 정원을 정해보세요</span>
+          <div class="card-title">공지사항 보내기 <span class="hint">학생페이지·학부모페이지 맨 위에 표시돼요 · 조건 비워두면 전체에게 보여요</span></div>
+          <div class="field">
+            <label>내용</label>
+            <textarea id="announceMessage" rows="2" placeholder="예: 이번 주 금요일은 학교 행사로 휴원합니다" style="width:100%;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;font-size:13.5px;resize:vertical;"></textarea>
           </div>
-          <div class="grid grid-3" style="align-items:start;gap:14px;">
+          <div class="grid grid-3" style="gap:14px;">
             <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">보강 정원 달력</div>
-              <div class="toolbar" style="margin-bottom:8px;">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(-1)">‹</button>
-                <span id="slotCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftSlotCalMonth(1)">›</button>
-              </div>
-              <div class="cal-weekdays">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="cal-grid" id="slotCalGrid"></div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">학년 (선택 안 하면 전체)</div>
+              <div id="announceGradeChips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
             </div>
-
             <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">이번 주 타임별 등원 인원 <span class="hint">숫자 클릭 시 명단</span></div>
-              <div id="slotHeadcountRef" style="overflow-x:auto;"></div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">요일 (선택 안 하면 전체)</div>
+              <div id="announceWeekdayChips" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
             </div>
-
             <div>
-              <div class="cell-muted" style="font-size:12px;font-weight:700;margin-bottom:6px;">선생님 출근 캘린더</div>
-              <div class="toolbar" style="margin-bottom:8px;">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(-1)">‹</button>
-                <span id="refTeacherCalMonthLabel" style="font-size:13px;font-weight:800;">-</span>
-                <button type="button" class="btn btn-ghost btn-sm" onclick="shiftRefTeacherCalMonth(1)">›</button>
-              </div>
-              <div class="cal-weekdays">
-                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
-              </div>
-              <div class="bigcal-grid" id="refTeacherCalGrid" style="gap:3px;"></div>
+              <div class="cell-muted" style="font-size:11.5px;font-weight:700;margin-bottom:6px;">학교 (선택 안 하면 전체)</div>
+              <div id="announceSchoolChips" style="display:flex;flex-wrap:wrap;gap:5px;max-height:90px;overflow-y:auto;"></div>
             </div>
           </div>
-
-          <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-top:16px;">
-            <div id="slotEditorTitle" style="font-weight:800;font-size:16px;margin-bottom:4px;"></div>
-            <p class="cell-muted" style="font-size:12.5px;margin:0 0 12px;">이날 출근하는 선생님을 참고해서 시간대별 정원을 정해보세요.</p>
-
-            <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div>
-
-            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 14px;">
-              <div id="slotInputRows"></div>
-            </div>
-
-            <div class="form-row" style="margin-top:14px;">
-              <div class="field" style="flex:1;">
-                <label>새 시간대 (선택)</label>
-                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
-              </div>
-              <div class="field" style="flex:0 0 100px;">
-                <label>정원</label>
-                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
-              </div>
-            </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:15px;padding:12px;" onclick="saveSlotEditor()">저장</button>
-          </div>
+          <button class="btn btn-primary" style="margin-top:12px;" onclick="sendAnnouncement()">보내기</button>
+          <div id="announceList" style="margin-top:14px;"></div>
         </div>
+
 
         <div class="card section-gap">
           <div class="card-title">
@@ -1356,6 +1484,18 @@
         </div>
 
         <div class="card section-gap">
+          <div class="card-title">학부모 페이지 보기 <span class="hint">초등부 학생 이름을 누르면 그 학부모 화면이 그대로 보여요</span></div>
+          <div id="parentPageNameGroups"></div>
+          <div id="parentPageFrameWrap" style="display:none;margin-top:16px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-surface-alt);border-bottom:1px solid var(--color-border);">
+              <span id="parentPageFrameTitle" style="font-size:12.5px;font-weight:800;"></span>
+              <span class="link-btn" onclick="closeParentPageFrame()">닫기</span>
+            </div>
+            <iframe id="parentPageFrame" style="width:100%;height:900px;border:none;display:block;"></iframe>
+          </div>
+        </div>
+
+        <div class="card section-gap">
           <div class="card-title">학생 페이지 보기 <span class="hint">이름을 누르면 그 학생 화면이 그대로 보여요</span></div>
           <div id="studentPageNameGroups"></div>
           <div id="studentPageFrameWrap" style="display:none;margin-top:16px;border:1px solid var(--color-border);border-radius:var(--radius-md);overflow:hidden;">
@@ -1365,6 +1505,40 @@
             </div>
             <iframe id="studentPageFrame" style="width:100%;height:900px;border:none;display:block;"></iframe>
           </div>
+        </div>
+
+      </section>
+
+      <!-- ================= 학부모 소통 (초등부) ================= -->
+      <section class="view" id="view-parentchat">
+
+        <div class="grid grid-2" style="align-items:start;">
+          <div class="card" style="max-height:520px;overflow-y:auto;">
+            <div class="card-title">학부모 대화 목록</div>
+            <div id="chatThreadList"></div>
+          </div>
+          <div class="card">
+            <div class="card-title" id="chatRoomTitle">대화방을 선택해 주세요</div>
+            <div id="chatRoomMessages" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:6px 2px;"></div>
+            <div id="chatRoomInputWrap" style="display:none;margin-top:10px;">
+              <div style="display:flex;gap:6px;">
+                <input type="text" id="chatReplyInput" placeholder="메시지 입력..." style="flex:1;padding:9px 12px;border:1px solid var(--color-border);border-radius:20px;font-size:13px;" onkeydown="if(event.key==='Enter') sendChatReply()">
+                <button class="btn btn-primary" style="border-radius:50%;width:38px;height:38px;padding:0;flex-shrink:0;" onclick="sendChatReply()">↑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card section-gap">
+          <div class="card-title">매쓰홀릭 월간평가 리포트 링크 <span class="hint">매쓰홀릭에서 URL 복사한 걸 여기 붙여넣으면 학부모님 화면에 버튼으로 떠요</span></div>
+          <div class="form-row">
+            <div class="field" style="flex:1;">
+              <label>학생 검색</label>
+              <input type="text" id="matholicStudentSearch" list="matholicStudentList" placeholder="이름 입력" oninput="renderMatholicLinkManager()">
+              <datalist id="matholicStudentList"></datalist>
+            </div>
+          </div>
+          <div id="matholicLinkList"></div>
         </div>
 
       </section>
@@ -1410,7 +1584,7 @@ const db = firebase.database();
 
 let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
-let makeupSchedules = []; // {id, studentId, date, note, createdAt} - 보강 예약
+let makeupSchedules = []; // {id, studentId, date, time, note, createdAt} - 보강 예약 (time은 미설정일 수 있음)
 let makeupDismissed = {}; // {"studentId_date": true} - "보강 안함" 처리된 결석
 let autoAbsenceExcluded = {}; // {"studentId_date": true} - 직접 삭제해서 자동 결석 처리 대상에서 뺀 날짜
 let selectedAbsenceIds = new Set(); // 보강 리스트 일괄삭제용 선택 상태
@@ -1422,6 +1596,14 @@ let teacherExceptions = []; // {id, teacherId, date, status:('on'|'off')}
 let studentMakeupSlots = []; // {id, date, time, capacity} - 학생페이지에서 결석/보강 신청할 때 고르는 시간대
 let absenceRequests = []; // {id, studentId, studentName, absenceDate, reason, makeupSlotId, makeupSlotLabel, status:('confirmed'|'pending'|'rejected'), createdAt}
 let homeworkItems = []; // {id, studentId, text, completed, completedAt, createdAt} - 학생페이지 숙제 플래너
+let elemMakeupProgress = []; // {id, studentId, date, targetMinutes, loggedMinutes, log:[{minutes,at}]} - 초등부 5분 단위 보강 적립
+let parentMessages = []; // {id, studentId, from:('parent'|'staff'), text, createdAt, read}
+let mathholicLinks = []; // {id, studentId, month:'YYYY-MM', url}
+let activeChatStudentId = null;
+let announcements = [];
+let announceSelectedGrades = new Set();
+let announceSelectedWeekdays = new Set();
+let announceSelectedSchools = new Set();
 const WEEKDAYS = ['월','화','수','목','금','토','일'];
 const JS_DAY_TO_LABEL = ['일','월','화','수','목','금','토']; // Date.getDay() 인덱스용
 const TEACHER_COLORS = ['#E4483A','#D9A404','#2E9E58','#0E9AAE','#3568D4','#7A4FE0','#D81B72','#57707F','#B85C00','#178A6B'];
@@ -1494,6 +1676,8 @@ function snapshotToArray(snapVal){
 db.ref('students').on('value', snap => {
   students = snapshotToArray(snap.val());
   refreshCurrentView();
+  // 학생 시간표 칩 목록을 최신 데이터로 갱신 (학생 등록 폼이 열려있을 때 반영)
+  if(document.getElementById('stuScheduleGrid')) renderScheduleGrid();
 });
 db.ref('attendance').on('value', snap => {
   attendance = snapshotToArray(snap.val());
@@ -1501,11 +1685,13 @@ db.ref('attendance').on('value', snap => {
 });
 db.ref('makeupSchedules').on('value', snap => {
   makeupSchedules = snapshotToArray(snap.val());
-  if(currentView === 'attendance') renderAttendance();
+  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
+  if(currentView === 'dashboard' && document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(currentView === 'sms' && document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
 });
 db.ref('makeupDismissed').on('value', snap => {
   makeupDismissed = snap.val() || {};
-  if(currentView === 'attendance') renderWeeklyAbsentList();
+  if(currentView === 'attendance'){ renderWeeklyAbsentList(); }
 });
 db.ref('autoAbsenceExcluded').on('value', snap => {
   autoAbsenceExcluded = snap.val() || {};
@@ -1525,31 +1711,60 @@ db.ref('dailyNotes').on('value', snap => {
 });
 db.ref('teachers').on('value', snap => {
   teachers = snapshotToArray(snap.val());
+  // 실제 존재하지 않는 선생님 ID는 숨김 목록에서 자동 제거
+  const validIds = new Set(teachers.map(t => t.id));
+  const cleaned = hiddenTeacherIds.filter(id => validIds.has(id));
+  if(cleaned.length !== hiddenTeacherIds.length){
+    hiddenTeacherIds = cleaned;
+    localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  }
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderTeacherLegend(); renderTeacherList(); renderBigCalendar(); }
   if(currentView === 'staff'){ renderStaffList(); renderStaffDayStatus(); renderStaffCal(); }
-  if(currentView === 'studentapp') renderRefTeacherCal();
+  if(currentView === 'attendance') renderRefTeacherCal();
 });
 db.ref('teacherExceptions').on('value', snap => {
   teacherExceptions = snapshotToArray(snap.val());
   if(currentView === 'dashboard') renderDashCalendar();
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
   if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); renderStaffCal(); }
-  if(currentView === 'studentapp') renderRefTeacherCal();
+  if(currentView === 'attendance') renderRefTeacherCal();
 });
 db.ref('makeupSlots').on('value', snap => {
   studentMakeupSlots = snapshotToArray(snap.val());
-  if(currentView === 'studentapp') renderMakeupSlotList();
-  if(currentView === 'attendance') renderExtraMakeupSection();
+  if(currentView === 'attendance'){ renderMakeupSlotList(); renderExtraMakeupSection(); }
+  if(currentView === 'dashboard' && document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(currentView === 'sms' && document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
 });
 db.ref('absenceRequests').on('value', snap => {
   absenceRequests = snapshotToArray(snap.val());
-  if(currentView === 'studentapp'){ renderMakeupSlotList(); renderPendingApprovals(); renderConfirmedMakeupList(); }
-  if(currentView === 'attendance') renderExtraMakeupSection();
+  if(currentView === 'studentapp'){ renderPendingApprovals(); renderConfirmedMakeupList(); }
+  if(currentView === 'attendance'){ renderMakeupSlotList(); renderExtraMakeupSection(); }
+  if(currentView === 'dashboard' && document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(currentView === 'sms' && document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
 });
 db.ref('homework').on('value', snap => {
   homeworkItems = snapshotToArray(snap.val());
-  if(currentView === 'studentapp') renderStudentPageNameGroups();
+  if(currentView === 'studentapp'){ renderStudentPageNameGroups(); renderParentPageNameGroups(); }
+});
+db.ref('elemMakeupProgress').on('value', snap => {
+  elemMakeupProgress = snapshotToArray(snap.val());
+  if(currentView === 'attendance'){
+    renderElemMakeupPanel();
+    if(elemMakeupPopupStudentId) renderElemMakeupPopup();
+  }
+});
+db.ref('parentMessages').on('value', snap => {
+  parentMessages = snapshotToArray(snap.val());
+  if(currentView === 'parentchat'){ renderChatThreadList(); if(activeChatStudentId) renderChatRoom(activeChatStudentId); }
+});
+db.ref('mathholicLinks').on('value', snap => {
+  mathholicLinks = snapshotToArray(snap.val());
+  if(currentView === 'parentchat') renderMatholicLinkManager();
+});
+db.ref('announcements').on('value', snap => {
+  announcements = snapshotToArray(snap.val());
+  if(currentView === 'studentapp') renderAnnounceList();
 });
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
@@ -1576,8 +1791,9 @@ db.ref('.info/connected').on('value', snap => {
 function refreshCurrentView(){
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'students') renderStudents();
-  if(currentView === 'attendance') renderAttendance();
+  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
   if(currentView === 'calendar') renderBigCalendar();
+  if(currentView === 'sms'){ applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
   if(currentView === 'scores'){ renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   populateStudentDropdowns();
 }
@@ -1652,14 +1868,16 @@ function bulkDeleteAllStudents(){
 const SMS_STATUS_OPTIONS = ['출석','지각','결석','미체크'];
 const SMS_GRADE_OPTIONS = ['초등','중1','중2','중3','고1','고2','고3','N수/기타'];
 let smsFilterGrades = [];
+let smsFilterSchools = [];  // 선택된 학교 (시험기간 등 특정 학교만 발송할 때)
 let smsFilterDays = [];
 let smsFilterStatus = [];
+let smsFilterTime = '';     // 선택된 시간대 (단일값, '' = 전체)
 let smsFilteredList = [];   // 필터에 걸린 학생 목록
 let smsSelectedKeys = new Set(); // 선택된 연락처 항목의 key
 
 function renderTogglePicker(containerEl, values, selectedArr, onToggleFnName){
   containerEl.innerHTML = values.map(v => `
-    <button type="button" class="weekday-chip ${selectedArr.includes(v) ? 'active' : ''}" onclick="${onToggleFnName}('${v}')">${v}</button>
+    <button type="button" class="sms-chip ${selectedArr.includes(v) ? 'active' : ''}" onclick="${onToggleFnName}('${v}')">${v}</button>
   `).join('');
 }
 
@@ -1670,38 +1888,136 @@ function smsGradeChipColor(g){
   if(g.startsWith('고')) return CATEGORY_COLORS['고등'];
   return CATEGORY_COLORS['기타'];
 }
+// 학년 칩의 "진한" 버전 색상 (선택됐을 때 배경으로 사용)
+const SMS_GRADE_ACTIVE_COLOR = {
+  '초등': '#1D9E75', '중등': '#378ADD', '고등': '#D4537E', '기타': '#5F5E5A',
+};
+function smsGradeCategory(g){
+  if(g === '초등') return '초등';
+  if(g.startsWith('중')) return '중등';
+  if(g.startsWith('고')) return '고등';
+  return '기타';
+}
 function renderSmsGradePicker(containerEl, values, selectedArr, onToggleFnName){
   containerEl.innerHTML = values.map(v => {
     const isActive = selectedArr.includes(v);
     const c = smsGradeChipColor(v);
-    return `<button type="button" class="weekday-chip ${isActive ? 'active' : ''}" style="${isActive ? '' : `background:${c.bg};color:${c.text};border-color:transparent;`}" onclick="${onToggleFnName}('${v}')">${v}</button>`;
+    const activeColor = SMS_GRADE_ACTIVE_COLOR[smsGradeCategory(v)];
+    const style = isActive
+      ? `background:${activeColor};color:#fff;`
+      : `background:${c.bg};color:${c.text};`;
+    return `<button type="button" class="sms-chip ${isActive ? 'active' : ''}" style="${style}" onclick="${onToggleFnName}('${v}')">${v}</button>`;
   }).join('');
+}
+
+function renderSmsSchoolPicker(){
+  const el = document.getElementById('smsSchoolSelect');
+  if(!el) return;
+  const schools = [...new Set(students.map(s => (s.school||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const prev = smsFilterSchools[0] || '';
+  el.innerHTML = `<option value="">학교 전체</option>` + schools.map(sc =>
+    `<option value="${escapeHtml(sc)}" ${prev===sc?'selected':''}>${escapeHtml(sc)}</option>`
+  ).join('');
+}
+function onSmsSchoolSelectChange(){
+  const val = document.getElementById('smsSchoolSelect').value;
+  smsFilterSchools = val ? [val] : [];
+  renderSmsFilterSummary();
 }
 
 function renderSmsFilterPickers(){
   renderSmsGradePicker(document.getElementById('smsGradePicker'), SMS_GRADE_OPTIONS, smsFilterGrades, 'toggleSmsGrade');
+  renderSmsSchoolPicker();
   renderTogglePicker(document.getElementById('smsDayPicker'), WEEKDAYS, smsFilterDays, 'toggleSmsDay');
   renderTogglePicker(document.getElementById('smsStatusPicker'), SMS_STATUS_OPTIONS, smsFilterStatus, 'toggleSmsStatus');
 }
 function toggleSmsGrade(g){
   smsFilterGrades = smsFilterGrades.includes(g) ? smsFilterGrades.filter(x=>x!==g) : [...smsFilterGrades, g];
   renderSmsFilterPickers();
+  renderSmsFilterSummary();
 }
 function toggleSmsDay(d){
   smsFilterDays = smsFilterDays.includes(d) ? smsFilterDays.filter(x=>x!==d) : [...smsFilterDays, d];
-  renderSmsFilterPickers();
+  smsFilterTime = '';
+  // Day 칩만 다시 그리고 (전체 picker 재렌더 없이) 시간대 칩 바로 갱신
+  const dayEl = document.getElementById('smsDayPicker');
+  if(dayEl) renderTogglePicker(dayEl, WEEKDAYS, smsFilterDays, 'toggleSmsDay');
+  renderSmsTimePicker();
+  renderSmsFilterSummary();
+}
+
+function renderSmsTimePicker(){
+  const wrap = document.getElementById('smsTimeFilterWrap');
+  const picker = document.getElementById('smsTimePicker');
+  if(!wrap || !picker) return;
+
+  // 선택된 요일이 정확히 하나일 때만 시간대 칩 표시
+  if(smsFilterDays.length !== 1){
+    wrap.style.display = 'none';
+    smsFilterTime = '';
+    return;
+  }
+
+  const day = smsFilterDays[0];
+  // 그 요일에 등원하는 중·고등부 시간대 목록 + 학생 수 (초등부는 반이 따로 없어 제외)
+  const timeCounts = {};
+  students.forEach(s => {
+    if((s.grade||'').startsWith('초')) return;
+    const t = getDayTime(s, day);
+    if(!t) return;
+    if(!timeCounts[t]) timeCounts[t] = 0;
+    timeCounts[t]++;
+  });
+  const times = Object.keys(timeCounts).sort();
+
+  if(!times.length){
+    wrap.style.display = 'none';
+    return;
+  }
+
+  wrap.style.display = 'flex';
+  picker.innerHTML = [
+    `<button type="button" class="sms-chip ts ${smsFilterTime==='' ? 'active' : ''}" onclick="toggleSmsTime('')">전체</button>`,
+    ...times.map(t =>
+      `<button type="button" class="sms-chip ts ${smsFilterTime===t ? 'active' : ''}" onclick="toggleSmsTime('${t}')">${t}<span class="cnt">${timeCounts[t]}</span></button>`
+    )
+  ].join('');
+}
+
+function toggleSmsTime(t){
+  smsFilterTime = t;
+  renderSmsTimePicker();
+  applySmsFilter();
 }
 function toggleSmsStatus(s){
   smsFilterStatus = smsFilterStatus.includes(s) ? smsFilterStatus.filter(x=>x!==s) : [...smsFilterStatus, s];
   renderSmsFilterPickers();
+  renderSmsFilterSummary();
+}
+
+function renderSmsFilterSummary(){
+  const el = document.getElementById('smsFilterSummary');
+  if(!el) return;
+  const parts = [];
+  if(smsFilterGrades.length) parts.push(smsFilterGrades.join('·'));
+  if(smsFilterSchools.length) parts.push(smsFilterSchools.join('·'));
+  if(smsFilterDays.length) parts.push(smsFilterDays.join('·') + '요일');
+  if(smsFilterTime) parts.push(smsFilterTime);
+  if(smsFilterStatus.length) parts.push(smsFilterStatus.join('·'));
+  el.innerHTML = parts.length
+    ? `📨 <b>${parts.join(' · ')}</b> 대상으로 필터링 중`
+    : `📨 전체 학생 대상 (조건 없음)`;
 }
 
 function resetSmsFilter(){
   smsFilterGrades = [];
+  smsFilterSchools = [];
   smsFilterDays = [];
   smsFilterStatus = [];
+  smsFilterTime = '';
   document.getElementById('smsSearchInput').value = '';
   renderSmsFilterPickers();
+  renderSmsTimePicker();
   applySmsFilter();
 }
 
@@ -1731,9 +2047,15 @@ function applySmsFilter(){
   smsFilteredList = students.filter(s => {
     if(keyword && !s.name.toLowerCase().includes(keyword)) return false;
     if(smsFilterGrades.length && !smsFilterGrades.some(g => smsGradeMatches(s.grade, g))) return false;
+    if(smsFilterSchools.length && !smsFilterSchools.includes((s.school||'').trim())) return false;
     if(smsFilterDays.length){
       const hasDay = smsFilterDays.some(d => getDayTime(s, d));
       if(!hasDay) return false;
+    }
+    // 시간대 필터: 요일 하나 + 시간대 선택 시 그 반만
+    if(smsFilterTime && smsFilterDays.length === 1){
+      const t = getDayTime(s, smsFilterDays[0]);
+      if(t !== smsFilterTime) return false;
     }
     if(smsFilterStatus.length){
       const rec = getAttendanceRecord(s.id, today);
@@ -1745,55 +2067,84 @@ function applySmsFilter(){
 
   smsSelectedKeys = new Set();
   smsFilteredList.forEach(s => {
-    if(s.phone && s.phone.trim()) smsSelectedKeys.add(`${s.id}_stu`);
-    if(s.parentPhone && s.parentPhone.trim()) smsSelectedKeys.add(`${s.id}_parent`);
+    if(smsSendToStudent && s.phone && s.phone.trim()) smsSelectedKeys.add(`${s.id}_stu`);
+    if(smsSendToParent && s.parentPhone && s.parentPhone.trim()) smsSelectedKeys.add(`${s.id}_parent`);
   });
   smsShowOthers = false;
+  renderSmsFilterSummary();
   renderSmsStudentList();
 }
 
-function toggleSmsKey(key){
-  if(smsSelectedKeys.has(key)) smsSelectedKeys.delete(key); else smsSelectedKeys.add(key);
-  renderSmsStudentList();
-}
+let smsSendToStudent = true;
+let smsSendToParent = true;
 
-function toggleAllSmsType(type){
-  const key = s => type === 'stu' ? `${s.id}_stu` : `${s.id}_parent`;
-  const hasContact = s => type === 'stu' ? !!(s.phone && s.phone.trim()) : !!(s.parentPhone && s.parentPhone.trim());
-  const eligible = smsFilteredList.filter(hasContact);
-  const allSelected = eligible.length > 0 && eligible.every(s => smsSelectedKeys.has(key(s)));
-  eligible.forEach(s => {
-    if(allSelected) smsSelectedKeys.delete(key(s));
-    else smsSelectedKeys.add(key(s));
+function toggleSmsSendType(type){
+  if(type === 'stu') smsSendToStudent = !smsSendToStudent;
+  else smsSendToParent = !smsSendToParent;
+
+  const btn = document.getElementById(type === 'stu' ? 'smsToggleStudentBtn' : 'smsToggleParentBtn');
+  const isOn = type === 'stu' ? smsSendToStudent : smsSendToParent;
+  if(btn){
+    btn.classList.toggle('on', isOn);
+    btn.textContent = (isOn ? '✓ ' : '') + (type === 'stu' ? '학생' : '학부모');
+  }
+
+  // 이미 선택된(태그 on) 학생들에 대해 새 토글 상태에 맞춰 키를 다시 계산
+  smsFilteredList.forEach(s => {
+    const stuKey = `${s.id}_stu`, parentKey = `${s.id}_parent`;
+    const wasOn = smsSelectedKeys.has(stuKey) || smsSelectedKeys.has(parentKey);
+    if(!wasOn) return;
+    const hasPhone = !!(s.phone && s.phone.trim());
+    const hasParent = !!(s.parentPhone && s.parentPhone.trim());
+    if(smsSendToStudent && hasPhone) smsSelectedKeys.add(stuKey); else smsSelectedKeys.delete(stuKey);
+    if(smsSendToParent && hasParent) smsSelectedKeys.add(parentKey); else smsSelectedKeys.delete(parentKey);
   });
   renderSmsStudentList();
 }
 
-function smsRowHtml(s, variant, today){
+// 태그를 눌러 학생 전체를 켜고 끔 (학생/학부모 온오프 상태에 맞춰 해당 연락처 키를 넣거나 뺌)
+function toggleSmsStudentTag(studentId){
+  const s = studentById(studentId);
+  if(!s) return;
+  const stuKey = `${s.id}_stu`, parentKey = `${s.id}_parent`;
+  const isOn = smsSelectedKeys.has(stuKey) || smsSelectedKeys.has(parentKey);
   const hasPhone = !!(s.phone && s.phone.trim());
   const hasParent = !!(s.parentPhone && s.parentPhone.trim());
-  const stuKey = `${s.id}_stu`;
-  const parentKey = `${s.id}_parent`;
-  const stuChecked = smsSelectedKeys.has(stuKey);
-  const parentChecked = smsSelectedKeys.has(parentKey);
-  const rec = today ? getAttendanceRecord(s.id, today) : null;
-  const rowClass = variant === 'absent' ? 'absent' : variant === 'processed' ? 'arrived' : '';
-  return `
-    <div class="sms-row ${rowClass}">
-      <div class="sms-name">
-        <strong>${escapeHtml(s.name)}</strong>
-        ${gradeBadge(s.grade)}
-        ${variant === 'absent' ? `<span class="status-pill 결석">결석</span>` : ''}
-      </div>
-      <div class="sms-contact student">
-        <input type="checkbox" ${stuChecked ? 'checked' : ''} ${hasPhone ? '' : 'disabled'} onchange="toggleSmsKey('${stuKey}')" style="width:16px;height:16px;">
-        <span>${hasPhone ? escapeHtml(s.phone) : '연락처 없음'}</span>
-      </div>
-      <div class="sms-contact parent">
-        <input type="checkbox" ${parentChecked ? 'checked' : ''} ${hasParent ? '' : 'disabled'} onchange="toggleSmsKey('${parentKey}')" style="width:16px;height:16px;">
-        <span>${hasParent ? escapeHtml(s.parentPhone) : '연락처 없음'}</span>
-      </div>
-    </div>`;
+  if(isOn){
+    smsSelectedKeys.delete(stuKey);
+    smsSelectedKeys.delete(parentKey);
+  }else{
+    if(smsSendToStudent && hasPhone) smsSelectedKeys.add(stuKey);
+    if(smsSendToParent && hasParent) smsSelectedKeys.add(parentKey);
+  }
+  renderSmsStudentList();
+}
+
+function smsSelectAllVisible(select){
+  smsFilteredList.forEach(s => {
+    const hasPhone = !!(s.phone && s.phone.trim());
+    const hasParent = !!(s.parentPhone && s.parentPhone.trim());
+    if(!select){
+      smsSelectedKeys.delete(`${s.id}_stu`);
+      smsSelectedKeys.delete(`${s.id}_parent`);
+    }else{
+      if(smsSendToStudent && hasPhone) smsSelectedKeys.add(`${s.id}_stu`);
+      if(smsSendToParent && hasParent) smsSelectedKeys.add(`${s.id}_parent`);
+    }
+  });
+  renderSmsStudentList();
+}
+
+function smsTagHtml(s, showAbsent){
+  const hasPhone = !!(s.phone && s.phone.trim());
+  const hasParent = !!(s.parentPhone && s.parentPhone.trim());
+  const isOn = smsSelectedKeys.has(`${s.id}_stu`) || smsSelectedKeys.has(`${s.id}_parent`);
+  // 학생/학부모 온오프 둘 다 꺼져있거나, 둘 다 연락처가 없으면 비활성
+  const anyReachable = (smsSendToStudent && hasPhone) || (smsSendToParent && hasParent);
+  if(!anyReachable){
+    return `<span class="sms-tag no-contact">${escapeHtml(s.name)}<span class="g">${escapeHtml(s.grade)}</span></span>`;
+  }
+  return `<span class="sms-tag ${isOn ? 'on' : ''}" onclick="toggleSmsStudentTag('${s.id}')">${showAbsent ? '🚨 ' : ''}${escapeHtml(s.name)}<span class="g">${escapeHtml(s.grade)}</span></span>`;
 }
 
 let smsShowOthers = false;
@@ -1805,44 +2156,21 @@ function toggleSmsOthers(){
 
 function smsByName(a, b){ return a.name.localeCompare(b.name, 'ko'); }
 
-function renderSmsBundle(title, list, today, flat){
+function renderSmsTagGroup(title, list, showAbsent){
   if(!list.length) return '';
-
-  if(flat){
-    // 오늘이 아닌 다른 요일을 볼 때는 "아직 등원 전/출석 처리됨" 구분 없이 명단만 보여줌
-    const sorted = [...list].sort(compareByGradeThenName);
-    return `<div class="sms-group-title">${title} (${sorted.length}명)</div>` +
-      sorted.map(s => smsRowHtml(s, 'notyet', today)).join('');
-  }
-
-  const notYet = list.filter(s => !getAttendanceRecord(s.id, today)).sort(compareByGradeThenName);
-  const processed = list.filter(s => !!getAttendanceRecord(s.id, today)).sort(compareByGradeThenName);
-
-  let html = '';
-  if(notYet.length){
-    html += `<div class="sms-group-title notyet">🔴 ${title} · 아직 등원 전 (${notYet.length}명)</div>`;
-    html += notYet.map(s => smsRowHtml(s, 'notyet', today)).join('');
-  }
-  if(processed.length){
-    html += `<div class="sms-group-title done">🟢 ${title} · 출석·지각 처리됨 (${processed.length}명)</div>`;
-    html += processed.map(s => smsRowHtml(s, 'processed', today)).join('');
-  }
-  return html;
+  const sorted = [...list].sort(compareByGradeThenName);
+  return `<div class="sms-tag-group-title">${title} (${sorted.length}명)</div>
+    <div class="sms-tag-wrap">${sorted.map(s => smsTagHtml(s, showAbsent)).join('')}</div>`;
 }
 
 function renderSmsStudentList(){
   const box = document.getElementById('smsStudentList');
   const hint = document.getElementById('smsListHint');
+  const footer = document.getElementById('smsListFooter');
   const noContactCount = smsFilteredList.filter(s => !(s.phone && s.phone.trim()) && !(s.parentPhone && s.parentPhone.trim())).length;
-  hint.textContent = `(학생 ${smsFilteredList.length}명 · 선택됨 ${smsSelectedKeys.size}건${noContactCount ? ` · 연락처 없음 ${noContactCount}명 포함` : ''})`;
-
-  // 헤더 체크박스 상태 동기화
-  const stuEligible = smsFilteredList.filter(s => s.phone && s.phone.trim());
-  const parentEligible = smsFilteredList.filter(s => s.parentPhone && s.parentPhone.trim());
-  const stuAllChecked = document.getElementById('smsSelectAllStudent');
-  const parentAllChecked = document.getElementById('smsSelectAllParent');
-  if(stuAllChecked) stuAllChecked.checked = stuEligible.length > 0 && stuEligible.every(s => smsSelectedKeys.has(`${s.id}_stu`));
-  if(parentAllChecked) parentAllChecked.checked = parentEligible.length > 0 && parentEligible.every(s => smsSelectedKeys.has(`${s.id}_parent`));
+  const selectedStudentCount = new Set([...smsSelectedKeys].map(k => k.replace(/_stu$|_parent$/,''))).size;
+  if(hint) hint.textContent = `(${smsFilteredList.length}명 중 ${selectedStudentCount}명 선택)`;
+  if(footer) footer.innerHTML = `선택됨 ${selectedStudentCount}명${noContactCount ? ` · 연락처 없음 ${noContactCount}명` : ''} · <a onclick="smsSelectAllVisible(true)">전체 선택</a> / <a onclick="smsSelectAllVisible(false)">전체 해제</a>`;
 
   if(!smsFilteredList.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">조건에 맞는 학생이 없습니다.</div>`;
@@ -1862,19 +2190,17 @@ function renderSmsStudentList(){
 
   let html = '';
   if(absentToday.length){
-    html += `<div class="sms-group-title absent">🚨 오늘 결석 (${absentToday.length}명)</div>`;
-    html += absentToday.map(s => smsRowHtml(s, 'absent', today)).join('');
+    html += renderSmsTagGroup('🚨 오늘 결석', absentToday, false);
   }
 
   // 오늘 등원 예정인 학생만 우선 표시 (초등은 한 묶음, 나머지는 타임별)
   const scheduledToday = rest.filter(s => getDayTime(s, weekday));
   const others = rest.filter(s => !getDayTime(s, weekday)); // 다른 요일에만 오거나 시간 미정(보강)인 학생
-  const isNonTodayFilter = weekday !== weekdayLabelOf(today); // 오늘이 아닌 특정 요일을 보는 중인지
 
   const elementary = scheduledToday.filter(s => (s.grade || '').startsWith('초'));
   const byTime = scheduledToday.filter(s => !(s.grade || '').startsWith('초'));
 
-  html += renderSmsBundle('초등부', elementary, today, isNonTodayFilter);
+  html += renderSmsTagGroup('초등부', elementary, false);
 
   const timeGroups = {};
   byTime.forEach(s => {
@@ -1883,7 +2209,7 @@ function renderSmsStudentList(){
     timeGroups[t].push(s);
   });
   Object.keys(timeGroups).sort().forEach(t => {
-    html += renderSmsBundle(`${t} 타임`, timeGroups[t], today, isNonTodayFilter);
+    html += renderSmsTagGroup(`${t} 타임`, timeGroups[t], false);
   });
 
   if(others.length){
@@ -1892,7 +2218,8 @@ function renderSmsStudentList(){
         <span>${smsShowOthers ? '▾' : '▸'}</span> 그 외 학생 (다른 요일 · 시간 미정 · 보강) ${others.length}명
       </div>`;
     if(smsShowOthers){
-      html += others.sort(compareByGradeThenName).map(s => smsRowHtml(s, 'none', todayStr())).join('');
+      const sorted = [...others].sort(compareByGradeThenName);
+      html += `<div class="sms-tag-wrap">${sorted.map(s => smsTagHtml(s, false)).join('')}</div>`;
     }
   }
 
@@ -1977,6 +2304,10 @@ function todayStr(){
 function getDayTime(student, dayLabel){
   return (student.schedule && student.schedule[dayLabel]) || null;
 }
+// 특정 학생의 특정 요일 수업시간(분) — 초등부 보강 목표 시간 계산용
+function getDayDuration(student, dayLabel){
+  return (student.scheduleDuration && student.scheduleDuration[dayLabel]) || 60; // 설정 안 했으면 기본 60분
+}
 // 오늘(또는 특정 날짜)이 무슨 요일인지 한글로 반환
 function weekdayLabelOf(dateStr){
   const d = new Date(dateStr + 'T00:00:00');
@@ -2018,7 +2349,7 @@ function studentById(id){ return students.find(s => s.id === id); }
 /* =========================================================
    네비게이션
 ========================================================= */
-const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리', studentapp:'학생 개별관리' };
+const VIEW_TITLES = { dashboard:'대시보드', attendance:'출결 관리', calendar:'캘린더', students:'학생 관리', sms:'문자 발송', scores:'성적 관리', staff:'직원 관리', studentapp:'학생 개별관리', parentchat:'학부모 소통' };
 
 function switchView(view){
   currentView = view;
@@ -2028,13 +2359,14 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); }
+  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
-  if(view === 'students') renderStudents();
-  if(view === 'sms'){ renderSmsFilterPickers(); applySmsFilter(); }
+  if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); }
+  if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
-  if(view === 'studentapp'){ renderMakeupSlotList(); renderRefTeacherCal(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); }
+  if(view === 'studentapp'){ renderAnnounceChips(); renderAnnounceList(); renderPendingApprovals(); renderConfirmedMakeupList(); renderStudentPageNameGroups(); renderParentPageNameGroups(); }
+  if(view === 'parentchat'){ renderChatThreadList(); renderMatholicLinkManager(); }
 }
 
 /* =========================================================
@@ -2100,10 +2432,10 @@ function renderDashboard(){
   const absent = todayRecords.filter(a => a.status === '결석').length;
   const unchecked = expectedToday.length - todayRecords.length;
 
-  document.getElementById('statTodayPresent').textContent = present;
-  document.getElementById('statTodayPresentSub').textContent = `오늘 등원 예정 ${expectedToday.length}명 중`;
-  document.getElementById('statTodayAbsent').textContent = absent + late;
-  document.getElementById('statTodayAbsentSub').textContent = `결석 ${absent} · 지각 ${late}`;
+  document.getElementById('statTodayPresent').textContent = present + late;
+  document.getElementById('statTodayPresentSub').textContent = `출석 ${present} · 지각 ${late}`;
+  document.getElementById('statTodayAbsent').textContent = absent;
+  document.getElementById('statTodayAbsentSub').textContent = `등원 예정 ${expectedToday.length}명 중`;
 
   renderDonut(document.getElementById('dashDonut'), [
     {label:'출석', value:present, color:'var(--color-success)'},
@@ -2127,6 +2459,7 @@ function renderDashboard(){
   renderWeeklyCounselList();
   renderTeacherDailyNotes();
   loadDirectorNote();
+  loadDirectorNoteMH();
 
   renderDashCalendar();
 }
@@ -2149,6 +2482,64 @@ function renderGradeDonut(){
   ], '전체 학생');
 }
 
+let headcountWeekMonday = mondayOfCurrentWeek();
+function mondayOfCurrentWeek(){
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return dateToStr(d);
+}
+function dateToStr(d){
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function addDaysStr(dateStr, n){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return dateToStr(d);
+}
+function shiftHeadcountWeek(delta){
+  headcountWeekMonday = addDaysStr(headcountWeekMonday, delta * 7);
+  if(document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(document.getElementById('slotHeadcountRef')) renderTimetableHeadcount('slotHeadcountRef');
+  if(document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
+}
+
+// 보강(추가보강+결석보강)으로 등록된 학생 id 집합. time을 안 넘기면 그 날짜 전체(시간 무관) 집계
+function extraStudentIdsAt(dateStr, t){
+  const ids = new Set();
+  absenceRequests.forEach(r => {
+    if(r.status !== 'confirmed') return;
+    let mDate, mTime;
+    if(r.type === 'extra_makeup' && r.extraDate){ mDate = r.extraDate; mTime = r.extraTime; }
+    else{
+      const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+      if(!slot) return;
+      mDate = slot.date; mTime = slot.time;
+    }
+    if(mDate === dateStr && (t === undefined || mTime === t)) ids.add(r.studentId);
+  });
+  makeupSchedules.forEach(m => {
+    if(m.date === dateStr && (t === undefined || m.time === t)) ids.add(m.studentId);
+  });
+  return ids;
+}
+
+function extraCountAt(dateStr, t){
+  return extraStudentIdsAt(dateStr, t).size;
+}
+
+// 그 날짜의 보강 학생 중 특정 학년 그룹(gradeFilterFn)에 해당하는 인원수
+function extraCountDayForGrade(dateStr, gradeFilterFn){
+  let count = 0;
+  extraStudentIdsAt(dateStr, undefined).forEach(id => {
+    const s = studentById(id);
+    if(s && gradeFilterFn(s.grade || '')) count++;
+  });
+  return count;
+}
+
 function renderTimetableHeadcount(targetId){
   targetId = targetId || 'timetableHeadcount';
   const popupId = targetId === 'timetableHeadcount' ? 'timetableStudentPopup' : targetId + 'Popup';
@@ -2156,101 +2547,99 @@ function renderTimetableHeadcount(targetId){
   if(!box) return;
 
   const allDays = ['월','화','수','목','금','토'];
+  const weekDates = allDays.map((d,i) => addDaysStr(headcountWeekMonday, i));
   const secondary = students.filter(s => !(s.grade || '').startsWith('초')); // 중·고
   const elementary = students.filter(s => (s.grade || '').startsWith('초'));
   const middleSchool = students.filter(s => (s.grade || '').startsWith('중'));
   const highSchool = students.filter(s => (s.grade || '').startsWith('고') || s.grade === 'N수/기타');
 
-  // 중·고 학생들의 요일별 등원 시간 중 실제 등장하는 시간만 표 행으로 사용
+  // 중·고 학생들의 요일별 등원 시간 중 실제 등장하는 시간 + 이번 주에 등록된 보강 시간대도 표 행으로 사용
   const timesSet = new Set();
   secondary.forEach(s => {
     allDays.forEach(day => { const t = getDayTime(s, day); if(t) timesSet.add(t); });
+  });
+  studentMakeupSlots.forEach(slot => {
+    if(weekDates.includes(slot.date)) timesSet.add(slot.time);
+  });
+  makeupSchedules.forEach(m => {
+    if(m.time && weekDates.includes(m.date)) timesSet.add(m.time);
   });
   const times = [...timesSet].sort();
 
   const countAt = (list, day, time) => list.filter(s => getDayTime(s, day) === time).length;
   const countDay = (list, day) => list.filter(s => getDayTime(s, day)).length;
 
+  const weekLabel = `${headcountWeekMonday.slice(5).replace('-','/')} ~ ${addDaysStr(headcountWeekMonday,5).slice(5).replace('-','/')}`;
+  const weekNav = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftHeadcountWeek(-1)">‹ 지난주</button>
+      <span style="font-size:12px;font-weight:800;">${weekLabel}</span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="shiftHeadcountWeek(1)">다음주 ›</button>
+    </div>`;
+
   if(!times.length && !elementary.some(s => allDays.some(d => getDayTime(s, d)))){
-    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">등록된 시간표가 없습니다.</div>`;
+    box.innerHTML = weekNav + `<div class="cell-muted" style="font-size:12.5px;">등록된 시간표가 없습니다.</div>`;
     return;
   }
 
   const elemRow = `
     <tr>
       <td class="tt-elem-label">초등부</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         if(d === '토') return `<td><span class="tc-empty">-</span></td>`;
         const n = countDay(elementary, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-elem" onclick="showTimetableStudents('${d}','ELEM','${popupId}')">${n}</button>` : `<span class="tc-empty">-</span>`}</td>`;
+        return `<td>${n ? `<button type="button" class="tc-count tc-elem" onclick="showTimetableStudents('${d}','ELEM','${popupId}','${weekDates[i]}')">${n}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`;
-
-  const todayForExtra = todayStr();
-  function extraCountAt(d, t){
-    let count = 0;
-    absenceRequests.forEach(r => {
-      if(r.status !== 'confirmed') return;
-      let mDate, mTime;
-      if(r.type === 'extra_makeup'){
-        if(r.extraDate){ mDate = r.extraDate; mTime = r.extraTime; }
-        else{
-          const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
-          if(!slot) return;
-          mDate = slot.date; mTime = slot.time;
-        }
-      }else{
-        const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
-        if(!slot) return;
-        mDate = slot.date; mTime = slot.time;
-      }
-      if(mDate >= todayForExtra && weekdayLabelOf(mDate) === d && mTime === t) count++;
-    });
-    return count;
-  }
 
   const timeRows = times.map(t => `
     <tr>
       <td>${t}</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countAt(secondary, d, t);
-        const extra = extraCountAt(d, t);
-        const label = extra > 0 ? `${n}<span style="color:var(--color-primary);">+${extra}</span>` : `${n}`;
-        return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
+        const extra = extraCountAt(weekDates[i], t);
+        const label = extra > 0 ? `${n} <span style="color:var(--color-primary);font-weight:800;">(${extra})</span>` : `${n}`;
+        return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}','${weekDates[i]}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`).join('');
 
   const middleTotalRow = `
     <tr class="tt-total">
       <td>중학생</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(middleSchool, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}')">${n}</button>` : '-'}</td>`;
+        const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('중'));
+        const total = n + extra;
+        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
   const highTotalRow = `
     <tr class="tt-total">
       <td>고등학생</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(highSchool, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}')">${n}</button>` : '-'}</td>`;
+        const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('고') || g === 'N수/기타');
+        const total = n + extra;
+        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
   const combinedTotalRow = `
     <tr class="tt-total tt-grand">
       <td>합계</td>
-      ${allDays.map(d => {
+      ${allDays.map((d,i) => {
         const n = countDay(secondary, d);
-        return `<td>${n ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}')">${n}</button>` : '-'}</td>`;
+        const extra = extraCountDayForGrade(weekDates[i], g => !g.startsWith('초'));
+        const total = n + extra;
+        return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
       }).join('')}
     </tr>`;
 
-  box.innerHTML = `
+  box.innerHTML = weekNav + `
     <table class="timetable-headcount">
       <thead>
-        <tr><th>시간</th>${allDays.map(d => `<th>${d}</th>`).join('')}</tr>
+        <tr><th>시간</th>${allDays.map((d,i) => `<th>${d}<br><span style="font-weight:400;font-size:9.5px;color:var(--color-text-muted);">${weekDates[i].slice(5).replace('-','/')}</span></th>`).join('')}</tr>
       </thead>
       <tbody>
         ${elemRow}
@@ -2263,7 +2652,7 @@ function renderTimetableHeadcount(targetId){
     <div id="${popupId}"></div>`;
 }
 
-function showTimetableStudents(day, time, popupId){
+function showTimetableStudents(day, time, popupId, dateStr){
   popupId = popupId || 'timetableStudentPopup';
   const box = document.getElementById(popupId);
   if(!box) return;
@@ -2286,27 +2675,26 @@ function showTimetableStudents(day, time, popupId){
     })
     .sort(compareByGradeThenName);
 
-  // 이 요일·시간대에 앞으로 예정된 보강(결석보강+추가보강)을 전부 모아서 같이 보여준다
+  // 이 정확한 날짜(선택된 주 기준)에 예정된 보강(결석보강+추가보강)을 모아서 같이 보여준다
   let makeupStudents = [];
-  if(!isElem && !isMid && !isHigh && !isAllDay){
-    const todayForPopup = todayStr();
-    const bookedIds = new Set();
-    absenceRequests.forEach(r => {
-      if(r.status !== 'confirmed') return;
-      const slot = r.type === 'extra_makeup' && r.extraDate
-        ? { date: r.extraDate, time: r.extraTime }
-        : studentMakeupSlots.find(s => s.id === r.makeupSlotId);
-      if(!slot) return;
-      if(slot.date >= todayForPopup && weekdayLabelOf(slot.date) === day && slot.time === time) bookedIds.add(r.studentId);
+  if(dateStr){
+    const bookedIds = isElem ? new Set() : extraStudentIdsAt(dateStr, (isMid || isHigh || isAllDay) ? undefined : time);
+    makeupStudents = students.filter(s => {
+      if(!bookedIds.has(s.id) || list.some(l => l.id === s.id)) return false;
+      const grade = s.grade || '';
+      if(isMid) return grade.startsWith('중');
+      if(isHigh) return grade.startsWith('고') || grade === 'N수/기타';
+      if(isAllDay) return !grade.startsWith('초');
+      return true;
     });
-    makeupStudents = students.filter(s => bookedIds.has(s.id) && !list.some(l => l.id === s.id));
   }
 
-  const title = isElem ? `${day}요일 초등부`
-    : isMid ? `${day}요일 중학생`
-    : isHigh ? `${day}요일 고등학생`
-    : isAllDay ? `${day}요일 합계`
-    : `${day}요일 ${time}`;
+  const dateLabel = dateStr ? ` (${dateStr.slice(5).replace('-','/')})` : '';
+  const title = isElem ? `${day}요일${dateLabel} 초등부`
+    : isMid ? `${day}요일${dateLabel} 중학생`
+    : isHigh ? `${day}요일${dateLabel} 고등학생`
+    : isAllDay ? `${day}요일${dateLabel} 합계`
+    : `${day}요일${dateLabel} ${time}`;
 
   box.innerHTML = `
     <div class="timetable-student-popup">
@@ -2316,7 +2704,7 @@ function showTimetableStudents(day, time, popupId){
       </div>
       <div class="tp-names">
         ${list.map(s => `<span class="tp-name"><span>${escapeHtml(s.name)}</span>${gradeBadge(s.grade)}</span>`).join('')}
-        ${makeupStudents.map(s => `<span class="tp-name" style="background:#EEEAFB;color:#5030B0;border-color:#D8CEF5;"><span>${escapeHtml(s.name)} (보강)</span></span>`).join('')}
+        ${makeupStudents.map(s => `<span class="tp-name" style="background:#161616;color:#fff;border:1px solid #8B5CF6;"><span>${escapeHtml(s.name)} (보강)</span>${gradeBadge(s.grade)}</span>`).join('')}
         ${!list.length && !makeupStudents.length ? '<span class="cell-muted">학생이 없습니다.</span>' : ''}
       </div>
     </div>`;
@@ -2346,13 +2734,37 @@ function loadDirectorNote(){
   });
 }
 
+function sendDirectorNoteMH(){
+  const note = document.getElementById('directorNoteMHTextarea').value.trim();
+  if(!note){ alert('내용을 입력해 주세요.'); return; }
+  db.ref('directorNotesMH/' + todayStr()).set({ date: todayStr(), note, updatedAt: Date.now() });
+  const msg = document.getElementById('directorNoteMHSavedMsg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2000);
+  showToast('중고등부 선생님 페이지에 전달했습니다.');
+}
+
+function clearDirectorNoteMH(){
+  db.ref('directorNotesMH/' + todayStr()).remove();
+  document.getElementById('directorNoteMHTextarea').value = '';
+  showToast('전달사항을 지웠습니다.');
+}
+
+function loadDirectorNoteMH(){
+  db.ref('directorNotesMH/' + todayStr()).once('value').then(snap => {
+    const data = snap.val();
+    const ta = document.getElementById('directorNoteMHTextarea');
+    if(ta) ta.value = (data && data.note) || '';
+  });
+}
+
 function renderTeacherDailyNotes(){
   const box = document.getElementById('teacherDailyNotesList');
   if(!box) return;
   const recent = dailyNotes
     .filter(n => n.note && n.note.trim())
     .sort((a,b)=> b.date.localeCompare(a.date))
-    .slice(0, 7);
+    .slice(0, 14);
 
   if(!recent.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">아직 등록된 전달사항이 없습니다.</div>`;
@@ -2360,14 +2772,48 @@ function renderTeacherDailyNotes(){
   }
 
   const today = todayStr();
-  box.innerHTML = recent.map(n => {
-    const isToday = n.date === today;
-    return `
-    <div class="teacher-note-box ${isToday ? 'today' : ''}">
-      <div class="teacher-note-date">${formatDateKR(n.date)}${isToday ? ' · 오늘' : ''}</div>
-      <div class="teacher-note-text">${escapeHtml(n.note)}</div>
+  const todayNote = recent.find(n => n.date === today);
+  const pastNotes = recent.filter(n => n.date !== today);
+  const pastOpen = box.dataset.pastOpen === 'true';
+
+  let html = '';
+  if(todayNote){
+    html += `
+    <div class="teacher-note-box today">
+      <div class="teacher-note-date">${formatDateKR(todayNote.date)} · 오늘</div>
+      <div class="teacher-note-text">${escapeHtml(todayNote.note)}</div>
     </div>`;
-  }).join('');
+  } else {
+    html += `<div class="cell-muted" style="font-size:12.5px;">오늘 등록된 전달사항이 없습니다.</div>`;
+  }
+
+  if(pastNotes.length){
+    html += `
+    <div style="margin-top:6px;">
+      <span style="font-size:11.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="togglePastNotes(this)">
+        ${pastOpen ? '▾' : '▸'} 지난 전달사항 (${pastNotes.length}건)
+      </span>
+      <div id="pastNotesList" style="display:${pastOpen ? 'block' : 'none'};margin-top:6px;">
+        ${pastNotes.map(n => `
+          <div class="teacher-note-box" style="margin-bottom:6px;">
+            <div class="teacher-note-date">${formatDateKR(n.date)}</div>
+            <div class="teacher-note-text">${escapeHtml(n.note)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function togglePastNotes(el){
+  const list = document.getElementById('pastNotesList');
+  const box = document.getElementById('teacherDailyNotesList');
+  if(!list) return;
+  const isOpen = list.style.display !== 'none';
+  list.style.display = isOpen ? 'none' : 'block';
+  el.innerHTML = `${isOpen ? '▸' : '▾'} 지난 전달사항`;
+  if(box) box.dataset.pastOpen = String(!isOpen);
 }
 
 function toggleCounselDone(eventId, currentDone){
@@ -2380,31 +2826,39 @@ function renderWeeklyCounselList(){
   if(!box) return;
 
   const { start, end } = getThisWeekRange();
-  const weekCounsel = events
-    .filter(e => e.type === '상담' && e.date >= start && e.date <= end)
-    .sort((a,b)=> a.date.localeCompare(b.date));
+  const weekEvents = events
+    .filter(e => e.date >= start && e.date <= end)
+    .sort((a,b) => a.date.localeCompare(b.date));
 
   if(progressEl){
-    const doneCount = weekCounsel.filter(e => e.done).length;
-    progressEl.textContent = weekCounsel.length ? `${doneCount} / ${weekCounsel.length} 완료` : '';
+    const doneCount = weekEvents.filter(e => e.done).length;
+    progressEl.textContent = weekEvents.length ? `${doneCount} / ${weekEvents.length} 완료` : '';
   }
 
-  if(!weekCounsel.length){
-    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 등록된 상담 일정이 없습니다.</div>`;
+  if(!weekEvents.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">이번 주 등록된 일정이 없습니다.</div>`;
     return;
   }
 
+  // 타입별 색상
+  const typeColor = {
+    '시험': { bg:'var(--color-danger-soft)', text:'var(--color-danger)', border:'var(--color-danger)' },
+    '상담': { bg:'#FFF6DC', text:'var(--color-accent-dark)', border:'var(--color-accent-dark)' },
+    '기타': { bg:'#E7EBEF', text:'#475569', border:'#94A3B8' },
+    '기작팀': { bg:'#FCE7F6', text:'#B4308F', border:'#B4308F' },
+  };
+
   const today = todayStr();
-  box.innerHTML = weekCounsel.map(e => {
+  box.innerHTML = weekEvents.map(e => {
     const isToday = e.date === today;
     const weekday = weekdayLabelOf(e.date);
+    const c = typeColor[e.type] || typeColor['기타'];
     return `
-      <div class="avg-mini" style="align-items:center;${e.done ? 'opacity:0.55;' : ''}">
-        <span style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleCounselDone('${e.id}', ${!!e.done})" style="width:16px;height:16px;cursor:pointer;">
-          <span style="${e.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(e.title)}</span>
-        </span>
-        <span class="cell-muted" style="font-size:11.5px;">${weekday}${isToday ? ' · 오늘' : ''}</span>
+      <div class="avg-mini" style="align-items:center;gap:8px;${e.done ? 'opacity:0.55;' : ''}">
+        <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleCounselDone('${e.id}', ${!!e.done})" style="width:15px;height:15px;cursor:pointer;flex-shrink:0;">
+        <span style="display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;font-weight:700;background:${c.bg};color:${c.text};border:1px solid ${c.border};flex-shrink:0;">${escapeHtml(e.type)}</span>
+        <span style="flex:1;${e.done ? 'text-decoration:line-through;' : ''}">${escapeHtml(e.title)}</span>
+        <span class="cell-muted" style="font-size:11.5px;white-space:nowrap;">${weekday}${isToday ? ' · 오늘' : ''}</span>
       </div>`;
   }).join('');
 }
@@ -2769,16 +3223,24 @@ function renderTeacherLegend(){
     if(allBtn) allBtn.style.display = 'none';
     return;
   }
-  if(allBtn){
-    allBtn.style.display = 'inline-flex';
-    const allHidden = teachers.every(t => hiddenTeacherIds.includes(t.id));
-    allBtn.textContent = allHidden ? '전체 보이기' : '전체 숨기기';
-  }
-  box.innerHTML = teachers.map(t => `
-    <button type="button" class="teacher-chip ${hiddenTeacherIds.includes(t.id) ? 'hidden-teacher' : ''}" onclick="toggleTeacherVisibility('${t.id}')">
-      <span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}
-    </button>
-  `).join('');
+  if(allBtn) allBtn.style.display = 'none';
+  const someHidden = hiddenTeacherIds.length > 0;
+  box.innerHTML =
+    (someHidden ? `<button type="button" class="teacher-chip" style="cursor:pointer;border-color:var(--color-primary);color:var(--color-primary);" onclick="restoreAllTeachers()">전체 보기</button>` : '') +
+    teachers.map(t => {
+      const isHidden = hiddenTeacherIds.includes(t.id);
+      return `<span class="teacher-chip ${isHidden ? 'hidden-teacher' : ''}">
+        <span class="t-dot" style="background:${t.color};"></span>${escapeHtml(t.name)}
+        <span class="tc-exclude" title="${isHidden ? '다시 보기' : '숨기기'}" onclick="toggleTeacherVisibility('${t.id}')">${isHidden ? '✓' : '×'}</span>
+      </span>`;
+    }).join('');
+}
+
+function restoreAllTeachers(){
+  hiddenTeacherIds = [];
+  localStorage.setItem('hiddenTeacherIds', JSON.stringify(hiddenTeacherIds));
+  renderTeacherLegend();
+  renderBigCalendar();
 }
 
 function toggleTeacherVisibility(id){
@@ -2935,30 +3397,172 @@ function initGradeSelect(sel){
 }
 
 // 학생 등록 폼의 요일별(월~일) 시간 입력 칸 생성
+let schedCurrentDay = '월'; // 현재 선택된 요일 탭
+// 임시 저장용 (폼 제출 전까지 메모리에)
+let schedValues = {}; // {월: '16:30', 화: '', ...}
+let schedDurs = {};   // {월: 90, ...}
+
 function renderScheduleGrid(){
+  // hidden input들은 readScheduleFromForm에서 쓰므로 유지
   const grid = document.getElementById('stuScheduleGrid');
-  if(!grid) return;
-  grid.innerHTML = WEEKDAYS.map(d => `
-    <div class="schedule-cell">
-      <span class="sc-day">${d}</span>
-      <input type="time" id="stuSched-${d}" step="1800">
-    </div>
-  `).join('');
+  if(grid) grid.innerHTML = WEEKDAYS.map(d =>
+    `<input type="hidden" id="stuSched-${d}"><input type="hidden" id="stuSchedDurH-${d}">`
+  ).join('');
+  renderSchedTabs();
+  renderSchedPanel(schedCurrentDay);
+  renderSchedSummary();
 }
+
+function renderSchedTabs(){
+  const tabsEl = document.getElementById('schedDayTabs');
+  if(!tabsEl) return;
+  tabsEl.innerHTML = WEEKDAYS.map(d => {
+    const val = schedValues[d] || '';
+    const hasTime = !!val;
+    const isActive = d === schedCurrentDay;
+    return `<button type="button" class="sched-day-tab ${isActive?'active':''} ${hasTime?'has-time':''}"
+      onclick="selectSchedDay('${d}')">${d}${hasTime ? ' ●' : ''}</button>`;
+  }).join('');
+}
+
+function selectSchedDay(d){
+  schedCurrentDay = d;
+  renderSchedTabs();
+  renderSchedPanel(d);
+}
+
+function renderSchedPanel(d){
+  const panel = document.getElementById('schedPanel');
+  if(!panel) return;
+  const durations = [30,40,45,50,60,70,80,90,100,120];
+  const existingTimes = [...new Set(
+    students.flatMap(s => WEEKDAYS.map(day => s.schedule && s.schedule[day]).filter(Boolean))
+  )].sort();
+  const curTime = schedValues[d] || '';
+  const curDur = schedDurs[d] || '';
+  const isCustom = curTime && !existingTimes.includes(curTime);
+
+  panel.innerHTML = `
+    <div class="sched-panel-label">${d}요일 수업 시간</div>
+    <div class="sched-chips">
+      ${existingTimes.map(t => `<button type="button" class="sc-time-chip ${curTime===t?'active':''}"
+        onclick="schedSelectChip('${d}','${t}')">${t}</button>`).join('')}
+      <button type="button" class="sc-custom-btn ${isCustom?'active':''}"
+        onclick="schedToggleCustom('${d}')" id="schedCustomBtn-${d}">+ 직접 입력</button>
+    </div>
+    <div id="schedCustomRow-${d}" style="display:${isCustom?'flex':'none'};" class="sc-custom-row">
+      <select id="schedH-${d}" onchange="schedApplyCustom('${d}')">
+        <option value="">시</option>
+        ${Array.from({length:14},(_,i)=>i+9).map(h=>`<option value="${String(h).padStart(2,'0')}" ${curTime.startsWith(String(h).padStart(2,'0'))?'selected':''}>${h}시</option>`).join('')}
+      </select>
+      <select id="schedM-${d}" onchange="schedApplyCustom('${d}')">
+        <option value="">분</option>
+        ${['00','10','20','30','40','50'].map(m=>`<option value="${m}" ${curTime.endsWith(':'+m)?'selected':''}>${m}분</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:2px;">
+      <label style="font-size:12px;color:var(--color-text-muted);">수업 시간</label>
+      <select class="sc-dur-select ${curDur?'set':''}" id="schedDur-${d}" onchange="schedSetDur('${d}',this.value)">
+        <option value="">선택 안 함</option>
+        ${durations.map(m => `<option value="${m}" ${curDur==m?'selected':''}>${m}분</option>`).join('')}
+      </select>
+      ${curTime ? `<button type="button" style="font-size:11.5px;padding:4px 10px;border:1px solid var(--color-border);border-radius:6px;background:var(--color-danger-soft);color:var(--color-danger);cursor:pointer;" onclick="schedClearDay('${d}')">지우기</button>` : ''}
+    </div>`;
+}
+
+function schedSelectChip(d, time){
+  schedValues[d] = schedValues[d] === time ? '' : time;
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
+}
+
+function schedToggleCustom(d){
+  const row = document.getElementById(`schedCustomRow-${d}`);
+  if(!row) return;
+  const isOpen = row.style.display !== 'none';
+  if(isOpen){
+    row.style.display = 'none';
+    schedValues[d] = '';
+  } else {
+    row.style.display = 'flex';
+    schedValues[d] = '';
+  }
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
+}
+
+function schedApplyCustom(d){
+  const h = (document.getElementById(`schedH-${d}`)?.value) || '';
+  const m = (document.getElementById(`schedM-${d}`)?.value) || '';
+  if(h && m){
+    schedValues[d] = `${h}:${m}`;
+  } else {
+    schedValues[d] = '';
+  }
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedSummary();
+}
+
+function schedSetDur(d, val){
+  schedDurs[d] = val ? parseInt(val,10) : '';
+  syncSchedHidden();
+  renderSchedSummary();
+}
+
+function schedClearDay(d){
+  schedValues[d] = '';
+  schedDurs[d] = '';
+  syncSchedHidden();
+  renderSchedTabs();
+  renderSchedPanel(d);
+  renderSchedSummary();
+}
+
+function syncSchedHidden(){
+  WEEKDAYS.forEach(d => {
+    const hidEl = document.getElementById('stuSched-' + d);
+    if(hidEl) hidEl.value = schedValues[d] || '';
+  });
+}
+
+function renderSchedSummary(){
+  const el = document.getElementById('schedSummary');
+  if(!el) return;
+  const set = WEEKDAYS.filter(d => schedValues[d]);
+  if(!set.length){ el.innerHTML = ''; return; }
+  el.innerHTML = set.map(d => {
+    const dur = schedDurs[d] ? ` · ${schedDurs[d]}분` : '';
+    return `<span class="sched-sum-chip"><span>${d}</span>${schedValues[d]}${dur}</span>`;
+  }).join('');
+}
+
+function updateSchedDurHighlight(d){ /* 하위호환 유지 */ }
 
 function readScheduleFromForm(){
   const schedule = {};
+  const scheduleDuration = {};
   WEEKDAYS.forEach(d => {
-    const val = document.getElementById('stuSched-' + d).value;
+    const val = schedValues[d] || '';
     if(val) schedule[d] = val;
+    const dur = schedDurs[d];
+    if(val && dur) scheduleDuration[d] = parseInt(dur, 10);
   });
-  return schedule;
+  return { schedule, scheduleDuration };
 }
 
-function fillScheduleForm(schedule){
+function fillScheduleForm(schedule, scheduleDuration){
+  // schedValues/schedDurs에 로드
   WEEKDAYS.forEach(d => {
-    document.getElementById('stuSched-' + d).value = (schedule && schedule[d]) || '';
+    schedValues[d] = (schedule && schedule[d]) || '';
+    schedDurs[d] = (scheduleDuration && scheduleDuration[d]) || '';
   });
+  schedCurrentDay = '월';
+  renderScheduleGrid();
 }
 
 function submitStudent(){
@@ -2972,13 +3576,13 @@ function submitStudent(){
   if(!name){ alert('이름을 입력해 주세요.'); return; }
   if(!school){ alert('학교를 입력해 주세요.'); return; }
 
-  const schedule = readScheduleFromForm();
+  const { schedule, scheduleDuration } = readScheduleFromForm();
 
   if(editingStudentId){
-    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, parentPhone, memo, schedule });
+    db.ref('students/' + editingStudentId).update({ name, grade, school, phone, parentPhone, memo, schedule, scheduleDuration });
     showToast('학생 정보가 수정되었습니다.');
   }else{
-    db.ref('students').push({ name, grade, school, phone, parentPhone, memo, schedule, createdAt: Date.now() });
+    db.ref('students').push({ name, grade, school, phone, parentPhone, memo, schedule, scheduleDuration, createdAt: Date.now() });
     showToast('학생이 등록되었습니다.');
   }
   cancelStudentEdit();
@@ -2994,7 +3598,7 @@ function editStudent(id){
   document.getElementById('stuPhone').value = stu.phone || '';
   document.getElementById('stuParentPhone').value = stu.parentPhone || '';
   document.getElementById('stuMemo').value = stu.memo || '';
-  fillScheduleForm(stu.schedule);
+  fillScheduleForm(stu.schedule, stu.scheduleDuration);
   document.getElementById('studentFormTitle').firstChild.textContent = '학생 정보 수정 ';
   document.getElementById('stuSubmitBtn').textContent = '수정 완료';
   document.getElementById('stuCancelRow').style.display = 'flex';
@@ -3018,12 +3622,59 @@ function cancelStudentEdit(){
 function deleteStudent(id){
   const stu = studentById(id);
   if(!stu) return;
-  if(!confirm(`'${stu.name}' 학생을 삭제하시겠습니까?\n관련된 출결/성적 기록도 함께 삭제됩니다.`)) return;
+  if(!confirm(`'${stu.name}' 학생을 휴지통으로 이동할까요?\n출결·성적 기록은 보존되며, 휴지통에서 복원할 수 있어요.`)) return;
+  const deletedAt = Date.now();
+  db.ref('deletedStudents/' + id).set({ ...stu, deletedAt });
   db.ref('students/' + id).remove();
+  if(editingStudentId === id) cancelStudentEdit();
+  showToast(`'${stu.name}' 학생이 휴지통으로 이동됐어요.`);
+}
+
+let deletedStudents = [];
+db.ref('deletedStudents').on('value', snap => {
+  const val = snap.val() || {};
+  deletedStudents = Object.entries(val).map(([id, d]) => ({ ...d, id }));
+  if(currentView === 'students') renderTrashBin();
+});
+
+function renderTrashBin(){
+  const box = document.getElementById('trashBinList');
+  if(!box) return;
+  if(!deletedStudents.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">휴지통이 비어있어요.</div>`;
+    return;
+  }
+  box.innerHTML = deletedStudents
+    .sort((a,b) => (b.deletedAt||0) - (a.deletedAt||0))
+    .map(s => {
+      const deletedDate = s.deletedAt ? new Date(s.deletedAt).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'}) : '-';
+      return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;margin-bottom:6px;background:var(--color-surface-alt);">
+        <div style="flex:1;">
+          <div style="font-weight:800;font-size:13px;">${escapeHtml(s.name)}</div>
+          <div class="cell-muted" style="font-size:11.5px;">${escapeHtml(s.grade)} · ${escapeHtml(s.school||'')} · ${deletedDate} 삭제</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="restoreStudent('${s.id}')">복원</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="permanentDeleteStudent('${s.id}','${escapeHtml(s.name)}')">완전삭제</button>
+      </div>`;
+    }).join('');
+}
+
+function restoreStudent(id){
+  const stu = deletedStudents.find(s => s.id === id);
+  if(!stu) return;
+  const { deletedAt, ...stuData } = stu;
+  db.ref('students/' + id).set(stuData);
+  db.ref('deletedStudents/' + id).remove();
+  showToast(`'${stu.name}' 학생이 복원됐어요. 출결·성적 기록도 그대로예요!`);
+}
+
+function permanentDeleteStudent(id, name){
+  if(!confirm(`'${name}' 학생을 완전히 삭제할까요?\n출결·성적 기록까지 모두 지워지고 되돌릴 수 없어요.`)) return;
+  db.ref('deletedStudents/' + id).remove();
   attendance.filter(a => a.studentId === id).forEach(a => db.ref('attendance/' + a.id).remove());
   scores.filter(s => s.studentId === id).forEach(s => db.ref('scores/' + s.id).remove());
-  if(editingStudentId === id) cancelStudentEdit();
-  showToast('학생이 삭제되었습니다.');
+  showToast(`'${name}' 학생이 완전히 삭제됐어요.`);
 }
 
 function parseBulkImportRow(line){
@@ -3435,7 +4086,7 @@ function renderStudents(){
     const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
-      <td><strong style="cursor:pointer;text-decoration:underline dotted;" onclick="goToStudentAttendance('${s.id}')" title="눌러서 출결 캘린더 보기">${escapeHtml(s.name)}</strong></td>
+      <td><strong>${escapeHtml(s.name)}</strong></td>
       <td>${gradeBadge(s.grade)}</td>
       <td>${escapeHtml(s.school)}</td>
       <td class="cell-muted">${escapeHtml(s.phone || '-')}</td>
@@ -3554,7 +4205,7 @@ function getEffectiveDayTime(s, weekday, date){
   const normal = getDayTime(s, weekday);
   if(normal) return normal;
   const makeup = makeupSchedules.find(m => m.studentId === s.id && m.date === date);
-  if(makeup) return 'MAKEUP';
+  if(makeup) return makeup.time || 'MAKEUP'; // 시간까지 설정된 보강이면 그 시간으로, 아니면 임시 'MAKEUP' 그룹으로
   // 학생 페이지 결석 보강 확정 또는 원장님이 등록한 추가보강도 그 날 출결 화면에 자동으로 나타나게 함
   const extra = absenceRequests.find(r =>
     r.studentId === s.id && r.status === 'confirmed' &&
@@ -3580,6 +4231,15 @@ function setAttTimeFilter(t){ attTimeFilter = t; renderAttendance(); }
 function toggleAttMakeupCollapse(){
   attMakeupCollapsed = !attMakeupCollapsed;
   renderAttendance();
+}
+
+function toggleManualMakeupPanel(){
+  const panel = document.getElementById('manualMakeupPanel');
+  const icon = document.getElementById('manualMakeupToggleIcon');
+  if(!panel) return;
+  const willShow = panel.style.display === 'none';
+  panel.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
 }
 
 function attRowHtml(s, date, isToday, nowTime, t){
@@ -3646,6 +4306,23 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
   }).join('');
 }
 
+// 그날 등원 예정인 초등부 전원을 한 번에 결석 처리 (방학 등으로 결석이 많을 때)
+function markAllElementaryAbsent(date){
+  const weekday = weekdayLabelOf(date);
+  const scheduledElem = students.filter(s => (s.grade || '').startsWith('초') && getEffectiveDayTime(s, weekday, date));
+  if(!scheduledElem.length){ alert('이 날짜에 등원 예정인 초등부 학생이 없어요.'); return; }
+  if(!confirm(`이 날짜(${weekday}요일)에 등원 예정인 초등부 ${scheduledElem.length}명을 전부 결석 처리할까요?`)) return;
+  scheduledElem.forEach(s => {
+    const rec = getAttendanceRecord(s.id, date);
+    if(rec){
+      if(rec.status !== '결석') db.ref('attendance/' + rec.id).update({ status: '결석' });
+    }else{
+      db.ref('attendance').push({ studentId: s.id, date, status: '결석', memo:'' });
+    }
+  });
+  showToast(`${scheduledElem.length}명 결석 처리했어요.`);
+}
+
 function cycleElementaryStatus(studentId, date){
   const order = [null, '출석', '지각', '결석'];
   const rec = getAttendanceRecord(studentId, date);
@@ -3676,12 +4353,22 @@ function elementaryCardHtml(s, date){
 }
 
 function renderElementaryBundleHtml(list, date){
-  if(!list.length) return '';
+  const allElem = students.filter(s => (s.grade || '').startsWith('초'));
+  if(!allElem.length) return '';
+  // 보강관리 명단은 "오늘 등원 예정" 필터와 무관하게 학원 전체 초등부 학생을 대상으로 함
+  elemMakeupPanelStudentIds = allElem.map(s => s.id);
+  elemMakeupPanelDate = date;
+
   const sorted = [...list].sort(compareByGradeThenName);
   return `
     <div class="att-group">
-      <div class="att-group-title" style="color:var(--color-success);">🎒 초등부 <span class="cnt">${sorted.length}명</span></div>
-      <div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>
+      <div class="att-group-title" style="color:var(--color-success);">
+        🎒 초등부 <span class="cnt">${sorted.length}명</span>
+        ${sorted.length ? `<button type="button" class="elem-makeup-btn" style="background:var(--color-danger-soft);color:var(--color-danger);border-color:#F09595;" onclick="markAllElementaryAbsent('${date}')">전체 결석 처리</button>` : ''}
+        <button type="button" class="elem-makeup-btn" onclick="toggleElemMakeupPanel()">📋 보강관리</button>
+      </div>
+      <div id="elemMakeupPanel" class="elem-makeup-panel" style="display:none;"></div>
+      ${sorted.length ? `<div class="elem-card-grid">${sorted.map(s => elementaryCardHtml(s, date)).join('')}</div>` : `<div class="cell-muted" style="font-size:12.5px;">이 날짜에 등원 예정인 초등부 학생이 없습니다.</div>`}
       <p class="hint" style="margin-top:8px;margin-bottom:0;">카드를 누르면 출석→지각→결석→대기중 순서로 바뀌어요. 초등부 선생님 페이지와 실시간으로 같이 반영돼요.</p>
     </div>`;
 }
@@ -3763,7 +4450,7 @@ function renderTodayAbsentAlert(){
   const today = todayStr();
   const absentToday = attendance.filter(a => a.date === today && a.status === '결석');
   const needMakeup = absentToday.filter(a => {
-    const hasMakeup = absenceRequests.some(r => r.studentId === a.studentId && r.absenceDate === today && r.status !== 'rejected') ||
+    const hasMakeup = hasAnyUpcomingMakeup(a.studentId, today) ||
       makeupSchedules.some(m => m.studentId === a.studentId && m.note === `${today} 결석 보강`);
     return !hasMakeup;
   });
@@ -3838,26 +4525,10 @@ function renderAttendance(){
         <div class="att-makeup-toggle" onclick="toggleAttMakeupCollapse()">
           <span>${attMakeupCollapsed ? '▸' : '▾'}</span> 예정 없음 (임시·보강) ${hiddenCount}명 ${attMakeupCollapsed ? '보기' : '숨기기'}
         </div>` : ''}`;
+    // 화면이 다시 그려져도 보강관리 패널이 열려있던 상태를 그대로 유지
+    renderElemMakeupPanel();
   }
 
-  // 통계: 오늘 등원 예정 인원을 기준으로 계산
-  const expected = students.filter(s => getEffectiveDayTime(s, weekday, date) || getAttendanceRecord(s.id, date));
-  const dayRecords = attendance.filter(a => a.date === date);
-  const present = dayRecords.filter(a => a.status === '출석').length;
-  const late = dayRecords.filter(a => a.status === '지각').length;
-  const absent = dayRecords.filter(a => a.status === '결석').length;
-  const unchecked = Math.max(expected.length - dayRecords.length, 0);
-
-  document.getElementById('attDonutDate').textContent = '(' + formatDateKR(date) + ')';
-  renderDonut(document.getElementById('attDonut'), [
-    {label:'출석', value:present, color:'var(--color-success)'},
-    {label:'지각', value:late,    color:'var(--color-warning)'},
-    {label:'결석', value:absent,  color:'var(--color-danger)'},
-    {label:'미체크', value:unchecked, color:'var(--color-neutral)'},
-  ], '예정 인원');
-
-  renderAttendanceHistory();
-  renderAttCalendar();
   renderWeeklyAbsentList();
   updateAttDatePickerLabel();
   renderTodayAbsentAlert();
@@ -3878,6 +4549,37 @@ function getThisWeekRange(){
   return { start: fmt(monday), end: fmt(sunday) };
 }
 
+function toggleDoneMakeupSection(){
+  const sec = document.getElementById('doneMakeupSection');
+  const icon = document.getElementById('doneMakeupToggleIcon');
+  if(!sec) return;
+  const willShow = sec.style.display === 'none';
+  sec.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
+function toggleNeedsTimePastSection(){
+  const sec = document.getElementById('needsTimePastSection');
+  const icon = document.getElementById('needsTimePastToggleIcon');
+  if(!sec) return;
+  const willShow = sec.style.display === 'none';
+  sec.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
+function hasAnyUpcomingMakeup(studentId, sinceDate){
+  return absenceRequests.some(r => {
+    if(r.studentId !== studentId || r.status !== 'confirmed') return false;
+    let mDate;
+    if(r.type === 'extra_makeup' && r.extraDate) mDate = r.extraDate;
+    else{
+      const slot = studentMakeupSlots.find(s => s.id === r.makeupSlotId);
+      mDate = slot ? slot.date : null;
+    }
+    return mDate && mDate >= sinceDate;
+  });
+}
+
 function renderWeeklyAbsentList(){
   const box = document.getElementById('weeklyAbsentList');
   if(!box) return;
@@ -3894,10 +4596,22 @@ function renderWeeklyAbsentList(){
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
     .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강 안함" 처리된 건 목록에서 제외
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
-    .filter(a => a.stu)
+    .filter(a => a.stu && !(a.stu.grade || '').startsWith('초')) // 초등부는 보강관리 팝업에서 따로 관리하므로 제외
     .map(a => {
       const makeup = makeupSchedules.find(m => m.studentId === a.studentId && m.note === `${a.date} 결석 보강`);
-      return { ...a, alreadyMakeup: !!makeup, makeupDate: makeup ? makeup.date : null };
+      // 보강 날짜가 이미 지났는데 그날 출석/지각 기록이 없다면 = 안 온 것 → 다시 잡을 수 있게 미예약 상태로 취급
+      const makeupNoShow = !!makeup && makeup.date < end &&
+        !attendance.some(x => x.studentId === a.studentId && x.date === makeup.date && (x.status === '출석' || x.status === '지각'));
+      // 학생페이지/직원관리에서 새 보강 시스템으로 이미 예약된 경우도 "예약 완료"로 인식
+      const newBooked = !makeup && hasAnyUpcomingMakeup(a.studentId, a.date);
+      return {
+        ...a,
+        alreadyMakeup: (!!makeup && !makeupNoShow) || newBooked,
+        makeupDate: (makeup && !makeupNoShow) ? makeup.date : (newBooked ? '새 보강 시스템' : null),
+        makeupTime: (makeup && !makeupNoShow) ? (makeup.time || '') : (newBooked ? 'NEW' : ''), // makeup 있는데 time이 빈 문자열이면 "시간 미설정"
+        expiredMakeupId: makeupNoShow ? makeup.id : null,
+        priorMakeupDate: makeupNoShow ? makeup.date : null
+      };
     });
 
   if(!absences.length){
@@ -3916,30 +4630,62 @@ function renderWeeklyAbsentList(){
 
   const rowHtml = a => {
     const inputId = `makeupDate-${a.id}`;
+    const timeSelId = `makeupTime-${a.id}`;
     const checked = selectedAbsenceIds.has(a.id);
     // 이 학생이 예전에(다른 결석 건으로) 보강 예약을 한 적이 있으면 "재결석"으로 표시
-    const hasPriorMakeup = !a.alreadyMakeup && makeupSchedules.some(m => m.studentId === a.stu.id && m.note !== `${a.date} 결석 보강`);
+    const hasPriorMakeup = !a.alreadyMakeup && !a.expiredMakeupId && makeupSchedules.some(m => m.studentId === a.stu.id && m.note !== `${a.date} 결석 보강`);
+    const noShowNote = a.priorMakeupDate ? ` <span style="color:var(--color-danger);font-weight:700;">(${fmtDateKR(a.priorMakeupDate)}로 잡았던 보강에 안 와서 다시 잡아야 해요)</span>` : '';
     return `
       <div class="weekly-absent-row ${a.alreadyMakeup ? 'makeup-done' : ''}">
         <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAbsenceSelected('${a.id}')" style="width:16px;height:16px;cursor:pointer;">
         <div class="wa-name">
-          <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석</span>
+          <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)} <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석</span>${noShowNote}
           ${hasPriorMakeup ? `<span class="repeat-absence-tag">⚠ 재결석</span>` : ''}
         </div>
         ${a.alreadyMakeup
-          ? `<span class="status-pill 출석">→ ${fmtDateKR(a.makeupDate)} 보강 예약됨</span>
-             <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>`
-          : `<input type="date" id="${inputId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}')">보강 예약</button>
+          ? `<span class="status-pill 출석">→ ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? fmtDateKR(a.makeupDate) + (a.makeupTime && a.makeupTime !== 'NEW' ? ` ${a.makeupTime}` : '') + ' ' : ''}보강 예약됨</span>
+             ${/^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) ? `<button class="btn btn-ghost btn-sm" onclick="editMakeupSchedule('${a.stu.id}','${a.date}')">✏ 수정</button><button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>` : ''}`
+          : `<input type="date" id="${inputId}" onchange="onMakeupDateChange('${inputId}','${timeSelId}')" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+             <select id="${timeSelId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜를 먼저 선택하세요</option></select>
+             <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${a.stu.id}','${inputId}','${a.date}','${timeSelId}','${a.expiredMakeupId || ''}')">보강 예약</button>
              <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강 안함</button>
              <button class="btn btn-danger-outline btn-sm" onclick="deleteAbsenceRecord('${a.id}','${a.studentId}','${a.date}')">삭제</button>`}
       </div>`;
   };
 
-  const pending = absences.filter(a => !a.alreadyMakeup);
-  const done = absences.filter(a => a.alreadyMakeup);
+  // 날짜는 잡혔지만 시간은 아직 설정 안 된 보강 — 따로 표시해서 시간을 설정할 수 있게 함
+  // highlight=false면 이미 지나서 출석까지 끝난 보강이라 색 없이 조용히 표시
+  const needsTimeRowHtml = (a, highlight) => {
+    const timeSelId = `setTime-${a.id}`;
+    const boxStyle = highlight ? 'background:var(--color-warning-soft);border-color:var(--color-warning);' : '';
+    const tag = highlight
+      ? `<span style="color:var(--color-warning-dark,#C98A2E);font-weight:700;">(시간 미설정)</span>`
+      : `<span class="cell-muted">(출석 완료 · 시간만 미설정)</span>`;
+    return `
+      <div class="weekly-absent-row makeup-needs-time" style="${boxStyle}">
+        <div class="wa-name">
+          <strong>${escapeHtml(a.stu.name)}</strong> ${gradeBadge(a.stu.grade)}
+          <span class="cell-muted" style="font-size:12px;">${fmtDateKR(a.date)} 결석 → ${fmtDateKR(a.makeupDate)} 보강 ${tag}</span>
+        </div>
+        <select id="${timeSelId}" style="padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">${makeupTimeOptionsHtml(a.makeupDate, '')}</select>
+        <button class="btn btn-primary btn-sm" onclick="setMakeupTime('${a.stu.id}','${a.date}','${timeSelId}')">시간 설정</button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelMakeup('${a.stu.id}','${a.date}')">예약 취소</button>
+      </div>`;
+  };
 
-  const byGrade = list => {
+  // 보강 날짜에 이미 출석/지각으로 체크됐다면 = 사실상 보강이 끝난 것이므로 급한 색 표시가 필요 없음
+  const makeupAlreadyAttended = (studentId, dateStr) => {
+    const rec = attendance.find(x => x.studentId === studentId && x.date === dateStr);
+    return !!rec && (rec.status === '출석' || rec.status === '지각');
+  };
+
+  const pending = absences.filter(a => !a.alreadyMakeup);
+  const needsTimeAll = absences.filter(a => a.alreadyMakeup && /^\d{4}-\d{2}-\d{2}$/.test(a.makeupDate) && !a.makeupTime);
+  const needsTime = needsTimeAll.filter(a => !makeupAlreadyAttended(a.stu.id, a.makeupDate));
+  const needsTimePastDone = needsTimeAll.filter(a => makeupAlreadyAttended(a.stu.id, a.makeupDate));
+  const done = absences.filter(a => a.alreadyMakeup && !needsTimeAll.includes(a));
+
+  const byGrade = (list, renderFn) => {
     const groups = {};
     list.forEach(a => {
       const g = a.stu.grade;
@@ -3950,7 +4696,7 @@ function renderWeeklyAbsentList(){
       .sort((a,b)=> GRADES.indexOf(a) - GRADES.indexOf(b))
       .map(g => {
         const rows = groups[g].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
-        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(rowHtml).join('')}`;
+        return `<div class="sms-group-title" style="color:var(--color-primary-light);">${g}</div>${rows.map(renderFn).join('')}`;
       }).join('');
   };
 
@@ -3962,10 +4708,46 @@ function renderWeeklyAbsentList(){
       </label>
       <button class="btn btn-danger-outline btn-sm" id="bulkDeleteAbsencesBtn" onclick="bulkDeleteSelectedAbsences()" style="display:none;">🗑 선택 삭제 (<span id="selectedAbsenceCountLabel">0</span>)</button>
     </div>`;
-  html += byGrade(pending);
+  html += byGrade(pending, rowHtml);
+  if(needsTime.length){
+    html += `<div class="sms-group-title" style="margin-top:16px;color:var(--color-warning-dark,#C98A2E);">
+      ⏰ 시간 설정 필요 (${needsTime.length}건) <span class="hint">날짜만 잡힌 보강이에요 · 시간을 설정하면 캘린더·학생관리에 표시돼요</span>
+    </div>`;
+    html += needsTime.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(a => needsTimeRowHtml(a, true)).join('');
+  }
+  if(needsTimePastDone.length){
+    html += `<div class="sms-group-title" style="margin-top:16px;cursor:pointer;" onclick="toggleNeedsTimePastSection()">
+      <span id="needsTimePastToggleIcon">▸</span> 지난 보강 · 이미 출석함 (${needsTimePastDone.length}건) <span class="hint">시간 기록만 안 남았어요 · 눌러서 펼치기</span>
+    </div>`;
+    html += `<div id="needsTimePastSection" style="display:none;opacity:0.6;">${needsTimePastDone.sort((a,b)=> a.makeupDate.localeCompare(b.makeupDate) || a.stu.name.localeCompare(b.stu.name,'ko')).map(a => needsTimeRowHtml(a, false)).join('')}</div>`;
+  }
   if(done.length){
-    html += `<div class="sms-group-title done" style="margin-top:16px;">✓ 예약 완료</div>`;
-    html += `<div style="opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
+    html += `<div class="sms-group-title done" style="margin-top:16px;cursor:pointer;" onclick="toggleDoneMakeupSection()">
+      <span id="doneMakeupToggleIcon">▸</span> 예약 완료 (${done.length}건) <span class="hint">눌러서 펼치기</span>
+    </div>`;
+    html += `<div id="doneMakeupSection" style="display:none;opacity:0.6;">${done.sort((a,b)=> GRADES.indexOf(a.stu.grade)-GRADES.indexOf(b.stu.grade) || a.date.localeCompare(b.date)).map(rowHtml).join('')}</div>`;
+  }
+
+  // 수동 추가된 보강 목록 (결석 기록과 무관한 makeupSchedules)
+  const todayStr2 = new Date().toISOString().slice(0,10);
+  const manualMakeups = makeupSchedules.filter(m => !attendance.some(a => a.studentId === m.studentId && m.note === `${a.date} 결석 보강`) && m.note !== 'extra_makeup');
+  if(manualMakeups.length){
+    const manualHtml = manualMakeups
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .map(m => {
+        const stu = studentById(m.studentId);
+        const isPast = m.date < todayStr2;
+        const fmtD = d => { const [y,mo,dy] = d.split('-'); return `${parseInt(mo,10)}월 ${parseInt(dy,10)}일(${weekdayLabelOf(d)})`; };
+        return `<div class="weekly-absent-row" style="opacity:${isPast?'0.6':'1'};">
+          <div class="wa-name">
+            <strong>${escapeHtml(stu ? stu.name : m.studentId)}</strong> ${stu ? gradeBadge(stu.grade) : ''}
+            <span class="cell-muted" style="font-size:12px;">${fmtD(m.date)}${m.time ? ' ' + m.time : ''} 보강</span>
+            <span class="cell-muted" style="font-size:11px;margin-left:4px;">${escapeHtml(m.note || '')}</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="cancelMakeupById('${m.id}')">취소</button>
+        </div>`;
+      }).join('');
+    html += `<div class="sms-group-title" style="margin-top:16px;color:var(--color-text-muted);">📋 수동 추가된 보강 (${manualMakeups.length}건)</div>${manualHtml}`;
   }
 
   box.innerHTML = html;
@@ -4016,11 +4798,57 @@ function bulkDeleteSelectedAbsences(){
   showToast(`결석 기록 ${ids.length}건을 삭제했습니다.`);
 }
 
-function scheduleMakeup(studentId, inputId, absenceDate){
+// 특정 날짜에 선택 가능한 보강 시간 옵션(<option>)을 만든다.
+// 그 날짜에 설정된 보강 시간대(studentMakeupSlots) + 그 요일 정규수업 시간을 합쳐서 보여준다.
+function makeupTimeOptionsHtml(dateVal, selectedTime){
+  if(!dateVal) return `<option value="">날짜를 먼저 선택하세요</option>`;
+  const slots = slotsOnDate(dateVal).sort((a,b) => a.time.localeCompare(b.time));
+  const slotTimes = new Set(slots.map(s => s.time));
+  const ref = weekdayHeadcountRef(dateVal);
+  const regularTimes = Object.keys(ref).filter(t => !slotTimes.has(t)).sort();
+
+  const slotOptions = slots.map(s => {
+    const remain = s.capacity - slotBookedCountAdmin(s.id);
+    return `<option value="${escapeHtml(s.time)}" ${selectedTime===s.time?'selected':''}>${escapeHtml(s.time)} (보강자리 ${remain}개 남음)</option>`;
+  }).join('');
+  const regularOptions = regularTimes.map(t =>
+    `<option value="${escapeHtml(t)}" ${selectedTime===t?'selected':''}>${escapeHtml(t)} (정규수업 시간)</option>`
+  ).join('');
+
+  const blank = `<option value="" ${selectedTime?'':'selected'}>시간 미정 (나중에 설정)</option>`;
+  const opts = slotOptions + regularOptions;
+  return opts ? (blank + opts) : `<option value="">이 날짜엔 열린 시간대가 없어요 (보강 시간대 관리에서 먼저 추가해 주세요)</option>`;
+}
+
+// 보강 예약 행에서 날짜를 바꾸면, 그 날짜에 맞는 시간 옵션으로 시간 select를 다시 채운다
+function onMakeupDateChange(dateInputId, selectId){
+  const dateVal = document.getElementById(dateInputId).value;
+  const sel = document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML = makeupTimeOptionsHtml(dateVal, '');
+}
+
+function scheduleMakeup(studentId, inputId, absenceDate, timeSelId, oldMakeupId){
   const dateVal = document.getElementById(inputId).value;
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
-  db.ref('makeupSchedules').push({ studentId, date: dateVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
-  showToast('보강 일정이 등록되었습니다. 그 날짜 출결 화면에 자동으로 나타나요.');
+  const timeSel = timeSelId ? document.getElementById(timeSelId) : null;
+  const timeVal = timeSel ? timeSel.value : '';
+  if(oldMakeupId) db.ref('makeupSchedules/' + oldMakeupId).remove(); // 안 왔던 지난 보강 예약은 정리하고 새로 잡기
+  db.ref('makeupSchedules').push({ studentId, date: dateVal, time: timeVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
+  showToast(timeVal
+    ? `보강 일정이 등록되었습니다. ${dateVal} ${timeVal} 출결/캘린더 화면에 자동으로 나타나요.`
+    : '보강 날짜가 등록되었습니다. 시간은 아래 "시간 설정 필요" 목록에서 나중에 설정할 수 있어요.');
+}
+
+// 이미 날짜만 잡혀있던 보강에 시간을 설정(또는 재설정)한다
+function setMakeupTime(studentId, absenceDate, timeSelId){
+  const sel = document.getElementById(timeSelId);
+  const timeVal = sel ? sel.value : '';
+  if(!timeVal){ alert('시간을 선택해 주세요.'); return; }
+  const m = makeupSchedules.find(m => m.studentId === studentId && m.note === `${absenceDate} 결석 보강`);
+  if(!m){ showToast('보강 예약을 찾을 수 없어요.'); return; }
+  db.ref('makeupSchedules/' + m.id).update({ time: timeVal });
+  showToast('보강 시간이 설정되었습니다. 캘린더와 학생관리 화면에 반영돼요.');
 }
 
 function dismissMakeup(studentId, date){
@@ -4041,126 +4869,78 @@ function cancelMakeup(studentId, absenceDate){
   showToast('보강 예약이 취소되었습니다.');
 }
 
-function renderAttendanceHistory(){
-  const sel = document.getElementById('attHistoryStudent');
-  const list = document.getElementById('attHistoryList');
-  const studentId = sel.value;
-  if(!studentId){
-    list.innerHTML = `<div class="cell-muted" style="font-size:13px;">학생을 선택해 주세요.</div>`;
-    return;
-  }
-  const records = attendance.filter(a => a.studentId === studentId && a.status)
-    .sort((a,b)=> b.date.localeCompare(a.date)).slice(0,10);
-  list.innerHTML = records.length ? records.map(r => `
-    <div class="avg-mini">
-      <span>${formatDateKR(r.date)}</span>
-      <span class="status-pill ${r.status}">${r.status}</span>
-    </div>
-  `).join('') : `<div class="cell-muted" style="font-size:13px;">출결 기록이 없습니다.</div>`;
+// 수동 보강 부여 관련 함수
+function renderManualMakeupStudentList(){
+  const dl = document.getElementById('manualMakeupStudentList');
+  if(!dl) return;
+  dl.innerHTML = students.map(s => `<option value="${escapeHtml(s.name)}">`).join('');
 }
 
-/* =========================================================
-   학생별 출결 캘린더
-========================================================= */
-const nowD = new Date();
-let calYear = nowD.getFullYear();
-let calMonth = nowD.getMonth(); // 0-indexed
-
-function onHistoryStudentChange(){
-  renderAttendanceHistory();
-  renderAttCalendar();
+function renderManualMakeupTimeOptions(){
+  const dateVal = document.getElementById('manualMakeupDate').value;
+  const sel = document.getElementById('manualMakeupTime');
+  if(!sel) return;
+  if(!dateVal){ sel.innerHTML = '<option value="">날짜 먼저 선택</option>'; return; }
+  sel.innerHTML = makeupTimeOptionsHtml(dateVal, '');
 }
 
-function goToStudentAttendance(studentId){
-  switchView('attendance');
-  setTimeout(() => {
-    const sel = document.getElementById('attHistoryStudent');
-    if(sel){
-      sel.value = studentId;
-      onHistoryStudentChange();
-      sel.closest('.card').scrollIntoView({ behavior:'smooth', block:'start' });
-    }
-  }, 50);
-}
-
-function calShiftMonth(delta){
-  calMonth += delta;
-  if(calMonth < 0){ calMonth = 11; calYear--; }
-  if(calMonth > 11){ calMonth = 0; calYear++; }
-  renderAttCalendar();
-}
-
-function calGoToday(){
-  const now = new Date();
-  calYear = now.getFullYear();
-  calMonth = now.getMonth();
-  renderAttCalendar();
-}
-
-function renderAttCalendar(){
-  const grid = document.getElementById('calGrid');
-  const label = document.getElementById('calMonthLabel');
-  if(!grid || !label) return;
-
-  label.textContent = `${calYear}년 ${calMonth + 1}월`;
-
-  const studentId = document.getElementById('attHistoryStudent').value;
-  const firstWeekday = new Date(calYear, calMonth, 1).getDay(); // 0=일
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const today = todayStr();
-
-  let cells = '';
-  for(let i = 0; i < firstWeekday; i++){
-    cells += `<div class="cal-cell empty"></div>`;
-  }
-  for(let d = 1; d <= daysInMonth; d++){
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const rec = studentId ? attendance.find(a => a.studentId === studentId && a.date === dateStr) : null;
-    const statusClass = rec && rec.status ? `status-${rec.status}` : '';
-    const attendedClass = rec && (rec.status === '출석' || rec.status === '지각') ? 'attended' : '';
-    const todayClass = dateStr === today ? 'today' : '';
-    cells += `<div class="cal-cell ${statusClass} ${attendedClass} ${todayClass}" title="${rec ? (rec.status + (rec.checkInTime? ' · '+rec.checkInTime : '')) : ''}"><span class="cal-num">${d}</span></div>`;
-  }
-
-  grid.innerHTML = cells;
-}
-
-function exportStudentAttendance(){
-  const studentId = document.getElementById('attHistoryStudent').value;
-  const stu = studentById(studentId);
-  if(!stu){ alert('학생을 먼저 선택해 주세요.'); return; }
-
-  const records = attendance.filter(a => a.studentId === studentId).sort((a,b)=> a.date.localeCompare(b.date));
-  if(!records.length){ alert(`${stu.name} 학생의 출결 기록이 없습니다.`); return; }
-
-  const rows = [];
-  rows.push([`${stu.name} 학생 출결 기록`]);
-  rows.push([`학년: ${stu.grade}`, `시간표: ${scheduleSummary(stu)}`]);
-  rows.push([]);
-  rows.push(['날짜','요일','상태','등원 시간','하원 시간','비고']);
-  records.forEach(r => {
-    const d = new Date(r.date + 'T00:00:00');
-    const weekday = d.toLocaleDateString('ko-KR', { weekday:'short' });
-    rows.push([r.date, weekday, r.status || '-', r.checkInTime || '-', r.checkOutTime || '-', r.memo || '']);
+function addManualMakeup(){
+  const nameVal = document.getElementById('manualMakeupStudent').value.trim();
+  const dateVal = document.getElementById('manualMakeupDate').value;
+  const timeVal = document.getElementById('manualMakeupTime').value;
+  const noteVal = document.getElementById('manualMakeupNote').value.trim();
+  if(!nameVal){ alert('학생 이름을 입력해 주세요.'); return; }
+  const stu = students.find(s => s.name === nameVal);
+  if(!stu){ alert('등록된 학생 이름과 일치하지 않습니다.'); return; }
+  if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
+  db.ref('makeupSchedules').push({
+    studentId: stu.id,
+    date: dateVal,
+    time: timeVal || '',
+    note: noteVal || '수동 보강 추가',
+    createdAt: Date.now()
   });
+  document.getElementById('manualMakeupStudent').value = '';
+  document.getElementById('manualMakeupDate').value = '';
+  document.getElementById('manualMakeupNote').value = '';
+  const sel = document.getElementById('manualMakeupTime');
+  if(sel) sel.innerHTML = '<option value="">날짜 먼저 선택</option>';
+  showToast(`${stu.name} 보강이 추가됐어요.`);
+}
 
-  const present = records.filter(r=>r.status==='출석').length;
-  const late = records.filter(r=>r.status==='지각').length;
-  const absent = records.filter(r=>r.status==='결석').length;
-  rows.push([]);
-  rows.push(['요약', `출석 ${present}`, `지각 ${late}`, `결석 ${absent}`, `합계 ${records.length}`]);
+// 기존 보강 예약 수정 (날짜/시간 변경)
+function editMakeupSchedule(studentId, absenceDate){
+  const m = makeupSchedules.find(m => m.studentId === studentId && m.note === `${absenceDate} 결석 보강`);
+  if(!m){ showToast('보강 예약을 찾을 수 없습니다.'); return; }
+  const stu = studentById(studentId);
+  const newDate = prompt(`${stu ? stu.name : ''} - 보강 날짜 변경\n현재: ${m.date}\n새 날짜 입력 (YYYY-MM-DD):`, m.date);
+  if(!newDate || !/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())){ return; }
+  const opts = makeupTimeOptionsHtml(newDate.trim(), m.time || '');
+  // 시간 선택을 위한 간이 UI
+  const tempDiv = document.createElement('div');
+  tempDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.18);min-width:280px;';
+  tempDiv.innerHTML = `
+    <div style="font-weight:800;font-size:14px;margin-bottom:12px;">시간 선택</div>
+    <select id="editMakeupTimeSel" style="width:100%;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;margin-bottom:14px;">${opts}</select>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn btn-ghost btn-sm" onclick="this.closest('div[style*=fixed]').remove()">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmEditMakeup('${m.id}','${newDate.trim()}',document.getElementById('editMakeupTimeSel').value,this.closest('div[style*=fixed]'))">저장</button>
+    </div>
+  `;
+  document.body.appendChild(tempDiv);
+}
 
-  const csvContent = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
-  const blob = new Blob(['\uFEFF' + csvContent], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${stu.name}_출결기록.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`${stu.name} 학생의 출결 기록을 다운로드했습니다.`);
+function confirmEditMakeup(makeupId, newDate, newTime, overlayEl){
+  db.ref('makeupSchedules/' + makeupId).update({ date: newDate, time: newTime || '' });
+  if(overlayEl) overlayEl.remove();
+  showToast('보강 예약이 수정됐어요.');
+}
+
+// makeupId로 직접 취소 (수동 보강 등 note 기반이 아닌 경우)
+function cancelMakeupById(makeupId){
+  if(!confirm('이 보강을 취소하시겠어요?')) return;
+  db.ref('makeupSchedules/' + makeupId).remove();
+  showToast('보강이 취소됐어요.');
 }
 
 /* =========================================================
@@ -4170,11 +4950,6 @@ function populateStudentDropdowns(){
   const options = students.length
     ? students.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${escapeHtml(s.grade)})</option>`).join('')
     : `<option value="">등록된 학생 없음</option>`;
-
-  const historySel = document.getElementById('attHistoryStudent');
-  const prevHistory = historySel.value;
-  historySel.innerHTML = `<option value="">학생을 선택하세요</option>` + options;
-  if(students.some(s=>s.id===prevHistory)) historySel.value = prevHistory;
 
   const filterSel = document.getElementById('scoreFilterStudent');
   const prevFilter = filterSel.value;
@@ -4556,7 +5331,6 @@ function init(){
   renderScheduleGrid();
   renderTeacherDaysPicker();
   populateStudentDropdowns();
-  renderAttCalendar();
   renderBigCalendar();
   renderTeacherLegend();
   renderTeacherList();
@@ -4585,6 +5359,397 @@ function autoMarkPastAbsences(){
     });
   }
 }
+/* =========================================================
+   학부모 소통 (초등부) — 보강 적립, 매쓰홀릭 링크, 채팅
+========================================================= */
+function fmtDateKR2(dateStr){
+  const [y,m,d] = dateStr.split('-');
+  return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
+}
+
+function getElemProgress(studentId, date){
+  return elemMakeupProgress.find(p => p.studentId === studentId && p.date === date);
+}
+
+/* ===== 초등부 보강관리 (버튼 → 명단 → 팝업) ===== */
+let elemMakeupPanelOpen = false;
+let elemMakeupPanelStudentIds = [];
+let elemMakeupPanelDate = null;
+let elemMakeupPopupStudentId = null;
+let elemMakeupPopupDate = null;
+
+function toggleElemMakeupPanel(){
+  elemMakeupPanelOpen = !elemMakeupPanelOpen;
+  renderElemMakeupPanel();
+}
+
+// 완료되지 않은 가장 최근 보강 기록을 찾음 (없으면 null → 신규 등록 대상)
+function findActiveElemMakeup(studentId){
+  const unfinished = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
+  if(!unfinished.length) return null;
+  return unfinished.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+}
+
+function renderElemMakeupPanel(){
+  const box = document.getElementById('elemMakeupPanel');
+  if(!box) return;
+  if(!elemMakeupPanelOpen){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  box.style.display = 'block';
+  const students = elemMakeupPanelStudentIds.map(id => studentById(id)).filter(Boolean).sort(compareByGradeThenName);
+  if(!students.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;padding:6px 2px;">학생이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="elem-makeup-grid">` + students.map(s => {
+    const active = findActiveElemMakeup(s.id);
+    const remain = active ? Math.max((active.targetMinutes||0) - (active.loggedMinutes||0), 0) : 0;
+    const badge = active
+      ? `<span class="mn-remain">${remain}분 남음</span>`
+      : `<span class="mn-remain none">보강 없음</span>`;
+    const gc = GRADE_COLORS[s.grade] || { bg:'#ECECEC', text:'#666666' };
+    return `<div class="elem-makeup-name-row" onclick="openElemMakeupPopup('${s.id}',${active ? `'${active.date}'` : 'null'})">
+      <span class="mn-name">${escapeHtml(s.name)}</span>
+      <span class="mn-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(s.grade)}</span>
+      ${badge}
+      <span class="mn-arrow">›</span>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+function openElemMakeupPopup(studentId, date){
+  elemMakeupPopupStudentId = studentId;
+  elemMakeupPopupDate = date || null;
+  renderElemMakeupPopup();
+}
+
+function closeElemMakeupPopup(){
+  elemMakeupPopupStudentId = null;
+  elemMakeupPopupDate = null;
+  const el = document.getElementById('elemMakeupPopupOverlay');
+  if(el) el.remove();
+}
+
+function ensureElemMakeupOverlay(){
+  let overlay = document.getElementById('elemMakeupPopupOverlay');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'elemMakeupPopupOverlay';
+    overlay.className = 'elem-makeup-popup-overlay';
+    overlay.onclick = (e) => { if(e.target === overlay) closeElemMakeupPopup(); };
+    document.body.appendChild(overlay);
+  }
+  return overlay;
+}
+
+function renderElemMakeupPopup(){
+  if(!elemMakeupPopupStudentId) return;
+  const studentId = elemMakeupPopupStudentId;
+  const stu = studentById(studentId);
+  if(!stu){ closeElemMakeupPopup(); return; }
+  const overlay = ensureElemMakeupOverlay();
+
+  // 진행 중인 보강이 없으면 신규 등록 모드
+  if(!elemMakeupPopupDate){
+    overlay.innerHTML = `
+      <div class="elem-makeup-popup-box">
+        <span class="elem-makeup-popup-close" onclick="closeElemMakeupPopup()">닫기 ✕</span>
+        <div class="elem-makeup-popup-title">${escapeHtml(stu.name)}</div>
+        <div class="elem-makeup-popup-sub">진행 중인 보강이 없어요 · 새로 등록해요</div>
+        <div class="emp-setting-box">
+          <div class="emp-setting-row">
+            <label class="emp-setting-label">보강 대상일</label>
+            <input type="date" id="popupNewDate-${studentId}" value="${document.getElementById('attDate') && document.getElementById('attDate').value ? document.getElementById('attDate').value : todayStr()}" class="emp-date-input">
+          </div>
+          <div class="emp-setting-row">
+            <label class="emp-setting-label">보강 시간</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="number" id="popupNewTarget-${studentId}" value="60" min="5" max="300" onfocus="this.select()" class="emp-target-input">
+              <span class="emp-unit">분</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%;margin-top:12px;" onclick="registerElemMakeupPopup('${studentId}')">보강 등록</button>
+      </div>`;
+    return;
+  }
+
+  const date = elemMakeupPopupDate;
+  const weekday = weekdayLabelOf(date);
+  const defaultTarget = getDayDuration(stu, weekday);
+  const progress = getElemProgress(studentId, date);
+  const target = progress ? (progress.targetMinutes || defaultTarget) : defaultTarget;
+  const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+  const remaining = target - logged;
+  const pct = target ? Math.round((logged / target) * 100) : 0;
+  const done = logged >= target;
+  const progressId = progress ? progress.id : null;
+
+  const settingBox = `
+    <div class="emp-setting-box">
+      <div class="emp-setting-row">
+        <label class="emp-setting-label">보강 대상일</label>
+        <span class="emp-date-fixed">${fmtDateKR2(date)}</span>
+      </div>
+      <div class="emp-setting-row">
+        <label class="emp-setting-label">보강 시간</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="popupTarget-${studentId}-${date}" value="${target}" min="5" max="300" onfocus="this.select()" class="emp-target-input" ${done ? 'disabled' : ''}>
+          <span class="emp-unit">분</span>
+          ${!done ? `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;font-size:11.5px;" onclick="changeElemTargetPopup('${studentId}','${date}')">변경</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+
+  const bodyHtml = done ? `
+      ${settingBox}
+      <div class="emp-progress-section">
+        <div class="emp-progress-title">진행 현황</div>
+        <div class="emp-done-badge">✓ 목표 ${target}분 · 보강 완료!</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button class="btn btn-ghost btn-sm" onclick="resetElemMakeup('${progressId}','${studentId}','${date}');renderElemMakeupPopup();renderElemMakeupPanel();">↩ 되돌리기</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeElemMakeupPopup();renderElemMakeupPanel();">닫기</button>
+      </div>` : `
+      ${settingBox}
+      <div class="emp-progress-section">
+        <div class="emp-progress-title">진행 현황</div>
+        <div class="emp-progress-numbers">
+          <span class="emp-logged">${logged}분</span> 완료 <span class="emp-remain">· ${remaining}분 남음</span>
+        </div>
+        <div class="emp-bar-track"><div class="emp-bar-fill" style="width:${pct}%;"></div></div>
+      </div>
+      <div class="emp-add-label">보강 진행</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',10,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+10분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',15,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+15분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',20,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+20분</button>
+        <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',30,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+30분</button>
+        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-ghost btn-sm" style="border-color:var(--color-success);color:var(--color-success);" onclick="quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();">+${remaining}분 완료</button>` : ''}
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
+        <input type="number" id="popupDirect-${studentId}-${date}" value="${remaining}" min="1" max="300" onfocus="this.select()" style="width:52px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">
+        <span class="cell-muted" style="font-size:11.5px;">분 반영</span>
+        <button class="btn btn-primary btn-sm" style="margin-left:auto;" onclick="directElemMakeupPopup('${studentId}','${date}',${target})">반영</button>
+      </div>
+      <div style="text-align:center;">
+        <span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${studentId}','${date}');closeElemMakeupPopup();renderElemMakeupPanel();">보강없음 (공휴일 등)</span>
+      </div>`;
+
+  overlay.innerHTML = `
+    <div class="elem-makeup-popup-box">
+      <span class="elem-makeup-popup-close" onclick="closeElemMakeupPopup()">닫기 ✕</span>
+      <div class="elem-makeup-popup-title">${escapeHtml(stu.name)}</div>
+      ${bodyHtml}
+    </div>`;
+}
+
+function registerElemMakeupPopup(studentId){
+  const dateEl = document.getElementById(`popupNewDate-${studentId}`);
+  const targetEl = document.getElementById(`popupNewTarget-${studentId}`);
+  if(!dateEl || !dateEl.value){ alert('날짜를 선택해 주세요.'); return; }
+  const target = parseInt(targetEl.value, 10);
+  if(isNaN(target) || target < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const date = dateEl.value;
+  const existing = getElemProgress(studentId, date);
+
+  // 같은 날짜에 이미 진행된 기록(적립분)이 있으면 확인 후 새로 시작
+  if(existing && (existing.loggedMinutes || 0) > 0){
+    const ok = confirm(`이 날짜(${fmtDateKR2(date)})에 이미 ${existing.loggedMinutes}분 적립된 기록이 있어요.\n처음부터 새로 등록할까요? (기존 적립 기록은 지워져요)`);
+    if(!ok) return;
+  }
+
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: target, loggedMinutes: 0, log: [] });
+    existing.targetMinutes = target;
+    existing.loggedMinutes = 0;
+    existing.log = [];
+  } else {
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: 0, log: [] });
+  }
+  showToast(`${target}분 목표로 보강을 등록했어요.`);
+  elemMakeupPopupDate = date;
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
+}
+
+function changeElemTargetPopup(studentId, date){
+  const inputEl = document.getElementById(`popupTarget-${studentId}-${date}`);
+  if(!inputEl) return;
+  const newTarget = parseInt(inputEl.value, 10);
+  if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+    existing.targetMinutes = newTarget;
+  } else {
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [] });
+  }
+  showToast(`목표 시간을 ${newTarget}분으로 변경했어요.`);
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
+}
+
+function directElemMakeupPopup(studentId, date, target){
+  const inputEl = document.getElementById(`popupDirect-${studentId}-${date}`);
+  if(!inputEl) return;
+  const minutes = parseInt(inputEl.value, 10);
+  if(isNaN(minutes) || minutes < 1){ alert('1분 이상 입력해 주세요.'); return; }
+  quickElemMakeupIdx(studentId, date, minutes, target);
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
+}
+
+function quickElemMakeupIdx(studentId, date, minutes, target){
+  const existing = getElemProgress(studentId, date);
+  const prevLogged = existing ? (existing.loggedMinutes || 0) : 0;
+  const newLogged = Math.min(prevLogged + minutes, target);
+  const log = existing && existing.log ? existing.log.slice() : [];
+  log.push({ minutes, at: Date.now(), sessionDate: todayStr() });
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ loggedMinutes: newLogged, log });
+    existing.loggedMinutes = newLogged;
+    existing.log = log;
+  } else {
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: target, loggedMinutes: newLogged, log, createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: target, loggedMinutes: newLogged, log });
+  }
+  showToast(`${minutes}분 반영했어요.`);
+}
+
+// 보강 완료 상태 되돌리기 (적립 분 초기화)
+function resetElemMakeup(progressId, studentId, date){
+  if(!confirm('보강 완료를 취소하고 처음으로 되돌릴까요?\n적립된 기록이 모두 지워져요.')) return;
+  if(progressId && progressId !== 'null'){
+    db.ref('elemMakeupProgress/' + progressId).remove();
+  } else {
+    const prog = getElemProgress(studentId, date);
+    if(prog) db.ref('elemMakeupProgress/' + prog.id).remove();
+  }
+  showToast('보강 기록을 초기화했어요.');
+}
+
+function currentMonthStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function renderMatholicLinkManager(){
+  const listBox = document.getElementById('matholicLinkList');
+  const datalist = document.getElementById('matholicStudentList');
+  const searchInput = document.getElementById('matholicStudentSearch');
+  if(!listBox) return;
+  const keyword = (searchInput && searchInput.value || '').trim().toLowerCase();
+
+  if(datalist){
+    datalist.innerHTML = students.filter(s => (s.grade||'').startsWith('초')).map(s => `<option value="${escapeHtml(s.name)}">`).join('');
+  }
+
+  const month = currentMonthStr();
+  let list = students.filter(s => (s.grade || '').startsWith('초'));
+  if(keyword) list = list.filter(s => s.name.toLowerCase().includes(keyword));
+  list = list.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+
+  if(!list.length){
+    listBox.innerHTML = `<div class="cell-muted" style="font-size:13px;">해당하는 초등부 학생이 없습니다.</div>`;
+    return;
+  }
+
+  listBox.innerHTML = list.map(s => {
+    const rec = mathholicLinks.find(m => m.studentId === s.id && m.month === month);
+    return `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--color-border);">
+        <div style="width:90px;flex-shrink:0;font-size:13px;font-weight:700;">${escapeHtml(s.name)}</div>
+        <input type="text" id="matholicUrl-${s.id}" placeholder="매쓰홀릭 리포트 URL 붙여넣기" value="${rec ? escapeHtml(rec.url) : ''}" style="flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+        <button class="btn btn-primary btn-sm" onclick="saveMatholicLink('${s.id}')">저장</button>
+      </div>`;
+  }).join('');
+}
+
+function saveMatholicLink(studentId){
+  const input = document.getElementById('matholicUrl-' + studentId);
+  const url = input.value.trim();
+  const month = currentMonthStr();
+  const existing = mathholicLinks.find(m => m.studentId === studentId && m.month === month);
+  if(!url){
+    if(existing) db.ref('mathholicLinks/' + existing.id).remove();
+    showToast('링크가 삭제되었습니다.');
+    return;
+  }
+  if(existing) db.ref('mathholicLinks/' + existing.id).update({ url });
+  else db.ref('mathholicLinks').push({ studentId, month, url, createdAt: Date.now() });
+  showToast('리포트 링크가 저장되었습니다.');
+}
+
+function renderChatThreadList(){
+  const box = document.getElementById('chatThreadList');
+  if(!box) return;
+  const byStudent = {};
+  parentMessages.forEach(m => {
+    if(!byStudent[m.studentId] || m.createdAt > byStudent[m.studentId].createdAt) byStudent[m.studentId] = m;
+  });
+  const threads = Object.keys(byStudent).map(sid => {
+    const stu = studentById(sid);
+    const last = byStudent[sid];
+    const unread = parentMessages.some(m => m.studentId === sid && m.from === 'parent' && !m.read);
+    return { studentId: sid, stu, last, unread };
+  }).filter(t => t.stu).sort((a,b) => b.last.createdAt - a.last.createdAt);
+
+  if(!threads.length){ box.innerHTML = `<div class="cell-muted" style="font-size:13px;">아직 대화가 없습니다.</div>`; return; }
+
+  box.innerHTML = threads.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--color-border);cursor:pointer;${activeChatStudentId === t.studentId ? 'background:var(--color-surface-alt);border-radius:8px;' : ''}" onclick="openChatThread('${t.studentId}')">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--color-primary-soft);color:#8A6400;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;">${escapeHtml((t.stu.name || '?')[0])}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:800;">${escapeHtml(t.stu.name)} 학부모님</div>
+        <div class="cell-muted" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.last.from === 'staff' ? '선생님: ' : ''}${escapeHtml(t.last.text)}</div>
+      </div>
+      ${t.unread ? `<span style="width:14px;height:14px;border-radius:50%;background:var(--color-danger);flex-shrink:0;"></span>` : ''}
+    </div>`).join('');
+}
+
+function openChatThread(studentId){
+  activeChatStudentId = studentId;
+  parentMessages.filter(m => m.studentId === studentId && m.from === 'parent' && !m.read)
+    .forEach(m => db.ref('parentMessages/' + m.id).update({ read: true }));
+  renderChatThreadList();
+  renderChatRoom(studentId);
+}
+
+function renderChatRoom(studentId){
+  const stu = studentById(studentId);
+  const titleEl = document.getElementById('chatRoomTitle');
+  const msgBox = document.getElementById('chatRoomMessages');
+  const inputWrap = document.getElementById('chatRoomInputWrap');
+  if(!titleEl || !msgBox) return;
+  if(!stu){ titleEl.textContent = '대화방을 선택해 주세요'; msgBox.innerHTML = ''; inputWrap.style.display = 'none'; return; }
+
+  titleEl.textContent = `${stu.name} 학생 대화방`;
+  inputWrap.style.display = 'block';
+
+  const msgs = parentMessages.filter(m => m.studentId === studentId).sort((a,b) => a.createdAt - b.createdAt);
+  msgBox.innerHTML = msgs.map(m => {
+    const mine = m.from === 'staff';
+    const time = new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div style="align-self:${mine ? 'flex-end' : 'flex-start'};max-width:75%;">
+        <div style="background:${mine ? 'var(--color-accent)' : 'var(--color-surface-alt)'};color:${mine ? '#4A3A00' : 'var(--color-text)'};border-radius:${mine ? '14px 14px 4px 14px' : '14px 14px 14px 4px'};padding:9px 13px;font-size:13px;">${escapeHtml(m.text)}</div>
+        <div class="cell-muted" style="font-size:10px;margin-top:3px;${mine ? 'text-align:right;' : ''}">${mine ? '선생님' : '학부모'} · ${time}</div>
+      </div>`;
+  }).join('');
+  msgBox.scrollTop = msgBox.scrollHeight;
+}
+
+function sendChatReply(){
+  if(!activeChatStudentId) return;
+  const input = document.getElementById('chatReplyInput');
+  const text = input.value.trim();
+  if(!text) return;
+  db.ref('parentMessages').push({ studentId: activeChatStudentId, from: 'staff', text, createdAt: Date.now(), read: true });
+  input.value = '';
+}
+
 init();
 
 // 점수 입력칸에 마우스 휠을 올렸을 때 실수로 값이 바뀌는 것 방지
@@ -4734,6 +5899,62 @@ function deleteStaff(id){
   showToast('선생님이 삭제되었습니다.');
 }
 
+// 선생님별 미니달력 펼침 상태 {teacherId: {open, year, month}}
+let staffMiniCalState = {};
+
+function toggleStaffMiniCal(id){
+  if(!staffMiniCalState[id]){
+    const now = new Date();
+    staffMiniCalState[id] = { open: true, year: now.getFullYear(), month: now.getMonth() };
+  } else {
+    staffMiniCalState[id].open = !staffMiniCalState[id].open;
+  }
+  renderStaffList();
+}
+
+function shiftStaffMiniCalMonth(id, delta){
+  if(!staffMiniCalState[id]) return;
+  staffMiniCalState[id].month += delta;
+  if(staffMiniCalState[id].month < 0){ staffMiniCalState[id].month = 11; staffMiniCalState[id].year--; }
+  if(staffMiniCalState[id].month > 11){ staffMiniCalState[id].month = 0; staffMiniCalState[id].year++; }
+  renderStaffList();
+}
+
+function renderStaffMiniCal(t){
+  const state = staffMiniCalState[t.id];
+  if(!state || !state.open) return '';
+  const { year, month } = state;
+  const todayStr = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let workCount = 0;
+  let cells = ['일','월','화','수','목','금','토'].map(d => `<div class="mc-wday">${d}</div>`).join('');
+  for(let i=0;i<firstDay;i++) cells += `<div class="mc-day"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const working = isTeacherWorking(t, ds);
+    if(working) workCount++;
+    const isToday = ds === todayStr;
+    const dow = new Date(ds+'T00:00:00').getDay();
+    const colorStyle = working ? `background:${t.color};` : '';
+    const numColor = !working ? (dow===0?'color:#D64550;':dow===6?'color:#378ADD;':'') : '';
+    cells += `<div class="mc-day ${working?'work':''} ${isToday?'today-ring':''}" style="${colorStyle}${numColor}">${d}</div>`;
+  }
+  return `
+    <div class="teacher-mini-cal">
+      <div class="teacher-mini-cal-nav">
+        <button type="button" onclick="event.stopPropagation();shiftStaffMiniCalMonth('${t.id}',-1)">‹</button>
+        <span>${year}년 ${month+1}월</span>
+        <button type="button" onclick="event.stopPropagation();shiftStaffMiniCalMonth('${t.id}',1)">›</button>
+      </div>
+      <div class="teacher-mini-cal-grid">${cells}</div>
+      <div class="teacher-cal-summary">
+        <span>이번달 출근 ${workCount}일</span>
+        <span>${(t.days||[]).length ? t.days.join('·')+' 기본' : '기본 요일 없음'}</span>
+      </div>
+    </div>`;
+}
+
 function renderStaffList(){
   const box = document.getElementById('staffList');
   if(!box) return;
@@ -4741,21 +5962,27 @@ function renderStaffList(){
     box.innerHTML = `<div class="cell-muted" style="font-size:13px;">등록된 선생님이 없습니다.</div>`;
     return;
   }
-  box.innerHTML = teachers.map(t => `
+  box.innerHTML = teachers.map(t => {
+    const isOpen = staffMiniCalState[t.id] && staffMiniCalState[t.id].open;
+    return `
     <div class="teacher-item">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;"></span>
-        <div>
-          <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
-          <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? t.days.join('·') : '기본 출근 요일 없음'}${t.phone ? ' · ' + escapeHtml(t.phone) : ''}</div>
+      <div class="teacher-item-header ${isOpen?'open':''}" onclick="toggleStaffMiniCal('${t.id}')">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
+          <span class="t-dot" style="width:10px;height:10px;border-radius:50%;background:${t.color};display:inline-block;flex-shrink:0;"></span>
+          <div style="min-width:0;">
+            <div style="font-weight:800;font-size:13.5px;">${escapeHtml(t.name)}</div>
+            <div class="cell-muted" style="font-size:12px;">${(t.days||[]).length ? t.days.join('·') : '기본 출근 요일 없음'}${t.phone ? ' · ' + escapeHtml(t.phone) : ''}</div>
+          </div>
         </div>
+        <div style="display:flex;gap:6px;align-items:center;" onclick="event.stopPropagation()">
+          <button class="btn btn-ghost btn-sm" onclick="editStaff('${t.id}')">수정</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="deleteStaff('${t.id}')">삭제</button>
+        </div>
+        <span class="teacher-item-chevron ${isOpen?'open':''}">▾</span>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="editStaff('${t.id}')">수정</button>
-        <button class="btn btn-danger-outline btn-sm" onclick="deleteStaff('${t.id}')">삭제</button>
-      </div>
-    </div>
-  `).join('');
+      ${renderStaffMiniCal(t)}
+    </div>`;
+  }).join('');
 }
 
 /* ===== 선생님 출근 달력 ===== */
@@ -5322,15 +6549,132 @@ function renderConfirmedMakeupList(){
   }
   box.innerHTML = confirmed.map(r => `
     <div class="teacher-item">
-      <div>
+      <div style="flex:1;">
         <div style="font-weight:800;font-size:13.5px;">${escapeHtml(r.studentName)}</div>
         <div class="cell-muted" style="font-size:12px;">결석 ${escapeHtml(r.absenceDate)} → 보강 ${escapeHtml(r.makeupSlotLabel || '-')}</div>
       </div>
+      <button class="btn btn-danger-outline btn-sm" onclick="if(confirm('이 보강을 취소하시겠어요?')) { db.ref('absenceRequests/${r.id}').remove(); showToast('보강이 취소됐어요.'); }">취소</button>
     </div>
   `).join('');
 }
 
 /* ===== 숙제 완료 월별 통계 ===== */
+function renderAnnounceChips(){
+  const gradeBox = document.getElementById('announceGradeChips');
+  const weekdayBox = document.getElementById('announceWeekdayChips');
+  const schoolBox = document.getElementById('announceSchoolChips');
+  if(!gradeBox || !weekdayBox || !schoolBox) return;
+
+  const chip = (label, selected, onclick) =>
+    `<span class="weekday-chip ${selected ? 'active' : ''}" style="cursor:pointer;" onclick="${onclick}">${escapeHtml(label)}</span>`;
+
+  gradeBox.innerHTML = GRADES.map(g =>
+    chip(g, announceSelectedGrades.has(g), `toggleAnnounceChip('grade','${g}')`)
+  ).join('');
+
+  weekdayBox.innerHTML = WEEKDAYS.map(d =>
+    chip(d, announceSelectedWeekdays.has(d), `toggleAnnounceChip('weekday','${d}')`)
+  ).join('');
+
+  const schools = [...new Set(students.map(s => (s.school || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ko'));
+  schoolBox.innerHTML = schools.map(sc =>
+    chip(sc, announceSelectedSchools.has(sc), `toggleAnnounceChip('school','${escapeHtml(sc)}')`)
+  ).join('') || `<span class="cell-muted" style="font-size:11.5px;">등록된 학교가 없어요</span>`;
+}
+
+function toggleAnnounceChip(type, value){
+  const set = type === 'grade' ? announceSelectedGrades : type === 'weekday' ? announceSelectedWeekdays : announceSelectedSchools;
+  if(set.has(value)) set.delete(value); else set.add(value);
+  renderAnnounceChips();
+}
+
+function sendAnnouncement(){
+  const message = document.getElementById('announceMessage').value.trim();
+  if(!message){ alert('공지 내용을 입력해 주세요.'); return; }
+  db.ref('announcements').push({
+    message,
+    targetGrades: [...announceSelectedGrades],
+    targetWeekdays: [...announceSelectedWeekdays],
+    targetSchools: [...announceSelectedSchools],
+    createdAt: Date.now()
+  });
+  document.getElementById('announceMessage').value = '';
+  announceSelectedGrades = new Set();
+  announceSelectedWeekdays = new Set();
+  announceSelectedSchools = new Set();
+  renderAnnounceChips();
+  showToast('공지사항을 보냈습니다.');
+}
+
+function renderAnnounceList(){
+  const box = document.getElementById('announceList');
+  if(!box) return;
+  const list = [...announcements].sort((a,b) => b.createdAt - a.createdAt).slice(0, 20);
+  if(!list.length){ box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">보낸 공지사항이 없습니다.</div>`; return; }
+
+  box.innerHTML = list.map(a => {
+    const tags = [
+      ...(a.targetGrades || []),
+      ...(a.targetWeekdays || []).map(d => d + '요일'),
+      ...(a.targetSchools || [])
+    ];
+    const tagLabel = tags.length ? tags.join(' · ') : '전체';
+    const date = new Date(a.createdAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    return `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-border);">
+        <div>
+          <div style="font-size:12.5px;color:var(--color-text);">${escapeHtml(a.message)}</div>
+          <div class="cell-muted" style="font-size:11px;margin-top:2px;">${escapeHtml(tagLabel)} · ${date}</div>
+        </div>
+        <span style="font-size:11px;color:var(--color-danger);cursor:pointer;flex-shrink:0;" onclick="deleteAnnouncement('${a.id}')">삭제</span>
+      </div>`;
+  }).join('');
+}
+
+function deleteAnnouncement(id){
+  if(!confirm('이 공지사항을 삭제하시겠습니까?')) return;
+  db.ref('announcements/' + id).remove();
+}
+
+function renderParentPageNameGroups(){
+  const box = document.getElementById('parentPageNameGroups');
+  if(!box) return;
+  const elem = students.filter(s => (s.grade || '').startsWith('초')).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+
+  if(!elem.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:13px;">초등부 학생이 없습니다.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${elem.map(s => `
+        <span class="teacher-chip" id="parentPageChip_${s.id}" style="cursor:pointer;" onclick="openParentPageFrame('${s.id}','${escapeHtml(s.name)}')">${escapeHtml(s.name)}</span>
+      `).join('')}
+    </div>`;
+}
+
+let currentParentPageFrameId = null;
+function openParentPageFrame(studentId, name){
+  currentParentPageFrameId = studentId;
+  document.getElementById('parentPageFrameWrap').style.display = 'block';
+  document.getElementById('parentPageFrameTitle').textContent = `${name} 학생 학부모 화면`;
+  document.getElementById('parentPageFrame').src = `학부모페이지.html?admin=${studentId}`;
+  document.querySelectorAll('[id^="parentPageChip_"]').forEach(el => {
+    el.style.background = '';
+    el.style.color = '';
+  });
+  const chip = document.getElementById('parentPageChip_' + studentId);
+  if(chip){ chip.style.background = 'var(--color-primary)'; chip.style.color = '#fff'; }
+  document.getElementById('parentPageFrameWrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function closeParentPageFrame(){
+  currentParentPageFrameId = null;
+  document.getElementById('parentPageFrameWrap').style.display = 'none';
+  document.getElementById('parentPageFrame').src = '';
+  document.querySelectorAll('[id^="parentPageChip_"]').forEach(el => { el.style.background = ''; el.style.color = ''; });
+}
+
 function renderStudentPageNameGroups(){
   const box = document.getElementById('studentPageNameGroups');
   if(!box) return;
