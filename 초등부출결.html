@@ -124,6 +124,41 @@
   .work-cal-legend{display:flex;align-items:center;gap:6px;margin-top:10px;}
   .work-cal-legend .dot{width:10px;height:10px;border-radius:3px;background:#EAF3DE;border:1px solid #C0DD97;flex-shrink:0;}
   .work-cal-legend span{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-count{font-size:11px;color:var(--color-text-muted);font-weight:700;margin-bottom:8px;}
+  .elem-mk-row{border:1px solid var(--color-border);border-radius:10px;margin-bottom:6px;overflow:hidden;background:var(--color-surface);}
+  .elem-mk-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;background:var(--color-surface-alt);}
+  .elem-mk-name{font-weight:800;font-size:13px;}
+  .elem-mk-grade{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-remain{margin-left:auto;font-size:11px;font-weight:700;background:#FEF2E9;color:#BA7517;padding:2px 9px;border-radius:12px;}
+  .elem-mk-head i{font-size:14px;color:var(--color-text-muted);}
+  .elem-mk-body{padding:12px;border-top:1px solid var(--color-border);}
+  .elem-mk-sub{font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;}
+  .elem-mk-progress-box{background:var(--color-surface-alt);border-radius:8px;padding:8px 10px;margin-bottom:10px;}
+  .elem-mk-bar{height:5px;background:var(--color-surface);border-radius:99px;overflow:hidden;margin-bottom:4px;}
+  .elem-mk-bar-fill{height:100%;background:#5DCAA5;border-radius:99px;}
+  .elem-mk-progress-txt{font-size:11px;color:var(--color-text-muted);}
+  .elem-mk-progress-txt b{color:var(--color-text);}
+  .elem-mk-add-box{background:#EAF4FF;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .elem-mk-deduct-box{background:#FBEAF0;border-radius:8px;padding:8px 10px;margin-bottom:8px;}
+  .elem-mk-sec-label{font-size:11px;font-weight:800;margin-bottom:6px;}
+  .elem-mk-sec-label.add{color:#1A5FA8;}
+  .elem-mk-sec-label.deduct{color:#993556;}
+  .elem-mk-btn-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .elem-mk-btn{padding:4px 9px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;border:1px solid transparent;background:#fff;}
+  .elem-mk-btn.add{border-color:#BFE0FB;color:#1A5FA8;}
+  .elem-mk-btn.deduct{border-color:#F4C0D1;color:#993556;}
+  .elem-mk-btn.deduct-done{border-color:#9FE1CB;background:#E1F5EE;color:#085041;}
+  .elem-mk-btn.apply{background:#161616;color:#fff;margin-left:auto;}
+  .elem-mk-input{width:42px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;}
+  .elem-mk-dismiss{text-align:right;margin-bottom:10px;}
+  .elem-mk-dismiss span{font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;}
+  .elem-mk-chat{display:flex;flex-direction:column;gap:6px;background:var(--color-surface-alt);border-radius:8px;padding:8px 10px;margin-bottom:8px;max-height:160px;overflow-y:auto;}
+  .elem-mk-chat-empty{font-size:11.5px;color:var(--color-text-muted);text-align:center;padding:6px 0;}
+  .elem-mk-bubble{font-size:12px;padding:6px 10px;border-radius:8px;max-width:80%;line-height:1.4;}
+  .elem-mk-bubble.parent{align-self:flex-start;background:#fff;border:1px solid var(--color-border);}
+  .elem-mk-bubble.staff{align-self:flex-end;background:var(--color-primary);color:#fff;}
+  .elem-mk-reply-row{display:flex;gap:6px;}
+  .elem-mk-reply-input{flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;}
 </style>
 </head>
 <body>
@@ -582,102 +617,109 @@ function fmtDateKR3(dateStr){
   return `${parseInt(m,10)}월 ${parseInt(d,10)}일(${weekdayLabelOf(dateStr)})`;
 }
 
+let elemPanelOpenKey = null; // 지금 펼쳐진 학생_날짜 key (한 번에 하나만 펼침)
+
+function toggleElemPanel(key){
+  elemPanelOpenKey = (elemPanelOpenKey === key) ? null : key;
+  renderElemAbsenceList();
+}
+
 function renderElemAbsenceList(){
   const card = document.getElementById('elemAbsenceCard');
   const box = document.getElementById('elemAbsenceList');
   if(!card || !box) return;
 
-  const d14 = new Date(); d14.setDate(d14.getDate() - 14);
-  const start = `${d14.getFullYear()}-${String(d14.getMonth()+1).padStart(2,'0')}-${String(d14.getDate()).padStart(2,'0')}`;
+  const d30 = new Date(); d30.setDate(d30.getDate() - 30);
+  const start = `${d30.getFullYear()}-${String(d30.getMonth()+1).padStart(2,'0')}-${String(d30.getDate()).padStart(2,'0')}`;
   const end = todayStr();
 
-  const list = attendance
+  // 1) 최근 결석 중 아직 "보강없음" 처리 안 된 것들
+  const absenceDates = attendance
     .filter(a => a.status === '결석' && a.date >= start && a.date <= end)
-    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강없음" 처리된 건 제외 (공휴일 등)
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`])
     .map(a => ({ ...a, stu: students.find(s => s.id === a.studentId) }))
-    .filter(a => a.stu && isElementary(a.stu))
+    .filter(a => a.stu && isElementary(a.stu));
+
+  // 2) 원장님이 별도로 등록해준 보강 중 아직 안 끝난 것들 (결석 기록과 무관하게)
+  const progressOnly = elemMakeupProgress
+    .filter(p => (p.loggedMinutes || 0) < (p.targetMinutes || 60))
+    .filter(p => !absenceDates.some(a => a.studentId === p.studentId && a.date === p.date))
+    .map(p => ({ studentId: p.studentId, date: p.date, memo:'', stu: students.find(s => s.id === p.studentId) }))
+    .filter(p => p.stu && isElementary(p.stu));
+
+  const list = [...absenceDates, ...progressOnly]
+    .map(a => {
+      const weekday = weekdayLabelOf(a.date);
+      const progress = getElemProgress(a.studentId, a.date);
+      const target = progress && progress.targetMinutes ? progress.targetMinutes : getDayDuration(a.stu, weekday);
+      const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+      return { ...a, target, logged, remaining: target - logged, done: logged >= target };
+    })
+    .filter(a => !a.done) // 보강 다 끝난 건 목록에서 제외 - "보강 남은 애들"만 보여줌
     .sort((a,b) => b.date.localeCompare(a.date));
 
   if(!list.length){ card.style.display = 'none'; return; }
   card.style.display = 'block';
 
-  box.innerHTML = list.map(a => {
-    const weekday = weekdayLabelOf(a.date);
-    const progress = getElemProgress(a.studentId, a.date);
-    // 원장님이 목표 시간을 직접 설정했으면 그 값을 우선 사용, 없으면 기본 수업시간으로 계산
-    const target = progress && progress.targetMinutes ? progress.targetMinutes : getDayDuration(a.stu, weekday);
-    const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
+  box.innerHTML = `<div class="elem-mk-count">보강 남은 학생 ${list.length}명</div>` + list.map(a => {
     const key = elemAbsenceKey(a.studentId, a.date);
-    const step = elemPendingAdjust[key] || 5;
-    const done = logged >= target;
+    const isOpen = elemPanelOpenKey === key;
+    const progress = getElemProgress(a.studentId, a.date);
+    const progressId = progress ? progress.id : null;
+    const pct = a.target ? Math.min(100, Math.round((a.logged / a.target) * 100)) : 0;
 
     const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
-    const lastParentMsg = [...msgs].reverse().find(m => m.from === 'parent');
-
-    const progressId = progress ? progress.id : null;
-    const remaining = target - logged;
-    const pct = target ? Math.min(100, Math.round((logged/target)*100)) : 0;
 
     return `
-      <div style="background:#FFF6DC;border:1px solid var(--color-accent);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
-          <div>
-            <div style="font-size:13px;font-weight:800;color:var(--color-text);">${escapeHtml(a.stu.name)} · ${fmtDateKR3(a.date)} 결석</div>
-            ${a.memo ? `<div style="font-size:12px;color:#4A3A00;margin-top:2px;">${escapeHtml(a.memo)}</div>` : ''}
+      <div class="elem-mk-row">
+        <div class="elem-mk-head" onclick="toggleElemPanel('${key}')">
+          <span class="elem-mk-name">${escapeHtml(a.stu.name)}</span>
+          <span class="elem-mk-grade">${escapeHtml(a.stu.grade)}</span>
+          <span class="elem-mk-remain">${a.remaining}분 남음</span>
+          <span style="font-size:11px;color:var(--color-text-muted);">${isOpen ? '▾' : '▸'}</span>
+        </div>
+        ${isOpen ? `
+        <div class="elem-mk-body">
+          <div class="elem-mk-sub">${fmtDateKR3(a.date)} 결석${a.memo ? ` · ${escapeHtml(a.memo)}` : ''}</div>
+
+          <div class="elem-mk-progress-box">
+            <div class="elem-mk-bar"><div class="elem-mk-bar-fill" style="width:${pct}%;"></div></div>
+            <div class="elem-mk-progress-txt"><b>${a.logged}분</b> 완료 · 목표 ${a.target}분</div>
           </div>
-          <div style="font-size:11.5px;color:${done ? '#0F6E56' : '#BA7517'};font-weight:800;flex-shrink:0;">${done ? '완료!' : `${remaining}분 남음`}</div>
-        </div>
 
-        <div style="height:5px;background:#fff;border-radius:99px;overflow:hidden;margin-bottom:4px;">
-          <div style="width:${pct}%;height:100%;background:#5DCAA5;border-radius:99px;"></div>
-        </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;">
-          <b style="color:var(--color-text);">${logged}분</b> 완료 · 목표 ${target}분
-        </div>
+          <div class="elem-mk-add-box">
+            <div class="elem-mk-sec-label add">보강 시간 추가</div>
+            <div class="elem-mk-btn-row">
+              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},10)">+10분</button>
+              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},20)">+20분</button>
+              <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${a.target}" min="5" max="300" class="elem-mk-input">
+              <button class="elem-mk-btn add" onclick="changeElemTargetByInput('${a.studentId}','${a.date}')">변경</button>
+            </div>
+          </div>
 
-        <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:5px;">보강 시간 추가</div>
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
-          <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${target}" min="5" max="300"
-            style="width:42px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;">
-          <span style="font-size:11px;color:var(--color-text-muted);">분</span>
-          <button onclick="changeElemTargetByInput('${a.studentId}','${a.date}')"
-            style="font-size:11px;padding:3px 8px;border:1px solid var(--color-border);border-radius:5px;background:#fff;cursor:pointer;">변경</button>
-          <button onclick="addElemTarget('${a.studentId}','${a.date}',${target},10)" style="padding:3px 8px;border:1px solid #BFE0FB;border-radius:5px;background:#EAF4FF;color:#1A5FA8;font-size:11px;font-weight:700;cursor:pointer;">+10분</button>
-          <button onclick="addElemTarget('${a.studentId}','${a.date}',${target},20)" style="padding:3px 8px;border:1px solid #BFE0FB;border-radius:5px;background:#EAF4FF;color:#1A5FA8;font-size:11px;font-weight:700;cursor:pointer;">+20분</button>
-        </div>
+          <div class="elem-mk-deduct-box">
+            <div class="elem-mk-sec-label deduct">보강 시간 차감</div>
+            <div class="elem-mk-btn-row">
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',10)">-10분</button>
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',15)">-15분</button>
+              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',20)">-20분</button>
+              ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})">-${a.remaining}분 완료</button>` : ''}
+              <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${a.remaining}" min="1" max="300" class="elem-mk-input">
+              <button class="elem-mk-btn apply" onclick="directElemMakeup('${a.studentId}','${a.date}')">반영</button>
+            </div>
+          </div>
 
-        ${!done ? `
-        <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:5px;">보강 시간 차감</div>
-        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px;">
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',10)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-10분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',15)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-15분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',20)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-20분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',30)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-30분</button>
-          ${remaining > 0 && remaining !== 10 && remaining !== 15 && remaining !== 20 && remaining !== 30 ? `<button onclick="quickElemMakeup('${a.studentId}','${a.date}',${remaining})" style="padding:4px 9px;border:1px solid #9FE1CB;border-radius:6px;background:#E1F5EE;color:#085041;font-size:11.5px;font-weight:700;cursor:pointer;">-${remaining}분 완료</button>` : ''}
-          <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${remaining}" min="1" max="300"
-            style="width:42px;border:1px solid var(--color-border);border-radius:5px;padding:4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;">
-          <span style="font-size:11px;color:var(--color-text-muted);">분</span>
-          <button onclick="directElemMakeup('${a.studentId}','${a.date}')"
-            style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#161616;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">반영</button>
-        </div>` : `
-        <div style="display:flex;gap:6px;margin-bottom:6px;">
-          <button onclick="resetElemMakeup('${progressId}','${a.studentId}','${a.date}')"
-            style="font-size:11.5px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface-alt);cursor:pointer;">↩ 되돌리기</button>
-        </div>`}
-        ${!done ? `<div style="text-align:right;"><span style="font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline;" onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>` : ''}
+          <div class="elem-mk-dismiss"><span onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>
 
-        ${msgs.length ? `
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
-          ${msgs.map(m => `
-            <div style="font-size:12px;padding:7px 10px;border-radius:8px;background:${m.from === 'staff' ? '#fff' : '#FFFFFF'};border:1px solid var(--color-border);">
-              <b>${m.from === 'staff' ? '선생님' : '학부모'}</b> · ${escapeHtml(m.text)}
-            </div>`).join('')}
+          <div class="elem-mk-sec-label" style="margin-top:12px;">학부모 메시지</div>
+          <div class="elem-mk-chat">
+            ${msgs.length ? msgs.map(m => `<div class="elem-mk-bubble ${m.from}">${escapeHtml(m.text)}</div>`).join('') : `<div class="elem-mk-chat-empty">주고받은 메시지가 없어요.</div>`}
+          </div>
+          <div class="elem-mk-reply-row">
+            <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." class="elem-mk-reply-input">
+            <button class="elem-mk-btn apply" onclick="sendElemReply('${a.studentId}')">답장</button>
+          </div>
         </div>` : ''}
-
-        <div style="display:flex;gap:6px;">
-          <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." style="flex:1;padding:7px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-          <button class="btn btn-primary" style="padding:7px 12px;font-size:12px;" onclick="sendElemReply('${a.studentId}')">답장</button>
-        </div>
       </div>`;
   }).join('');
 }
