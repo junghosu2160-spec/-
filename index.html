@@ -856,7 +856,8 @@
             <div class="cal-weekdays">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
             </div>
-            <div class="cal-grid" id="dashCalGrid"></div>
+            <div class="bigcal-grid" id="dashCalGrid" style="gap:3px;"></div>
+            <div id="dashCalTeacherLegend" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--color-border);"></div>
             <div class="cal-legend">
               <span><i class="dot event-dot-시험"></i>시험</span>
               <span><i class="dot event-dot-상담"></i>상담</span>
@@ -2968,27 +2969,63 @@ function renderDashCalendar(){
 
   let cells = '';
   for(let i = 0; i < firstWeekday; i++){
-    cells += `<div class="cal-cell empty"></div>`;
+    cells += `<div class="bigcal-cell empty"></div>`;
   }
   for(let d = 1; d <= daysInMonth; d++){
     const dateStr = `${dashCalYear}-${String(dashCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayEvents = events.filter(e => e.date === dateStr);
-    const hasExam = dayEvents.some(e => e.type === '시험');
-    const hasCounsel = dayEvents.some(e => e.type === '상담');
-    const hasOther = dayEvents.some(e => e.type === '기타');
-    const hasGijak = dayEvents.some(e => e.type === '기작팀');
+    const dayEvents = events.filter(e => e.date === dateStr && !hiddenEventTypes.includes(e.type));
     let cls = '';
-    if(hasExam) cls += ' has-event-시험';
-    else if(hasCounsel) cls += ' has-event-상담';
-    else if(hasGijak) cls += ' has-event-기작팀';
-    else if(hasOther) cls += ' has-event-기타';
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
-    cells += `<div class="cal-cell${cls}" onclick="selectEventDate('${dateStr}')"><span class="cal-num">${d}</span></div>`;
+
+    const periodMarkers = schoolPeriods.filter(p => p.startDate === dateStr || p.endDate === dateStr);
+    let borderStyle = '';
+    let periodLabelsHtml = '';
+    if(periodMarkers.length){
+      const c = getSchoolColor(periodMarkers[0].school);
+      borderStyle = `style="border:2px solid ${c};"`;
+      periodLabelsHtml = periodMarkers.map(p => {
+        const pc = getSchoolColor(p.school);
+        const isStart = p.startDate === dateStr;
+        return `<span class="bc-chip" style="background:${pc}18;border-color:${pc};color:${pc};">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+      }).join('');
+    }
+    const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
+    if(hasGijakTeam){
+      borderStyle = `style="border:2.5px solid #B4308F;"`;
+    }
+
+    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
+    const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
+    let teacherNamesHtml = '';
+    if(workingTeachers.length <= 4){
+      teacherNamesHtml = workingTeachers.map(t =>
+        (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
+      ).join('');
+    }else{
+      const shown = workingTeachers.slice(0, 3);
+      const restCount = workingTeachers.length - 3;
+      teacherNamesHtml = shown.map(t =>
+        (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
+      ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
+    }
+    cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
   renderEventListForSelectedDate();
+  renderDashCalTeacherLegend();
+}
+
+function renderDashCalTeacherLegend(){
+  const box = document.getElementById('dashCalTeacherLegend');
+  if(!box) return;
+  box.innerHTML = teachers
+    .filter(t => !hiddenTeacherIds.includes(t.id))
+    .map(t => {
+      const p = teacherPastel(t.color);
+      return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};">${escapeHtml(t.name)}</span>`;
+    }).join('');
 }
 
 function renderBigCalendar(){
@@ -4710,6 +4747,9 @@ function renderWeeklyAbsentList(){
   const absences = attendance
     .filter(a => a.status === '결석' && a.date >= start) // 미래 날짜 제한 없음 - 방학 등 미리 입력한 결석도 바로 보강 잡을 수 있게
     .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`]) // "보강 안함" 처리된 건 목록에서 제외
+    // 보강 세션 당일 결석한 기록은 "새로운 결석"이 아니라 원래 결석의 보강이 실패한 것이므로, 별도 항목으로 만들지 않음
+    // (원래 결석 쪽에서 makeupNoShow로 이미 "다시 잡아야 함" 상태로 처리됨)
+    .filter(a => !makeupSchedules.some(m => m.studentId === a.studentId && m.date === a.date))
     .map(a => ({ ...a, stu: studentById(a.studentId) }))
     .filter(a => a.stu && !(a.stu.grade || '').startsWith('초')) // 초등부는 보강관리 팝업에서 따로 관리하므로 제외
     .map(a => {
