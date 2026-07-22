@@ -1076,7 +1076,7 @@
               <input type="month" id="exportMonthInput" style="min-width:120px;">
               <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
             </div>
-            <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
+            <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:268px;box-sizing:border-box;">
               <div class="cal-header" style="margin-bottom:6px;">
                 <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
                 <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
@@ -5385,9 +5385,23 @@ function toggleElemMakeupPanel(){
 
 // 완료되지 않은 가장 최근 보강 기록을 찾음 (없으면 null → 신규 등록 대상)
 function findActiveElemMakeup(studentId){
+  // 1) 이미 등록된 미완료 보강 진행 기록 중 최신 것
   const unfinished = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
-  if(!unfinished.length) return null;
-  return unfinished.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+  if(unfinished.length){
+    return unfinished.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+  }
+  // 2) 아직 보강을 등록 안 한 결석 기록이 있으면 자동으로 보강 대상으로 잡음 (과거·미래 날짜 모두 포함)
+  const stu = studentById(studentId);
+  const undismissedAbsence = attendance
+    .filter(a => a.studentId === studentId && a.status === '결석')
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`])
+    .sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+  if(undismissedAbsence && stu){
+    const weekday = weekdayLabelOf(undismissedAbsence.date);
+    const target = getDayDuration(stu, weekday) || 60;
+    return { date: undismissedAbsence.date, targetMinutes: target, loggedMinutes: 0 };
+  }
+  return null;
 }
 
 function renderElemMakeupPanel(){
