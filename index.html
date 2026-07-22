@@ -269,6 +269,7 @@
     display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;
   }
   .timetable-student-popup .tp-name .badge{font-size:9.5px;padding:1px 6px;flex-shrink:0;}
+  .timetable-student-popup .tp-absent{opacity:0.45;}
   .timetable-student-popup .tp-makeup{background:#161616;color:#fff;border:1px solid #8B5CF6;cursor:pointer;}
   .timetable-student-popup .tp-makeup:hover{background:#2A2A2A;}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
@@ -2588,8 +2589,16 @@ function renderTimetableHeadcount(targetId){
   });
   const times = [...timesSet].sort();
 
-  const countAt = (list, day, time) => list.filter(s => getDayTime(s, day) === time).length;
-  const countDay = (list, day) => list.filter(s => getDayTime(s, day)).length;
+  const countAt = (list, day, time, dateStr) => list.filter(s => {
+    if(getDayTime(s, day) !== time) return false;
+    const rec = dateStr ? getAttendanceRecord(s.id, dateStr) : null;
+    return !(rec && rec.status === '결석'); // 그날 결석 처리된 학생은 카운트에서 제외
+  }).length;
+  const countDay = (list, day, dateStr) => list.filter(s => {
+    if(!getDayTime(s, day)) return false;
+    const rec = dateStr ? getAttendanceRecord(s.id, dateStr) : null;
+    return !(rec && rec.status === '결석');
+  }).length;
 
   const weekLabel = `${headcountWeekMonday.slice(5).replace('-','/')} ~ ${addDaysStr(headcountWeekMonday,5).slice(5).replace('-','/')}`;
   const weekNav = `
@@ -2609,7 +2618,7 @@ function renderTimetableHeadcount(targetId){
       <td class="tt-elem-label">초등부</td>
       ${allDays.map((d,i) => {
         if(d === '토') return `<td><span class="tc-empty">-</span></td>`;
-        const n = countDay(elementary, d);
+        const n = countDay(elementary, d, weekDates[i]);
         return `<td>${n ? `<button type="button" class="tc-count tc-elem" onclick="showTimetableStudents('${d}','ELEM','${popupId}','${weekDates[i]}')">${n}</button>` : `<span class="tc-empty">-</span>`}</td>`;
       }).join('')}
     </tr>`;
@@ -2618,7 +2627,7 @@ function renderTimetableHeadcount(targetId){
     <tr>
       <td>${t}</td>
       ${allDays.map((d,i) => {
-        const n = countAt(secondary, d, t);
+        const n = countAt(secondary, d, t, weekDates[i]);
         const extra = extraCountAt(weekDates[i], t);
         const label = extra > 0 ? `${n} <span style="color:var(--color-primary);font-weight:800;">(${extra})</span>` : `${n}`;
         return `<td>${(n || extra) ? `<button type="button" class="tc-count" onclick="showTimetableStudents('${d}','${t}','${popupId}','${weekDates[i]}')">${label}</button>` : `<span class="tc-empty">-</span>`}</td>`;
@@ -2629,7 +2638,7 @@ function renderTimetableHeadcount(targetId){
     <tr class="tt-total">
       <td>중학생</td>
       ${allDays.map((d,i) => {
-        const n = countDay(middleSchool, d);
+        const n = countDay(middleSchool, d, weekDates[i]);
         const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('중'));
         const total = n + extra;
         return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','MID','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
@@ -2640,7 +2649,7 @@ function renderTimetableHeadcount(targetId){
     <tr class="tt-total">
       <td>고등학생</td>
       ${allDays.map((d,i) => {
-        const n = countDay(highSchool, d);
+        const n = countDay(highSchool, d, weekDates[i]);
         const extra = extraCountDayForGrade(weekDates[i], g => g.startsWith('고') || g === 'N수/기타');
         const total = n + extra;
         return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','HIGH','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
@@ -2651,7 +2660,7 @@ function renderTimetableHeadcount(targetId){
     <tr class="tt-total tt-grand">
       <td>합계</td>
       ${allDays.map((d,i) => {
-        const n = countDay(secondary, d);
+        const n = countDay(secondary, d, weekDates[i]);
         const extra = extraCountDayForGrade(weekDates[i], g => !g.startsWith('초'));
         const total = n + extra;
         return `<td>${total ? `<button type="button" class="tc-count tc-total-btn" onclick="showTimetableStudents('${d}','ALLDAY','${popupId}','${weekDates[i]}')">${total}</button>` : '-'}</td>`;
@@ -2684,26 +2693,33 @@ function showTimetableStudents(day, time, popupId, dateStr){
   const isAllDay = time === 'ALLDAY';
   const isAggregate = isMid || isHigh || isAllDay;
 
-  const list = students
-    .filter(s => {
-      const grade = s.grade || '';
-      const elem = grade.startsWith('초');
-      const mid = grade.startsWith('중');
-      const high = grade.startsWith('고') || grade === 'N수/기타';
-      if(isElem) return elem && getDayTime(s, day);
-      if(isMid) return mid && getDayTime(s, day);
-      if(isHigh) return high && getDayTime(s, day);
-      if(isAllDay) return !elem && getDayTime(s, day);
-      return !elem && getDayTime(s, day) === time;
-    })
-    .sort(compareByGradeThenName);
+  const scheduled = students.filter(s => {
+    const grade = s.grade || '';
+    const elem = grade.startsWith('초');
+    const mid = grade.startsWith('중');
+    const high = grade.startsWith('고') || grade === 'N수/기타';
+    if(isElem) return elem && getDayTime(s, day);
+    if(isMid) return mid && getDayTime(s, day);
+    if(isHigh) return high && getDayTime(s, day);
+    if(isAllDay) return !elem && getDayTime(s, day);
+    return !elem && getDayTime(s, day) === time;
+  }).sort(compareByGradeThenName);
+
+  // 결석 처리된 학생은 명단엔 남기되(흐리게 표시), 등원 인원 숫자에서는 빠지게
+  const isAbsentOn = s => {
+    if(!dateStr) return false;
+    const rec = getAttendanceRecord(s.id, dateStr);
+    return !!(rec && rec.status === '결석');
+  };
+  const list = scheduled.filter(s => !isAbsentOn(s));
+  const absentList = scheduled.filter(s => isAbsentOn(s));
 
   // 이 정확한 날짜(선택된 주 기준)에 예정된 보강(결석보강+추가보강)을 모아서 같이 보여준다
   let makeupStudents = [];
   if(dateStr){
     const bookedIds = isElem ? new Set() : extraStudentIdsAt(dateStr, isAggregate ? undefined : time);
     makeupStudents = students.filter(s => {
-      if(!bookedIds.has(s.id) || list.some(l => l.id === s.id)) return false;
+      if(!bookedIds.has(s.id) || scheduled.some(l => l.id === s.id)) return false;
       const grade = s.grade || '';
       if(isMid) return grade.startsWith('중');
       if(isHigh) return grade.startsWith('고') || grade === 'N수/기타';
@@ -2722,11 +2738,12 @@ function showTimetableStudents(day, time, popupId, dateStr){
   box.innerHTML = `
     <div class="timetable-student-popup">
       <div class="tp-title">
-        <span>${title} · ${list.length}명${makeupStudents.length ? ` (+ 보강 ${makeupStudents.length}명)` : ''}</span>
+        <span>${title} · ${list.length}명${makeupStudents.length ? ` (+ 보강 ${makeupStudents.length}명)` : ''}${absentList.length ? ` <span class="cell-muted">· 결석 ${absentList.length}명</span>` : ''}</span>
         <span class="link-btn" onclick="document.getElementById('${popupId}').innerHTML='';">닫기</span>
       </div>
       <div class="tp-names">
         ${list.map(s => `<span class="tp-name"><span>${escapeHtml(s.name)}</span>${gradeBadge(s.grade)}</span>`).join('')}
+        ${absentList.map(s => `<span class="tp-name tp-absent"><span>${escapeHtml(s.name)} (결석)</span>${gradeBadge(s.grade)}</span>`).join('')}
         ${makeupStudents.map(s => `<span class="tp-name tp-makeup" title="눌러서 이 보강 예약을 취소할 수 있어요" onclick="removeMakeupFromPopup('${s.id}','${dateStr}','${time}',${isAggregate},'${day}','${popupId}')"><span>${escapeHtml(s.name)} (보강) ✕</span>${gradeBadge(s.grade)}</span>`).join('')}
         ${!list.length && !makeupStudents.length ? '<span class="cell-muted">학생이 없습니다.</span>' : ''}
       </div>
