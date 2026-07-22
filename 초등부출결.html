@@ -69,8 +69,8 @@
   .stu-name{flex:1 1 130px;display:flex;align-items:center;gap:8px;}
   .stu-name strong{font-size:14px;}
   .badge{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--color-surface-alt);color:var(--color-text-muted);}
-  .time-box{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--color-text-muted);}
-  .time-box input[type=time]{border:1px solid var(--color-border);border-radius:6px;padding:5px 6px;font-size:12px;width:88px;}
+  .time-box{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--color-text-muted);}
+  .time-box input[type=time]{border:1px solid var(--color-border);border-radius:5px;padding:2px 4px;font-size:11px;width:64px;}
   .btn{
     padding:8px 14px;border-radius:8px;border:1px solid transparent;font-size:12.5px;font-weight:700;
     cursor:pointer;transition:filter .12s ease;
@@ -167,7 +167,7 @@
   <div id="directorNoteBanner" style="display:none;"></div>
 
   <div class="card" id="elemAbsenceCard" style="display:none;">
-    <div class="card-title">결석 학생 · 학부모님 전달사항</div>
+    <div class="card-title">📋 보강관리</div>
     <div id="elemAbsenceList"></div>
   </div>
 
@@ -431,12 +431,19 @@ setInterval(() => { tickDate(); if(!document.getElementById('searchInput').value
 function checkIn(studentId){
   const stu = students.find(s => s.id === studentId);
   if(!stu) return;
+  const rec = getTodayRecord(studentId);
+
+  // 이미 등원 체크된 상태에서 다시 누르면 취소 (하원 기록도 같이 지움)
+  if(rec && rec.checkInTime){
+    db.ref('attendance/' + rec.id).update({ checkInTime: '', checkOutTime: '', status: '' });
+    return;
+  }
+
   const date = todayStr();
   const time = nowTimeStr();
   const weekday = weekdayLabelOf(date);
   const scheduled = getDayTime(stu, weekday);
   const status = (!scheduled || time <= scheduled) ? '출석' : '지각';
-  const rec = getTodayRecord(studentId);
   if(rec){
     db.ref('attendance/' + rec.id).update({ status, checkInTime: time });
   }else{
@@ -446,18 +453,29 @@ function checkIn(studentId){
 
 function checkOut(studentId){
   const rec = getTodayRecord(studentId);
-  const time = nowTimeStr();
-  if(rec){
-    db.ref('attendance/' + rec.id).update({ checkOutTime: time });
-  }else{
-    db.ref('attendance').push({ studentId, date: todayStr(), status:'출석', checkInTime: time, checkOutTime: time, memo:'' });
+  if(!rec) return;
+
+  // 이미 하원 체크된 상태에서 다시 누르면 취소
+  if(rec.checkOutTime){
+    db.ref('attendance/' + rec.id).update({ checkOutTime: '' });
+    return;
   }
+
+  const time = nowTimeStr();
+  db.ref('attendance/' + rec.id).update({ checkOutTime: time });
 }
 
 function markAbsent(studentId){
   const rec = getTodayRecord(studentId);
+
+  // 이미 결석 상태에서 다시 누르면 취소 (대기중으로)
+  if(rec && rec.status === '결석'){
+    db.ref('attendance/' + rec.id).update({ status: '', checkInTime: '', checkOutTime: '' });
+    return;
+  }
+
   if(rec){
-    db.ref('attendance/' + rec.id).update({ status:'결석' });
+    db.ref('attendance/' + rec.id).update({ status:'결석', checkInTime:'', checkOutTime:'' });
   }else{
     db.ref('attendance').push({ studentId, date: todayStr(), status:'결석', checkInTime:'', checkOutTime:'', memo:'' });
   }
@@ -492,6 +510,10 @@ function rowHtml(stu){
   else if(rec && rec.checkInTime){ rowClass = 'checked-in'; statusTag = status === '지각' ? `<span class="status-tag 지각">지각</span>` : `<span class="status-tag 등원">등원 완료</span>`; }
   else if(rec && status){ rowClass = 'checked-in'; statusTag = `<span class="status-tag 등원">${escapeHtml(status)} 처리됨 (시간 미기록)</span>`; }
 
+  const checkedIn = !!(rec && rec.checkInTime);
+  const checkedOut = !!(rec && rec.checkOutTime);
+  const isAbsent = status === '결석';
+
   return `
     <div class="stu-row ${rowClass}">
       <div class="stu-name">
@@ -504,9 +526,9 @@ function rowHtml(stu){
         하원 <input type="time" value="${rec && rec.checkOutTime ? rec.checkOutTime : ''}" onchange="editCheckOutTime('${stu.id}', this.value)">
       </div>
       <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-        ${!rec || !rec.checkInTime ? `<button class="btn btn-success" onclick="checkIn('${stu.id}')">등원 체크</button>` : ''}
-        ${rec && rec.checkInTime && !rec.checkOutTime ? `<button class="btn btn-primary" onclick="checkOut('${stu.id}')">하원 체크</button>` : ''}
-        ${status !== '결석' ? `<button class="btn btn-danger-outline" onclick="markAbsent('${stu.id}')">결석 처리</button>` : ''}
+        <button class="btn ${checkedIn ? 'btn-ghost' : 'btn-success'}" onclick="checkIn('${stu.id}')">${checkedIn ? '↩ 등원 취소' : '등원 체크'}</button>
+        ${checkedIn ? `<button class="btn ${checkedOut ? 'btn-ghost' : 'btn-primary'}" onclick="checkOut('${stu.id}')">${checkedOut ? '↩ 하원 취소' : '하원 체크'}</button>` : ''}
+        <button class="btn ${isAbsent ? 'btn-ghost' : 'btn-danger-outline'}" onclick="markAbsent('${stu.id}')">${isAbsent ? '↩ 결석 취소' : '결석 처리'}</button>
         ${stu.memo && stu.memo.trim() ? `<span class="memo-pin">📌 ${escapeHtml(stu.memo)}</span>` : ''}
       </div>
     </div>`;
@@ -581,8 +603,9 @@ function renderElemAbsenceList(){
 
   box.innerHTML = list.map(a => {
     const weekday = weekdayLabelOf(a.date);
-    const target = getDayDuration(a.stu, weekday);
     const progress = getElemProgress(a.studentId, a.date);
+    // 원장님이 목표 시간을 직접 설정했으면 그 값을 우선 사용, 없으면 기본 수업시간으로 계산
+    const target = progress && progress.targetMinutes ? progress.targetMinutes : getDayDuration(a.stu, weekday);
     const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
     const key = elemAbsenceKey(a.studentId, a.date);
     const step = elemPendingAdjust[key] || 5;
@@ -597,42 +620,45 @@ function renderElemAbsenceList(){
 
     return `
       <div style="background:#FFF6DC;border:1px solid var(--color-accent);border-radius:12px;padding:12px 14px;margin-bottom:10px;">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
           <div>
             <div style="font-size:13px;font-weight:800;color:var(--color-text);">${escapeHtml(a.stu.name)} · ${fmtDateKR3(a.date)} 결석</div>
             ${a.memo ? `<div style="font-size:12px;color:#4A3A00;margin-top:2px;">${escapeHtml(a.memo)}</div>` : ''}
           </div>
-          <div style="display:flex;align-items:center;gap:4px;background:#fff;border-radius:7px;padding:4px 8px;flex-shrink:0;">
-            <span style="font-size:11px;color:var(--color-text-muted);">목표</span>
-            <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${target}" min="5" max="300"
-              style="width:44px;border:1px solid var(--color-border);border-radius:5px;padding:2px 4px;font-size:13px;font-weight:800;text-align:center;background:#fff;">
-            <span style="font-size:11px;color:var(--color-text-muted);">분</span>
-            <button onclick="changeElemTargetByInput('${a.studentId}','${a.date}')"
-              style="font-size:11px;padding:2px 7px;border:1px solid var(--color-border);border-radius:5px;background:var(--color-surface-alt);cursor:pointer;">변경</button>
-          </div>
+          <div style="font-size:11.5px;color:${done ? '#0F6E56' : '#BA7517'};font-weight:800;flex-shrink:0;">${done ? '완료!' : `${remaining}분 남음`}</div>
         </div>
 
         <div style="height:5px;background:#fff;border-radius:99px;overflow:hidden;margin-bottom:4px;">
           <div style="width:${pct}%;height:100%;background:#5DCAA5;border-radius:99px;"></div>
         </div>
-        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:8px;">
-          <b style="color:var(--color-text);">${logged}분</b> 완료${done ? ' · 완료!' : ` · ${remaining}분 남음`}
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px;">
+          <b style="color:var(--color-text);">${logged}분</b> 완료 · 목표 ${target}분
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:5px;">보강 시간 추가</div>
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+          <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${target}" min="5" max="300"
+            style="width:42px;border:1px solid var(--color-border);border-radius:5px;padding:3px 4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;">
+          <span style="font-size:11px;color:var(--color-text-muted);">분</span>
+          <button onclick="changeElemTargetByInput('${a.studentId}','${a.date}')"
+            style="font-size:11px;padding:3px 8px;border:1px solid var(--color-border);border-radius:5px;background:#fff;cursor:pointer;">변경</button>
+          <button onclick="addElemTarget('${a.studentId}','${a.date}',${target},10)" style="padding:3px 8px;border:1px solid #BFE0FB;border-radius:5px;background:#EAF4FF;color:#1A5FA8;font-size:11px;font-weight:700;cursor:pointer;">+10분</button>
+          <button onclick="addElemTarget('${a.studentId}','${a.date}',${target},20)" style="padding:3px 8px;border:1px solid #BFE0FB;border-radius:5px;background:#EAF4FF;color:#1A5FA8;font-size:11px;font-weight:700;cursor:pointer;">+20분</button>
         </div>
 
         ${!done ? `
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px;">
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',10)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+10분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',15)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+15분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',20)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+20분</button>
-          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',30)" style="padding:5px 10px;border:1px solid #BFE0FB;border-radius:7px;background:#EAF4FF;color:#1A5FA8;font-size:12px;font-weight:700;cursor:pointer;">+30분</button>
-          ${remaining > 0 && remaining !== 10 && remaining !== 15 && remaining !== 20 && remaining !== 30 ? `<button onclick="quickElemMakeup('${a.studentId}','${a.date}',${remaining})" style="padding:5px 10px;border:1px solid #9FE1CB;border-radius:7px;background:#E1F5EE;color:#085041;font-size:12px;font-weight:700;cursor:pointer;">+${remaining}분 완료</button>` : ''}
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-muted);margin-bottom:5px;">보강 시간 차감</div>
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px;">
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',10)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-10분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',15)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-15분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',20)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-20분</button>
+          <button onclick="quickElemMakeup('${a.studentId}','${a.date}',30)" style="padding:4px 9px;border:1px solid #F4C0D1;border-radius:6px;background:#FBEAF0;color:#993556;font-size:11.5px;font-weight:700;cursor:pointer;">-30분</button>
+          ${remaining > 0 && remaining !== 10 && remaining !== 15 && remaining !== 20 && remaining !== 30 ? `<button onclick="quickElemMakeup('${a.studentId}','${a.date}',${remaining})" style="padding:4px 9px;border:1px solid #9FE1CB;border-radius:6px;background:#E1F5EE;color:#085041;font-size:11.5px;font-weight:700;cursor:pointer;">-${remaining}분 완료</button>` : ''}
           <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${remaining}" min="1" max="300"
-            style="width:52px;border:1px solid var(--color-border);border-radius:7px;padding:5px 4px;font-size:14px;font-weight:800;text-align:center;background:#fff;">
-          <span style="font-size:12px;color:var(--color-text-muted);">분 반영</span>
+            style="width:42px;border:1px solid var(--color-border);border-radius:5px;padding:4px;font-size:12.5px;font-weight:800;text-align:center;background:#fff;">
+          <span style="font-size:11px;color:var(--color-text-muted);">분</span>
           <button onclick="directElemMakeup('${a.studentId}','${a.date}')"
-            style="margin-left:auto;padding:6px 14px;border-radius:7px;border:none;background:#161616;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">반영</button>
+            style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#161616;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;">반영</button>
         </div>` : `
         <div style="display:flex;gap:6px;margin-bottom:6px;">
           <button onclick="resetElemMakeup('${progressId}','${a.studentId}','${a.date}')"
@@ -699,6 +725,17 @@ function changeElemTargetByInput(studentId, date){
   if(!inputEl) return;
   const newTarget = parseInt(inputEl.value, 10);
   if(isNaN(newTarget) || newTarget < 5){ alert('5분 이상 입력해 주세요.'); return; }
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+  } else {
+    db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+}
+
+// 오늘 결석한 시간 이외에 추가로 목표 시간을 늘림 (예: +10분, +20분)
+function addElemTarget(studentId, date, currentTarget, addMinutes){
+  const newTarget = currentTarget + addMinutes;
   const existing = getElemProgress(studentId, date);
   if(existing){
     db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
