@@ -269,6 +269,8 @@
     display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:4px;
   }
   .timetable-student-popup .tp-name .badge{font-size:9.5px;padding:1px 6px;flex-shrink:0;}
+  .timetable-student-popup .tp-makeup{background:#161616;color:#fff;border:1px solid #8B5CF6;cursor:pointer;}
+  .timetable-student-popup .tp-makeup:hover{background:#2A2A2A;}
   .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .legend-count{margin-left:auto;font-weight:700;font-variant-numeric:tabular-nums;padding-left:14px;}
 
@@ -506,12 +508,15 @@
   .week-bundle-arrow{font-size:11px;color:var(--color-text-muted);}
   .week-bundle-body{padding:10px 12px;border-top:1px solid var(--color-border);}
   .wk-name-wrap{display:flex;flex-wrap:wrap;gap:6px;}
-  .wk-name-tag{display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:16px;font-size:12px;font-weight:700;border:1px solid var(--color-border);background:var(--color-surface-alt);cursor:pointer;}
+  .wk-name-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;font-size:12px;font-weight:700;border:1px solid var(--color-border);background:var(--color-surface-alt);}
   .wk-name-tag.active{background:var(--color-primary-soft);border-color:var(--color-primary-light);color:var(--color-primary);}
   .wk-name-tag.flag{border-color:#F4C0D1;}
   .wk-name-tag .wk-tag-grade{font-size:10px;font-weight:700;padding:0 5px;border-radius:8px;background:rgba(0,0,0,.06);}
   .wk-name-tag .wk-tag-date{font-size:10.5px;color:var(--color-text-muted);font-weight:600;}
   .wk-name-tag.flag .wk-tag-date{color:#993556;}
+  .wk-name-tag .wk-tag-star{font-size:10px;letter-spacing:-2px;margin-left:1px;}
+  .wk-name-tag span:not(.wk-tag-grade):not(.wk-tag-date):not(.wk-tag-star){cursor:pointer;display:inline-flex;align-items:center;gap:5px;}
+  .wk-tag-check{width:14px;height:14px;cursor:pointer;flex-shrink:0;}
   .elem-card{
     padding:8px 10px;border-radius:10px;border:1px solid var(--color-border);cursor:pointer;
     transition:filter .1s ease;user-select:none;
@@ -2677,6 +2682,7 @@ function showTimetableStudents(day, time, popupId, dateStr){
   const isMid = time === 'MID';
   const isHigh = time === 'HIGH';
   const isAllDay = time === 'ALLDAY';
+  const isAggregate = isMid || isHigh || isAllDay;
 
   const list = students
     .filter(s => {
@@ -2695,7 +2701,7 @@ function showTimetableStudents(day, time, popupId, dateStr){
   // 이 정확한 날짜(선택된 주 기준)에 예정된 보강(결석보강+추가보강)을 모아서 같이 보여준다
   let makeupStudents = [];
   if(dateStr){
-    const bookedIds = isElem ? new Set() : extraStudentIdsAt(dateStr, (isMid || isHigh || isAllDay) ? undefined : time);
+    const bookedIds = isElem ? new Set() : extraStudentIdsAt(dateStr, isAggregate ? undefined : time);
     makeupStudents = students.filter(s => {
       if(!bookedIds.has(s.id) || list.some(l => l.id === s.id)) return false;
       const grade = s.grade || '';
@@ -2721,10 +2727,46 @@ function showTimetableStudents(day, time, popupId, dateStr){
       </div>
       <div class="tp-names">
         ${list.map(s => `<span class="tp-name"><span>${escapeHtml(s.name)}</span>${gradeBadge(s.grade)}</span>`).join('')}
-        ${makeupStudents.map(s => `<span class="tp-name" style="background:#161616;color:#fff;border:1px solid #8B5CF6;"><span>${escapeHtml(s.name)} (보강)</span>${gradeBadge(s.grade)}</span>`).join('')}
+        ${makeupStudents.map(s => `<span class="tp-name tp-makeup" title="눌러서 이 보강 예약을 취소할 수 있어요" onclick="removeMakeupFromPopup('${s.id}','${dateStr}','${time}',${isAggregate},'${day}','${popupId}')"><span>${escapeHtml(s.name)} (보강) ✕</span>${gradeBadge(s.grade)}</span>`).join('')}
         ${!list.length && !makeupStudents.length ? '<span class="cell-muted">학생이 없습니다.</span>' : ''}
       </div>
     </div>`;
+}
+
+// 팝업에서 보강(중복·잘못된 예약 등)을 바로 취소. 취소 후 팝업과 타임별 등원인원 표를 즉시 갱신.
+function removeMakeupFromPopup(studentId, dateStr, time, isAggregate, day, popupId){
+  const stu = studentById(studentId);
+  if(!confirm(`${stu ? stu.name : ''}의 ${dateStr ? dateStr.slice(5).replace('-','/') : ''} 보강 예약을 취소할까요?`)) return;
+
+  // makeupSchedules에서 해당 학생·날짜(+시간, 집계뷰가 아니면)의 항목을 찾아 제거
+  const msMatches = makeupSchedules.filter(m => m.studentId === studentId && m.date === dateStr && (isAggregate || !time || m.time === time));
+  msMatches.forEach(m => db.ref('makeupSchedules/' + m.id).remove());
+  // 로컬 배열에도 즉시 반영 (팝업/표가 서버 응답 기다리지 않고 바로 갱신되게)
+  msMatches.forEach(m => {
+    const idx = makeupSchedules.indexOf(m);
+    if(idx > -1) makeupSchedules.splice(idx, 1);
+  });
+
+  // 학생 페이지 자체 신청(결석보강 예약)도 같이 확인
+  const reqMatches = absenceRequests.filter(r => {
+    if(r.studentId !== studentId || r.status !== 'confirmed') return false;
+    if(r.type === 'extra_makeup') return r.extraDate === dateStr && (isAggregate || !time || r.extraTime === time);
+    const slot = studentMakeupSlots.find(sl => sl.id === r.makeupSlotId);
+    return slot && slot.date === dateStr && (isAggregate || !time || slot.time === time);
+  });
+  reqMatches.forEach(r => db.ref('absenceRequests/' + r.id).remove());
+  reqMatches.forEach(r => {
+    const idx = absenceRequests.indexOf(r);
+    if(idx > -1) absenceRequests.splice(idx, 1);
+  });
+
+  showToast('보강 예약을 취소했어요.');
+
+  // 팝업 다시 그리기 + 이 화면에 있는 모든 타임별 등원인원 표도 즉시 갱신
+  showTimetableStudents(day, time, popupId, dateStr);
+  if(document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
+  if(document.getElementById('slotHeadcountRef')) renderTimetableHeadcount('slotHeadcountRef');
+  if(document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
 }
 
 function sendDirectorNote(){
@@ -4762,20 +4804,36 @@ function renderWeeklyAbsentList(){
     return weekKeys.map(wk => {
       const rows = groups[wk].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
       const sunday = addDaysStr(wk, 6);
-      const label = wk === thisMonday ? '이번 주' : (wk === addDaysStr(thisMonday, -7) ? '지난 주' : `${wk.slice(5).replace('-','/')} 주`);
+      const label = wk === thisMonday ? '이번 주'
+        : (wk === addDaysStr(thisMonday, -7) ? '지난 주'
+        : (wk === addDaysStr(thisMonday, 7) ? '다음 주'
+        : `${wk.slice(5).replace('-','/')} 주`));
       const rangeLabel = `${wk.slice(5).replace('-','/')}~${sunday.slice(5).replace('-','/')}`;
       const isOpen = weeklyAbsentOpenWeeks.has(wk);
-      const hasPriorMakeupFn = a => !a.alreadyMakeup && !a.expiredMakeupId && makeupSchedules.some(m => m.studentId === a.stu.id && m.note !== `${a.date} 결석 보강`);
+      // 진짜로 "보강 잡았는데 안 온" 횟수만 계산 (단순히 다른 보강 기록이 있다고 재결석 취급하지 않음)
+      const countGenuineNoShows = studentId => {
+        return makeupSchedules.filter(m => {
+          if(m.studentId !== studentId) return false;
+          if(m.date >= todayStr()) return false; // 아직 안 지난 보강은 노쇼가 아님
+          return !attendance.some(x => x.studentId === studentId && x.date === m.date && (x.status === '출석' || x.status === '지각'));
+        }).length;
+      };
 
       const tagsHtml = rows.map(a => {
-        const flagged = hasPriorMakeupFn(a);
+        const noShowCount = countGenuineNoShows(a.stu.id);
         const isRowOpen = weeklyAbsentOpenId === a.id;
-        return `<span class="wk-name-tag ${flagged ? 'flag' : ''} ${isRowOpen ? 'active' : ''}" onclick="toggleWeeklyAbsentRow('${a.id}')">
-          ${escapeHtml(a.stu.name)}<span class="wk-tag-grade">${escapeHtml(a.stu.grade)}</span><span class="wk-tag-date">${a.date.slice(5).replace('-','/')}${flagged ? ' ⚠재결석' : ''}</span>
+        const isChecked = selectedAbsenceIds.has(a.id);
+        const gc = GRADE_COLORS[a.stu.grade] || { bg:'#ECECEC', text:'#666666' };
+        const weekdayTag = weekdayLabelOf(a.date);
+        return `<span class="wk-name-tag ${noShowCount > 0 ? 'flag' : ''} ${isRowOpen ? 'active' : ''}">
+          <input type="checkbox" class="wk-tag-check" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleAbsenceSelected('${a.id}')">
+          <span onclick="toggleWeeklyAbsentRow('${a.id}')">${escapeHtml(a.stu.name)}<span class="wk-tag-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(a.stu.grade)}</span><span class="wk-tag-date">${weekdayTag}요일</span>${noShowCount > 0 ? `<span class="wk-tag-star">${'⭐'.repeat(Math.min(noShowCount,3))}</span>` : ''}</span>
         </span>`;
       }).join('');
 
       const openRowHtml = rows.filter(a => weeklyAbsentOpenId === a.id).map(renderFn).join('');
+      const weekIds = rows.map(a => a.id);
+      const weekAllChecked = weekIds.length > 0 && weekIds.every(id => selectedAbsenceIds.has(id));
 
       return `
         <div class="week-bundle">
@@ -4786,6 +4844,12 @@ function renderWeeklyAbsentList(){
             <span class="week-bundle-arrow">${isOpen ? '▾' : '▸'}</span>
           </div>
           ${isOpen ? `<div class="week-bundle-body">
+            <div style="margin-bottom:8px;">
+              <label style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--color-text-muted);cursor:pointer;">
+                <input type="checkbox" ${weekAllChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleWeekAbsencesSelected(${JSON.stringify(weekIds)}, this.checked)">
+                이 주 전체 선택
+              </label>
+            </div>
             <div class="wk-name-wrap">${tagsHtml}</div>
             ${openRowHtml}
           </div>` : ''}
@@ -4800,6 +4864,7 @@ function renderWeeklyAbsentList(){
         전체 선택
       </label>
       <button class="btn btn-danger-outline btn-sm" id="bulkDeleteAbsencesBtn" onclick="bulkDeleteSelectedAbsences()" style="display:none;">🗑 선택 삭제 (<span id="selectedAbsenceCountLabel">0</span>)</button>
+      <button class="btn btn-ghost btn-sm" id="bulkDismissAbsencesBtn" onclick="bulkDismissSelectedAbsences()" style="display:none;">보강 안함 처리 (<span id="selectedAbsenceDismissCountLabel">0</span>)</button>
     </div>`;
   html += byWeek(pending, rowHtml);
   if(needsTime.length){
@@ -4847,9 +4912,13 @@ function renderWeeklyAbsentList(){
 
   const selectAllCheckbox = document.getElementById('selectAllAbsencesCheckbox');
   const bulkBtn = document.getElementById('bulkDeleteAbsencesBtn');
+  const dismissBtn = document.getElementById('bulkDismissAbsencesBtn');
   const countLabel = document.getElementById('selectedAbsenceCountLabel');
+  const dismissCountLabel = document.getElementById('selectedAbsenceDismissCountLabel');
   if(countLabel) countLabel.textContent = selectedAbsenceIds.size;
+  if(dismissCountLabel) dismissCountLabel.textContent = selectedAbsenceIds.size;
   if(bulkBtn) bulkBtn.style.display = selectedAbsenceIds.size > 0 ? 'inline-flex' : 'none';
+  if(dismissBtn) dismissBtn.style.display = selectedAbsenceIds.size > 0 ? 'inline-flex' : 'none';
   if(selectAllCheckbox){
     const ids = absences.map(a => a.id);
     selectAllCheckbox.checked = ids.length > 0 && ids.every(id => selectedAbsenceIds.has(id));
@@ -4859,6 +4928,13 @@ function renderWeeklyAbsentList(){
 function toggleAbsenceSelected(id){
   if(selectedAbsenceIds.has(id)) selectedAbsenceIds.delete(id);
   else selectedAbsenceIds.add(id);
+  renderWeeklyAbsentList();
+}
+
+// 특정 주에 속한 결석 id들을 한 번에 선택/해제
+function toggleWeekAbsencesSelected(ids, checked){
+  if(checked) ids.forEach(id => selectedAbsenceIds.add(id));
+  else ids.forEach(id => selectedAbsenceIds.delete(id));
   renderWeeklyAbsentList();
 }
 
@@ -4889,6 +4965,19 @@ function bulkDeleteSelectedAbsences(){
   });
   selectedAbsenceIds.clear();
   showToast(`결석 기록 ${ids.length}건을 삭제했습니다.`);
+}
+
+// 출결 기록은 그대로 두고, "보강 예약 필요" 목록에서만 제외 (스케줄 변경 등으로 더 이상 추적 안 해도 되는 오래된 항목 정리용)
+function bulkDismissSelectedAbsences(){
+  const ids = [...selectedAbsenceIds];
+  if(!ids.length) return;
+  if(!confirm(`선택한 결석 ${ids.length}건을 보강 안함 처리할까요?\n출결 기록은 그대로 남고, 이 목록에서만 사라져요.`)) return;
+  ids.forEach(id => {
+    const rec = attendance.find(a => a.id === id);
+    if(rec) db.ref(`makeupDismissed/${rec.studentId}_${rec.date}`).set(true);
+  });
+  selectedAbsenceIds.clear();
+  showToast(`${ids.length}건을 보강 안함 처리했습니다.`);
 }
 
 // 특정 날짜에 선택 가능한 보강 시간 옵션(<option>)을 만든다.
@@ -4926,7 +5015,10 @@ function scheduleMakeup(studentId, inputId, absenceDate, timeSelId, oldMakeupId)
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
   const timeSel = timeSelId ? document.getElementById(timeSelId) : null;
   const timeVal = timeSel ? timeSel.value : '';
-  if(oldMakeupId) db.ref('makeupSchedules/' + oldMakeupId).remove(); // 안 왔던 지난 보강 예약은 정리하고 새로 잡기
+  // 같은 결석 건에 대해 이미 잡혀있던 보강 예약이 있으면(만료됐든 안 됐든) 정리하고 새로 잡기 - 중복 예약 방지
+  const existing = makeupSchedules.find(m => m.studentId === studentId && m.note === `${absenceDate} 결석 보강`);
+  if(existing) db.ref('makeupSchedules/' + existing.id).remove();
+  else if(oldMakeupId) db.ref('makeupSchedules/' + oldMakeupId).remove();
   db.ref('makeupSchedules').push({ studentId, date: dateVal, time: timeVal, note: `${absenceDate} 결석 보강`, createdAt: Date.now() });
   showToast(timeVal
     ? `보강 일정이 등록되었습니다. ${dateVal} ${timeVal} 출결/캘린더 화면에 자동으로 나타나요.`
