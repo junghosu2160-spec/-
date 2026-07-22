@@ -1089,6 +1089,9 @@
             <button type="button" class="btn btn-ghost btn-sm" id="attDatePickerBtn" onclick="toggleAttDatePopup()" style="display:flex;align-items:center;gap:6px;font-weight:700;">
               📅 <span id="attDatePickerLabel">-</span>
             </button>
+            <button type="button" class="btn btn-sm" id="holidayToggleBtn" onclick="toggleHolidayForCurrentDate()" style="display:flex;align-items:center;gap:5px;font-weight:700;">
+              🏖 <span id="holidayToggleLabel">공휴일 처리</span>
+            </button>
             <input type="date" id="attDate" onchange="renderAttendance()" style="display:none;">
             <input type="text" class="search-input" id="attSearch" placeholder="이름으로 검색" oninput="renderAttendance()" style="min-width:120px;">
             <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--color-text-muted);white-space:nowrap;">
@@ -1610,6 +1613,7 @@ let students   = [];
 let attendance = [];   // {id, studentId, date, status, checkInTime, checkOutTime, memo}
 let makeupSchedules = []; // {id, studentId, date, time, note, createdAt} - 보강 예약 (time은 미설정일 수 있음)
 let makeupDismissed = {}; // {"studentId_date": true} - "보강 안함" 처리된 결석
+let holidays = {}; // {"YYYY-MM-DD": true} - 공휴일로 처리된 날짜
 let autoAbsenceExcluded = {}; // {"studentId_date": true} - 직접 삭제해서 자동 결석 처리 대상에서 뺀 날짜
 let selectedAbsenceIds = new Set(); // 보강 리스트 일괄삭제용 선택 상태
 let scores     = [];   // {id, studentId, subject, examName, date, score, maxScore}
@@ -1716,6 +1720,10 @@ db.ref('makeupSchedules').on('value', snap => {
 db.ref('makeupDismissed').on('value', snap => {
   makeupDismissed = snap.val() || {};
   if(currentView === 'attendance'){ renderWeeklyAbsentList(); }
+});
+db.ref('holidays').on('value', snap => {
+  holidays = snap.val() || {};
+  if(currentView === 'attendance'){ renderAttendance(); }
 });
 db.ref('autoAbsenceExcluded').on('value', snap => {
   autoAbsenceExcluded = snap.val() || {};
@@ -4437,6 +4445,43 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
 }
 
 // 그날 등원 예정인 초등부 전원을 한 번에 결석 처리 (방학 등으로 결석이 많을 때)
+// 특정 날짜를 공휴일로 처리/해제. 공휴일로 처리하면 그날 이미 기록된 결석들을 전부 "보강없음"으로 일괄 처리해서
+// 결석→보강예약 목록에서 자동으로 빠지게 하고, 자동 결석 처리 대상에서도 제외함
+function toggleHolidayForCurrentDate(){
+  const date = document.getElementById('attDate').value || todayStr();
+  const isHoliday = !!holidays[date];
+
+  if(isHoliday){
+    if(!confirm(`${fmtDateKR2(date)}의 공휴일 처리를 해제할까요?`)) return;
+    db.ref('holidays/' + date).remove();
+    showToast('공휴일 처리를 해제했어요.');
+    return;
+  }
+
+  if(!confirm(`${fmtDateKR2(date)}을(를) 공휴일로 처리할까요?\n이날 이미 기록된 결석은 전부 "보강없음"으로 자동 처리되고, 앞으로 이날은 자동 결석 처리 대상에서도 빠져요.`)) return;
+
+  db.ref('holidays/' + date).set(true);
+
+  // 그날 이미 기록된 결석 전원을 보강없음 처리
+  const absencesToday = attendance.filter(a => a.date === date && a.status === '결석');
+  absencesToday.forEach(a => {
+    db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true);
+  });
+
+  showToast(`공휴일로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
+}
+
+function updateHolidayToggleUI(){
+  const btn = document.getElementById('holidayToggleBtn');
+  const label = document.getElementById('holidayToggleLabel');
+  if(!btn || !label) return;
+  const date = document.getElementById('attDate').value || todayStr();
+  const isHoliday = !!holidays[date];
+  label.textContent = isHoliday ? '공휴일 해제' : '공휴일 처리';
+  btn.classList.toggle('btn-primary', isHoliday);
+  btn.classList.toggle('btn-ghost', !isHoliday);
+}
+
 function markAllElementaryAbsent(date){
   const weekday = weekdayLabelOf(date);
   const scheduledElem = students.filter(s => (s.grade || '').startsWith('초') && getEffectiveDayTime(s, weekday, date));
@@ -4620,6 +4665,7 @@ function renderAttendance(){
   const isToday = date === todayStr();
   const nowTime = isToday ? (String(new Date().getHours()).padStart(2,'0') + ':' + String(new Date().getMinutes()).padStart(2,'0')) : null;
 
+  updateHolidayToggleUI();
   renderAttTimeFilterChips(weekday);
 
   const container = document.getElementById('attGroups');
@@ -4884,7 +4930,7 @@ function renderWeeklyAbsentList(){
         const weekdayTag = weekdayLabelOf(a.date);
         return `<span class="wk-name-tag ${noShowCount > 0 ? 'flag' : ''} ${isRowOpen ? 'active' : ''}">
           <input type="checkbox" class="wk-tag-check" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleAbsenceSelected('${a.id}')">
-          <span onclick="toggleWeeklyAbsentRow('${a.id}')">${escapeHtml(a.stu.name)}<span class="wk-tag-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(a.stu.grade)}</span><span class="wk-tag-date">${weekdayTag}요일</span>${noShowCount > 0 ? `<span class="wk-tag-star">${'⭐'.repeat(Math.min(noShowCount,3))}</span>` : ''}</span>
+          <span onclick="toggleWeeklyAbsentRow('${a.id}')">${escapeHtml(a.stu.name)}<span class="wk-tag-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(a.stu.grade)}</span><span class="wk-tag-date">${weekdayTag}요일 ${a.date.slice(5).replace('-','/')}</span>${noShowCount > 0 ? `<span class="wk-tag-star">${'⭐'.repeat(Math.min(noShowCount,3))}</span>` : ''}</span>
         </span>`;
       }).join('');
 
@@ -5590,6 +5636,7 @@ function autoMarkPastAbsences(){
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(holidays[dateStr]) continue; // 공휴일로 처리된 날은 자동 결석 처리 대상에서 제외
     const weekday = weekdayLabelOf(dateStr);
     students.forEach(s => {
       const scheduledTime = getDayTime(s, weekday);
