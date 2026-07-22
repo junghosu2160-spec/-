@@ -1076,11 +1076,7 @@
               <input type="month" id="exportMonthInput" style="min-width:120px;">
               <button class="btn btn-ghost btn-sm" onclick="exportMonthlyAttendance()">📊 엑셀 다운로드</button>
             </div>
-<<<<<<< HEAD
             <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:268px;box-sizing:border-box;">
-=======
-            <div id="attDatePopup" style="display:none;position:absolute;top:36px;left:0;z-index:10;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:12px;box-shadow:var(--shadow-md);width:220px;">
->>>>>>> origin/main
               <div class="cal-header" style="margin-bottom:6px;">
                 <button type="button" class="btn btn-ghost btn-sm" onclick="shiftAttDatePopupMonth(-1)">‹</button>
                 <div class="cal-month-label" id="attDatePopupMonthLabel" style="font-size:12.5px;">-</div>
@@ -4368,10 +4364,7 @@ function renderElementaryBundleHtml(list, date){
     <div class="att-group">
       <div class="att-group-title" style="color:var(--color-success);">
         🎒 초등부 <span class="cnt">${sorted.length}명</span>
-<<<<<<< HEAD
         ${sorted.length ? `<button type="button" class="elem-makeup-btn" style="background:var(--color-danger-soft);color:var(--color-danger);border-color:#F09595;" onclick="markAllElementaryAbsent('${date}')">전체 결석 처리</button>` : ''}
-=======
->>>>>>> origin/main
         <button type="button" class="elem-makeup-btn" onclick="toggleElemMakeupPanel()">📋 보강관리</button>
       </div>
       <div id="elemMakeupPanel" class="elem-makeup-panel" style="display:none;"></div>
@@ -5392,7 +5385,6 @@ function toggleElemMakeupPanel(){
 
 // 완료되지 않은 가장 최근 보강 기록을 찾음 (없으면 null → 신규 등록 대상)
 function findActiveElemMakeup(studentId){
-<<<<<<< HEAD
   // 1) 이미 등록된 미완료 보강 진행 기록 중 최신 것
   const unfinished = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
   if(unfinished.length){
@@ -5410,11 +5402,6 @@ function findActiveElemMakeup(studentId){
     return { date: undismissedAbsence.date, targetMinutes: target, loggedMinutes: 0 };
   }
   return null;
-=======
-  const unfinished = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
-  if(!unfinished.length) return null;
-  return unfinished.sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
->>>>>>> origin/main
 }
 
 function renderElemMakeupPanel(){
@@ -5485,11 +5472,7 @@ function renderElemMakeupPopup(){
         <div class="emp-setting-box">
           <div class="emp-setting-row">
             <label class="emp-setting-label">보강 대상일</label>
-<<<<<<< HEAD
             <input type="date" id="popupNewDate-${studentId}" value="${document.getElementById('attDate') && document.getElementById('attDate').value ? document.getElementById('attDate').value : todayStr()}" class="emp-date-input">
-=======
-            <input type="date" id="popupNewDate-${studentId}" value="${todayStr()}" class="emp-date-input">
->>>>>>> origin/main
           </div>
           <div class="emp-setting-row">
             <label class="emp-setting-label">보강 시간</label>
