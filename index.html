@@ -1783,7 +1783,12 @@ db.ref('elemMakeupProgress').on('value', snap => {
   elemMakeupProgress = snapshotToArray(snap.val());
   if(currentView === 'attendance'){
     renderElemMakeupPanel();
-    if(elemMakeupPopupStudentId) renderElemMakeupPopup();
+    if(elemMakeupPopupStudentId){
+      // 팝업 안 입력창에 지금 타이핑 중이면, 자동 갱신이 입력값을 지워버리지 않게 건너뜀
+      const active = document.activeElement;
+      const isEditingPopupInput = active && active.tagName === 'INPUT' && active.closest && active.closest('.elem-makeup-popup-box');
+      if(!isEditingPopupInput) renderElemMakeupPopup();
+    }
   }
 });
 db.ref('parentMessages').on('value', snap => {
@@ -2456,18 +2461,20 @@ function renderDashboard(){
 
   document.getElementById('statTotalStudents').textContent = students.length;
 
-  // 오늘 등원 예정인 학생만 대상으로 집계 (일정에 없는 학생은 제외, 이미 기록이 있으면 포함)
-  const expectedToday = students.filter(s => getDayTime(s, weekday) || getAttendanceRecord(s.id, today));
-  const todayRecords = attendance.filter(a => a.date === today && expectedToday.some(s => s.id === a.studentId));
+  // 오늘 실제로 등원할 인원만 집계 (결석 처리된 학생은 제외) - 타임별 등원인원 표와 기준을 맞춤
+  const scheduledToday = students.filter(s => getDayTime(s, weekday) || getAttendanceRecord(s.id, today));
+  const absentIdsToday = new Set(attendance.filter(a => a.date === today && a.status === '결석').map(a => a.studentId));
+  const expectedToday = scheduledToday.filter(s => !absentIdsToday.has(s.id));
+  const todayRecords = attendance.filter(a => a.date === today && scheduledToday.some(s => s.id === a.studentId));
   const present = todayRecords.filter(a => a.status === '출석').length;
   const late = todayRecords.filter(a => a.status === '지각').length;
   const absent = todayRecords.filter(a => a.status === '결석').length;
-  const unchecked = expectedToday.length - todayRecords.length;
+  const unchecked = Math.max(expectedToday.length - present - late, 0);
 
   document.getElementById('statTodayPresent').textContent = present + late;
   document.getElementById('statTodayPresentSub').textContent = `출석 ${present} · 지각 ${late}`;
   document.getElementById('statTodayAbsent').textContent = absent;
-  document.getElementById('statTodayAbsentSub').textContent = `등원 예정 ${expectedToday.length}명 중`;
+  document.getElementById('statTodayAbsentSub').textContent = `원래 예정 ${scheduledToday.length}명 중`;
 
   renderDonut(document.getElementById('dashDonut'), [
     {label:'출석', value:present, color:'var(--color-success)'},
@@ -5795,10 +5802,12 @@ function renderElemMakeupPopup(){
       </div>
       <div class="emp-setting-row">
         <label class="emp-setting-label">보강 시간</label>
-        <div style="display:flex;align-items:center;gap:6px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
           <input type="number" id="popupTarget-${studentId}-${date}" value="${target}" min="5" max="300" onfocus="this.select()" class="emp-target-input" ${done ? 'disabled' : ''}>
           <span class="emp-unit">분</span>
           ${!done ? `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;font-size:11.5px;" onclick="changeElemTargetPopup('${studentId}','${date}')">변경</button>` : ''}
+          ${!done ? `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;font-size:11.5px;color:var(--color-primary);" onclick="addToElemTargetPopup('${studentId}','${date}',${target},30)">+30분 추가</button>` : ''}
+          ${!done ? `<button class="btn btn-ghost btn-sm" style="padding:4px 9px;font-size:11.5px;color:var(--color-primary);" onclick="addToElemTargetPopup('${studentId}','${date}',${target},60)">+60분 추가</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -5872,6 +5881,22 @@ function registerElemMakeupPopup(studentId){
   }
   showToast(`${target}분 목표로 보강을 등록했어요.`);
   elemMakeupPopupDate = date;
+  renderElemMakeupPopup();
+  renderElemMakeupPanel();
+}
+
+// 기존 목표 시간에 추가로 더함 (예: 60분에 120분 더 얹어서 180분으로)
+function addToElemTargetPopup(studentId, date, currentTarget, addMinutes){
+  const newTarget = currentTarget + addMinutes;
+  const existing = getElemProgress(studentId, date);
+  if(existing){
+    db.ref('elemMakeupProgress/' + existing.id).update({ targetMinutes: newTarget });
+    existing.targetMinutes = newTarget;
+  } else {
+    const newRef = db.ref('elemMakeupProgress').push({ studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [], createdAt: Date.now() });
+    elemMakeupProgress.push({ id: newRef.key, studentId, date, targetMinutes: newTarget, loggedMinutes: 0, log: [] });
+  }
+  showToast(`목표 시간에 ${addMinutes}분을 더해서 ${newTarget}분이 됐어요.`);
   renderElemMakeupPopup();
   renderElemMakeupPanel();
 }
