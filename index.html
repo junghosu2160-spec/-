@@ -5836,7 +5836,7 @@ function renderElemMakeupPopup(){
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',15,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+15분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',20,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+20분</button>
         <button class="btn btn-ghost btn-sm" onclick="quickElemMakeupIdx('${studentId}','${date}',30,${target});renderElemMakeupPopup();renderElemMakeupPanel();">+30분</button>
-        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-ghost btn-sm" style="border-color:var(--color-success);color:var(--color-success);" onclick="quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();">+${remaining}분 완료</button>` : ''}
+        ${remaining > 0 && ![10,15,20,30].includes(remaining) ? `<button class="btn btn-ghost btn-sm" style="border-color:var(--color-success);color:var(--color-success);" onclick="if(confirm('${escapeHtml(studentById(studentId).name)}의 보강 ${target}분을 전부 완료 처리할까요?')){quickElemMakeupIdx('${studentId}','${date}',${remaining},${target});renderElemMakeupPopup();renderElemMakeupPanel();}">+${remaining}분 완료</button>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:5px;margin-bottom:10px;">
         <input type="number" id="popupDirect-${studentId}-${date}" value="${remaining}" min="1" max="300" onfocus="this.select()" style="width:52px;border:1px solid var(--color-border);border-radius:6px;padding:5px;font-size:13px;font-weight:800;text-align:center;background:var(--color-surface);">

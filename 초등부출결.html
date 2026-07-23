@@ -703,7 +703,7 @@ function renderElemAbsenceList(){
               <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',10)">-10분</button>
               <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',15)">-15분</button>
               <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',20)">-20분</button>
-              ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})">-${a.remaining}분 완료</button>` : ''}
+              ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="if(confirm('${escapeHtml(a.stu.name)}의 보강 ${a.target}분을 전부 완료 처리할까요?')){quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})}">-${a.remaining}분 완료</button>` : ''}
               <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${a.remaining}" min="1" max="300" class="elem-mk-input">
               <button class="elem-mk-btn apply" onclick="directElemMakeup('${a.studentId}','${a.date}')">반영</button>
             </div>
