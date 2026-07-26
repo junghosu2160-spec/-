@@ -564,7 +564,11 @@ function rowHtml(stu){
         <button class="btn ${checkedIn ? 'btn-ghost' : 'btn-success'}" onclick="checkIn('${stu.id}')">${checkedIn ? '↩ 등원 취소' : '등원 체크'}</button>
         ${checkedIn ? `<button class="btn ${checkedOut ? 'btn-ghost' : 'btn-primary'}" onclick="checkOut('${stu.id}')">${checkedOut ? '↩ 하원 취소' : '하원 체크'}</button>` : ''}
         <button class="btn ${isAbsent ? 'btn-ghost' : 'btn-danger-outline'}" onclick="markAbsent('${stu.id}')">${isAbsent ? '↩ 결석 취소' : '결석 처리'}</button>
-        ${stu.memo && stu.memo.trim() ? `<span class="memo-pin">📌 ${escapeHtml(stu.memo)}</span>` : ''}
+        ${!stu.specialUntil && stu.memo && stu.memo.trim() ? (() => {
+          const scheduleDays = WEEKDAYS.filter(d => stu.schedule && stu.schedule[d]).join('·');
+          const memoText = scheduleDays ? `${scheduleDays} ${stu.memo}` : stu.memo;
+          return `<span class="memo-pin">📌 ${escapeHtml(memoText)}</span>`;
+        })() : ''}
       </div>
     </div>`;
 }
