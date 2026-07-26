@@ -885,6 +885,28 @@
 
       <!-- ================= 학생 관리 ================= -->
       <section class="view" id="view-students">
+        <div class="card" id="specialLectureCard" style="display:none;background:#FFF6DC;border-color:var(--color-accent);">
+          <div class="card-title" style="margin-bottom:4px;">🎒 초등부 특강 시간표</div>
+          <p class="cell-muted" style="font-size:12.5px;margin:0 0 10px;">오늘부터 <b id="specialLectureUntilLabel"></b>까지, 초등부 전원이 월·화·수·목 시간표로 일괄 적용돼요. 그 이후엔 자동으로 원래 시간표로 복구돼요.</p>
+          <button class="btn btn-ghost btn-sm" onclick="restoreSpecialScheduleNow()">지금 바로 원래대로 복구</button>
+        </div>
+        <div class="card" id="specialLectureSetupCard">
+          <div class="card-title" style="margin-bottom:4px;">🎒 초등부 특강 시간표 일괄 적용</div>
+          <p class="cell-muted" style="font-size:12.5px;margin:0 0 10px;">초등부 전원의 시간표를 지정한 종료일까지 월·화·수·목 같은 시간으로 임시 변경해요. 원래 시간표는 자동으로 백업되고, 종료일이 지나면 자동으로 복구돼요.</p>
+          <div class="form-row" style="align-items:flex-end;">
+            <div class="field">
+              <label>특강 시간</label>
+              <input type="time" id="specialLectureTime" value="13:30">
+            </div>
+            <div class="field">
+              <label>종료일 (이 날부터 원래대로 복구)</label>
+              <input type="date" id="specialLectureUntilInput" value="2026-08-31">
+            </div>
+            <div class="field" style="flex:0 0 auto;">
+              <button class="btn btn-primary" onclick="applySpecialElemSchedule()">초등부 전원 적용</button>
+            </div>
+          </div>
+        </div>
         <div class="card">
           <div class="card-title" id="studentFormTitle">학생 등록 <span class="hint">요일마다 시간이 다르면 그대로 입력하고, 안 오는 요일은 비워두세요</span></div>
           <div class="form-row">
@@ -1827,7 +1849,7 @@ db.ref('.info/connected').on('value', snap => {
 
 function refreshCurrentView(){
   if(currentView === 'dashboard') renderDashboard();
-  if(currentView === 'students') renderStudents();
+  if(currentView === 'students'){ renderStudents(); renderSpecialLectureCard(); }
   if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
   if(currentView === 'calendar') renderBigCalendar();
   if(currentView === 'sms'){ applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
@@ -2398,7 +2420,7 @@ function switchView(view){
   if(view === 'dashboard') renderDashboard();
   if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
-  if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); }
+  if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); renderSpecialLectureCard(); }
   if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
   if(view === 'scores'){ renderScoreTabs(); renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
   if(view === 'staff'){ renderStaffList(); renderStaffDaysPicker(); initStaffDayPicker(); renderStaffCal(); }
@@ -4164,6 +4186,74 @@ function compareBySchoolThenGrade(a, b){
   return compareByGradeThenName(a, b); // 학교가 같으면 초등→중등→고등, 그 안에서 학년·이름순
 }
 
+/* ===== 초등부 특강 시간표 일괄 적용 (임시 변경 후 자동 복구) ===== */
+function applySpecialElemSchedule(){
+  const time = document.getElementById('specialLectureTime').value;
+  const until = document.getElementById('specialLectureUntilInput').value;
+  if(!time){ alert('특강 시간을 입력해 주세요.'); return; }
+  if(!until){ alert('복구할 날짜를 선택해 주세요.'); return; }
+
+  const elemStudents = students.filter(s => (s.grade || '').startsWith('초'));
+  if(!elemStudents.length){ alert('초등부 학생이 없습니다.'); return; }
+  if(!confirm(`초등부 전원(${elemStudents.length}명)의 시간표를 오늘부터 ${until} 전날까지 월·화·수·목 ${time}으로 일괄 변경할까요?\n원래 시간표는 자동으로 백업되고, ${until}이 되면 자동으로 복구돼요.`)) return;
+
+  elemStudents.forEach(s => {
+    // 이미 특강 적용 중이 아닐 때만 원래 시간표를 백업 (중복 적용해도 원본이 덮어써지지 않게)
+    const scheduleBackup = s.specialUntil ? s.scheduleBackup : (s.schedule || {});
+    db.ref('students/' + s.id).update({
+      scheduleBackup,
+      schedule: { 월: time, 화: time, 수: time, 목: time },
+      specialUntil: until
+    });
+  });
+
+  showToast(`초등부 ${elemStudents.length}명에게 특강 시간표를 적용했어요.`);
+}
+
+// 오늘 날짜가 복구 예정일 이후면, 백업해둔 원래 시간표로 자동 복구
+function checkAndRestoreSpecialSchedule(){
+  const today = todayStr();
+  students.forEach(s => {
+    if(s.specialUntil && today >= s.specialUntil){
+      db.ref('students/' + s.id).update({
+        schedule: s.scheduleBackup || {},
+        scheduleBackup: null,
+        specialUntil: null
+      });
+    }
+  });
+}
+
+function restoreSpecialScheduleNow(){
+  const applied = students.filter(s => s.specialUntil);
+  if(!applied.length) return;
+  if(!confirm(`특강 시간표가 적용된 ${applied.length}명을 지금 바로 원래 시간표로 복구할까요?`)) return;
+  applied.forEach(s => {
+    db.ref('students/' + s.id).update({
+      schedule: s.scheduleBackup || {},
+      scheduleBackup: null,
+      specialUntil: null
+    });
+  });
+  showToast('원래 시간표로 복구했어요.');
+}
+
+function renderSpecialLectureCard(){
+  const card = document.getElementById('specialLectureCard');
+  const setupCard = document.getElementById('specialLectureSetupCard');
+  if(!card || !setupCard) return;
+  const applied = students.filter(s => s.specialUntil);
+  if(applied.length){
+    card.style.display = 'block';
+    setupCard.style.display = 'none';
+    const untilDates = [...new Set(applied.map(s => s.specialUntil))];
+    document.getElementById('specialLectureUntilLabel').textContent = untilDates.length === 1 ? fmtDateKR2(untilDates[0]) : '설정된 날짜';
+  }else{
+    card.style.display = 'none';
+    setupCard.style.display = 'block';
+  }
+}
+
 function renderStudents(){
   populateStudentListFilters();
   const keyword = document.getElementById('studentSearch').value.trim().toLowerCase();
@@ -5634,6 +5724,7 @@ function init(){
   populateScoreHistorySelect();
   renderDashboard();
   setTimeout(autoMarkPastAbsences, 2500); // Firebase 데이터가 다 불러와질 시간을 준 뒤 지난 결석 자동 처리
+  setTimeout(checkAndRestoreSpecialSchedule, 3000); // 특강 시간표 종료일이 지났으면 자동으로 원래 시간표 복구
 }
 
 // 등원 예정이었는데 체크가 전혀 안 된 지난 날짜를 자동으로 '결석' 처리 (최근 14일)
