@@ -679,6 +679,7 @@ function renderElemAbsenceList(){
         <div class="elem-mk-head" onclick="toggleElemPanel('${key}')">
           <span class="elem-mk-name">${escapeHtml(a.stu.name)}</span>
           <span class="elem-mk-grade">${escapeHtml(a.stu.grade)}</span>
+          <span style="font-size:11px;color:var(--color-text-muted);">${fmtDateKR3(a.date)}</span>
           <span class="elem-mk-remain">${a.remaining}분 남음</span>
           <span style="font-size:11px;color:var(--color-text-muted);">${isOpen ? '▾' : '▸'}</span>
         </div>
