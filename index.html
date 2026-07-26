@@ -476,6 +476,7 @@
   .elem-makeup-name-row .mn-grade{font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:8px;}
   .elem-makeup-name-row .mn-remain{margin-left:auto;font-size:11px;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;font-weight:700;white-space:nowrap;}
   .elem-makeup-name-row .mn-remain.none{background:rgba(0,0,0,0.05);color:var(--color-text-muted);font-weight:600;}
+  .elem-makeup-name-row .mn-fix-btn{font-size:10px;color:var(--color-primary-light);text-decoration:underline;cursor:pointer;white-space:nowrap;flex-shrink:0;}
   .elem-makeup-name-row .mn-arrow{color:var(--color-text-muted);font-size:12px;flex-shrink:0;}
   .elem-makeup-popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;z-index:500;padding:16px;}
   .elem-makeup-popup-box{background:var(--color-surface);border-radius:14px;padding:20px 24px;width:440px;max-width:100%;box-shadow:var(--shadow-md);}
@@ -5791,6 +5792,31 @@ function findActiveElemMakeup(studentId){
   return null;
 }
 
+// 결석이 여러 건 밀려있으면 전부 합쳐서 총 남은 보강시간과 건수를 계산
+function getElemTotalRemaining(studentId){
+  const stu = studentById(studentId);
+  if(!stu) return { total: 0, count: 0 };
+
+  // 이미 보강 등록된(진행중) 건들
+  const progressDates = new Set(elemMakeupProgress.filter(p => p.studentId === studentId).map(p => p.date));
+  const unfinishedProgress = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
+
+  // 아직 보강 등록 안 한 결석 건들 (진행기록 있는 날짜는 중복 집계 방지)
+  const undismissedAbsences = attendance
+    .filter(a => a.studentId === studentId && a.status === '결석')
+    .filter(a => !makeupDismissed[`${a.studentId}_${a.date}`])
+    .filter(a => !progressDates.has(a.date));
+
+  let total = 0, count = 0;
+  unfinishedProgress.forEach(p => { total += Math.max((p.targetMinutes||0) - (p.loggedMinutes||0), 0); count++; });
+  undismissedAbsences.forEach(a => {
+    const weekday = weekdayLabelOf(a.date);
+    total += getDayDuration(stu, weekday) || 60;
+    count++;
+  });
+  return { total, count };
+}
+
 function renderElemMakeupPanel(){
   const box = document.getElementById('elemMakeupPanel');
   if(!box) return;
@@ -5803,18 +5829,45 @@ function renderElemMakeupPanel(){
   }
   box.innerHTML = `<div class="elem-makeup-grid">` + students.map(s => {
     const active = findActiveElemMakeup(s.id);
-    const remain = active ? Math.max((active.targetMinutes||0) - (active.loggedMinutes||0), 0) : 0;
+    const { total, count } = getElemTotalRemaining(s.id);
     const badge = active
-      ? `<span class="mn-remain">${remain}분 남음</span>`
+      ? `<span class="mn-remain">${total}분 남음${count > 1 ? ` (${count}건)` : ''}</span>`
       : `<span class="mn-remain none">보강 없음</span>`;
     const gc = GRADE_COLORS[s.grade] || { bg:'#ECECEC', text:'#666666' };
     return `<div class="elem-makeup-name-row" onclick="openElemMakeupPopup('${s.id}',${active ? `'${active.date}'` : 'null'})">
       <span class="mn-name">${escapeHtml(s.name)}</span>
       <span class="mn-grade" style="background:${gc.bg};color:${gc.text};">${escapeHtml(s.grade)}</span>
       ${badge}
+      <span class="mn-fix-btn" title="원래 알고 있던 정확한 남은시간으로 바로 설정" onclick="event.stopPropagation();resetElemTotalRemaining('${s.id}')">✎ 직접설정</span>
       <span class="mn-arrow">›</span>
     </div>`;
   }).join('') + `</div>`;
+}
+
+// 여러 결석건으로 흩어져 계산된 남은시간을, 원장님이 알고 있는 정확한 총 남은시간 숫자로 한 번에 리셋
+function resetElemTotalRemaining(studentId){
+  const stu = studentById(studentId);
+  if(!stu) return;
+  const { total: currentTotal } = getElemTotalRemaining(studentId);
+  const input = prompt(`${stu.name}의 정확한 총 남은 보강시간(분)을 입력해 주세요.\n(현재 화면에 합산된 값: ${currentTotal}분)\n\n확인을 누르면 기존에 흩어져 있던 결석·보강 기록들은 정리되고, 이 숫자 하나로 깔끔하게 다시 설정돼요.`, currentTotal);
+  if(input === null) return;
+  const newTotal = parseInt(input, 10);
+  if(isNaN(newTotal) || newTotal < 0){ alert('0 이상의 숫자를 입력해 주세요.'); return; }
+
+  // 기존에 흩어져 있던 진행중 보강 기록들을 정리 (서버에만 반영, 로컬 배열은 리스너가 알아서 다시 채워줌)
+  const existingProgress = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
+  existingProgress.forEach(p => db.ref('elemMakeupProgress/' + p.id).remove());
+
+  // 아직 등록 안 됐던 결석 건들도 "보강없음" 처리해서 다시 자동 집계되지 않게 함
+  const undismissedAbsences = attendance.filter(a => a.studentId === studentId && a.status === '결석' && !makeupDismissed[`${a.studentId}_${a.date}`]);
+  undismissedAbsences.forEach(a => db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true));
+
+  if(newTotal > 0){
+    db.ref('elemMakeupProgress').push({ studentId, date: todayStr(), targetMinutes: newTotal, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+
+  showToast(`${stu.name}의 남은 보강시간을 ${newTotal}분으로 다시 설정했어요.`);
+  setTimeout(() => renderElemMakeupPanel(), 300);
 }
 
 function openElemMakeupPopup(studentId, date){

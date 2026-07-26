@@ -659,74 +659,110 @@ function renderElemAbsenceList(){
       const logged = progress ? Math.min(progress.loggedMinutes || 0, target) : 0;
       return { ...a, target, logged, remaining: target - logged, done: logged >= target };
     })
-    .filter(a => !a.done) // 보강 다 끝난 건 목록에서 제외 - "보강 남은 애들"만 보여줌
-    .sort((a,b) => b.date.localeCompare(a.date));
+    .filter(a => !a.done); // 보강 다 끝난 건 목록에서 제외 - "보강 남은 애들"만 보여줌
 
   if(!list.length){ card.style.display = 'none'; return; }
   card.style.display = 'block';
 
-  box.innerHTML = `<div class="elem-mk-count">보강 남은 학생 ${list.length}명</div>` + list.map(a => {
-    const key = elemAbsenceKey(a.studentId, a.date);
-    const isOpen = elemPanelOpenKey === key;
-    const progress = getElemProgress(a.studentId, a.date);
-    const progressId = progress ? progress.id : null;
-    const pct = a.target ? Math.min(100, Math.round((a.logged / a.target) * 100)) : 0;
+  // 학생 한 명당 여러 결석 건이 있으면 하나로 묶어서, 총 남은시간과 함께 한 줄로 보여줌
+  const byStudent = {};
+  list.forEach(a => {
+    if(!byStudent[a.studentId]) byStudent[a.studentId] = { stu: a.stu, entries: [] };
+    byStudent[a.studentId].entries.push(a);
+  });
+  const studentGroups = Object.values(byStudent).map(g => ({
+    ...g,
+    entries: g.entries.sort((x,y) => y.date.localeCompare(x.date)),
+    totalRemaining: g.entries.reduce((sum,e) => sum + e.remaining, 0)
+  })).sort((a,b) => b.totalRemaining - a.totalRemaining);
 
-    const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
+  box.innerHTML = `<div class="elem-mk-count">보강 남은 학생 ${studentGroups.length}명</div>` + studentGroups.map(g => {
+    const key = g.stu.id;
+    const isOpen = elemPanelOpenKey === key;
 
     return `
       <div class="elem-mk-row">
         <div class="elem-mk-head" onclick="toggleElemPanel('${key}')">
-          <span class="elem-mk-name">${escapeHtml(a.stu.name)}</span>
-          <span class="elem-mk-grade">${escapeHtml(a.stu.grade)}</span>
-          <span style="font-size:11px;color:var(--color-text-muted);">${fmtDateKR3(a.date)}</span>
-          <span class="elem-mk-remain">${a.remaining}분 남음</span>
+          <span class="elem-mk-name">${escapeHtml(g.stu.name)}</span>
+          <span class="elem-mk-grade">${escapeHtml(g.stu.grade)}</span>
+          ${g.entries.length > 1 ? `<span style="font-size:10.5px;color:var(--color-text-muted);">결석 ${g.entries.length}건</span>` : `<span style="font-size:11px;color:var(--color-text-muted);">${fmtDateKR3(g.entries[0].date)}</span>`}
+          <span class="elem-mk-remain">${g.totalRemaining}분 남음</span>
+          <span style="font-size:10px;color:var(--color-primary);text-decoration:underline;cursor:pointer;" onclick="event.stopPropagation();resetElemTotalRemaining('${g.stu.id}')">✎ 직접설정</span>
           <span style="font-size:11px;color:var(--color-text-muted);">${isOpen ? '▾' : '▸'}</span>
         </div>
-        ${isOpen ? `
-        <div class="elem-mk-body">
-          <div class="elem-mk-sub">${fmtDateKR3(a.date)} 결석${a.memo ? ` · ${escapeHtml(a.memo)}` : ''}</div>
-
-          <div class="elem-mk-progress-box">
-            <div class="elem-mk-bar"><div class="elem-mk-bar-fill" style="width:${pct}%;"></div></div>
-            <div class="elem-mk-progress-txt"><b>${a.logged}분</b> 완료 · 목표 ${a.target}분</div>
-          </div>
-
-          <div class="elem-mk-add-box">
-            <div class="elem-mk-sec-label add">보강 시간 추가</div>
-            <div class="elem-mk-btn-row">
-              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},10)">+10분</button>
-              <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},20)">+20분</button>
-              <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${a.target}" min="5" max="300" class="elem-mk-input">
-              <button class="elem-mk-btn add" onclick="changeElemTargetByInput('${a.studentId}','${a.date}')">변경</button>
-            </div>
-          </div>
-
-          <div class="elem-mk-deduct-box">
-            <div class="elem-mk-sec-label deduct">보강 시간 차감</div>
-            <div class="elem-mk-btn-row">
-              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',10)">-10분</button>
-              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',15)">-15분</button>
-              <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',20)">-20분</button>
-              ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="if(confirm('${escapeHtml(a.stu.name)}의 보강 ${a.target}분을 전부 완료 처리할까요?')){quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})}">-${a.remaining}분 완료</button>` : ''}
-              <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${a.remaining}" min="1" max="300" class="elem-mk-input">
-              <button class="elem-mk-btn apply" onclick="directElemMakeup('${a.studentId}','${a.date}')">반영</button>
-            </div>
-          </div>
-
-          <div class="elem-mk-dismiss"><span onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>
-
-          <div class="elem-mk-sec-label" style="margin-top:12px;">학부모 메시지</div>
-          <div class="elem-mk-chat">
-            ${msgs.length ? msgs.map(m => `<div class="elem-mk-bubble ${m.from}">${escapeHtml(m.text)}</div>`).join('') : `<div class="elem-mk-chat-empty">주고받은 메시지가 없어요.</div>`}
-          </div>
-          <div class="elem-mk-reply-row">
-            <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." class="elem-mk-reply-input">
-            <button class="elem-mk-btn apply" onclick="sendElemReply('${a.studentId}')">답장</button>
-          </div>
-        </div>` : ''}
+        ${isOpen ? g.entries.map(a => renderElemEntryBody(a, g.stu)).join('') : ''}
       </div>`;
   }).join('');
+}
+
+// 여러 결석건으로 흩어져 계산된 남은시간을, 원장님이 알고 있는 정확한 총 남은시간 숫자로 한 번에 리셋
+function resetElemTotalRemaining(studentId){
+  const stu = students.find(s => s.id === studentId);
+  if(!stu) return;
+  const existingProgress = elemMakeupProgress.filter(p => p.studentId === studentId && (p.loggedMinutes||0) < (p.targetMinutes||60));
+  const currentTotal = existingProgress.reduce((sum,p) => sum + Math.max((p.targetMinutes||0)-(p.loggedMinutes||0),0), 0);
+  const input = prompt(`${stu.name}의 정확한 총 남은 보강시간(분)을 입력해 주세요.\n(현재 화면 합산값: ${currentTotal}분)\n\n확인을 누르면 흩어져 있던 결석·보강 기록은 정리되고 이 숫자로 다시 설정돼요.`, currentTotal);
+  if(input === null) return;
+  const newTotal = parseInt(input, 10);
+  if(isNaN(newTotal) || newTotal < 0){ alert('0 이상의 숫자를 입력해 주세요.'); return; }
+
+  existingProgress.forEach(p => db.ref('elemMakeupProgress/' + p.id).remove());
+  const undismissedAbsences = attendance.filter(a => a.studentId === studentId && a.status === '결석' && !makeupDismissed[`${a.studentId}_${a.date}`]);
+  undismissedAbsences.forEach(a => db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true));
+
+  if(newTotal > 0){
+    db.ref('elemMakeupProgress').push({ studentId, date: todayStr(), targetMinutes: newTotal, loggedMinutes: 0, log: [], createdAt: Date.now() });
+  }
+}
+
+function renderElemEntryBody(a, stu){
+  const progress = getElemProgress(a.studentId, a.date);
+  const progressId = progress ? progress.id : null;
+  const pct = a.target ? Math.min(100, Math.round((a.logged / a.target) * 100)) : 0;
+  const msgs = parentMessages.filter(m => m.studentId === a.studentId).sort((x,y) => x.createdAt - y.createdAt);
+
+  return `
+    <div class="elem-mk-body" style="border-top:1px solid var(--color-border);">
+      <div class="elem-mk-sub">${fmtDateKR3(a.date)} 결석${a.memo ? ` · ${escapeHtml(a.memo)}` : ''}</div>
+
+      <div class="elem-mk-progress-box">
+        <div class="elem-mk-bar"><div class="elem-mk-bar-fill" style="width:${pct}%;"></div></div>
+        <div class="elem-mk-progress-txt"><b>${a.logged}분</b> 완료 · 목표 ${a.target}분</div>
+      </div>
+
+      <div class="elem-mk-add-box">
+        <div class="elem-mk-sec-label add">보강 시간 추가</div>
+        <div class="elem-mk-btn-row">
+          <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},10)">+10분</button>
+          <button class="elem-mk-btn add" onclick="addElemTarget('${a.studentId}','${a.date}',${a.target},20)">+20분</button>
+          <input type="number" id="target-elem-${a.studentId}-${a.date}" value="${a.target}" min="5" max="300" class="elem-mk-input">
+          <button class="elem-mk-btn add" onclick="changeElemTargetByInput('${a.studentId}','${a.date}')">변경</button>
+        </div>
+      </div>
+
+      <div class="elem-mk-deduct-box">
+        <div class="elem-mk-sec-label deduct">보강 시간 차감</div>
+        <div class="elem-mk-btn-row">
+          <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',10)">-10분</button>
+          <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',15)">-15분</button>
+          <button class="elem-mk-btn deduct" onclick="quickElemMakeup('${a.studentId}','${a.date}',20)">-20분</button>
+          ${a.remaining > 0 && ![10,15,20].includes(a.remaining) ? `<button class="elem-mk-btn deduct-done" onclick="if(confirm('${escapeHtml(stu.name)}의 보강 ${a.target}분을 전부 완료 처리할까요?')){quickElemMakeup('${a.studentId}','${a.date}',${a.remaining})}">-${a.remaining}분 완료</button>` : ''}
+          <input type="number" id="direct-elem-${a.studentId}-${a.date}" value="${a.remaining}" min="1" max="300" class="elem-mk-input">
+          <button class="elem-mk-btn apply" onclick="directElemMakeup('${a.studentId}','${a.date}')">반영</button>
+        </div>
+      </div>
+
+      <div class="elem-mk-dismiss"><span onclick="dismissMakeup('${a.studentId}','${a.date}')">보강없음 (공휴일 등)</span></div>
+
+      <div class="elem-mk-sec-label" style="margin-top:12px;">학부모 메시지</div>
+      <div class="elem-mk-chat">
+        ${msgs.length ? msgs.map(m => `<div class="elem-mk-bubble ${m.from}">${escapeHtml(m.text)}</div>`).join('') : `<div class="elem-mk-chat-empty">주고받은 메시지가 없어요.</div>`}
+      </div>
+      <div class="elem-mk-reply-row">
+        <input type="text" id="reply-${a.studentId}" placeholder="답장 입력..." class="elem-mk-reply-input">
+        <button class="elem-mk-btn apply" onclick="sendElemReply('${a.studentId}')">답장</button>
+      </div>
+    </div>`;
 }
 
 function adjustElemStep(key, delta){
