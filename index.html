@@ -1466,7 +1466,9 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffCal(1)">›</button>
             </div>
             <div style="display:flex;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="confirmStaffMonthSchedule()">📌 이번 달 확정</button>
               <button class="btn btn-ghost btn-sm" onclick="reassignTeacherColors()">🎨 색상 재배정</button>
+              <button class="btn btn-ghost btn-sm" onclick="copyStaffCalImage()">📋 이미지 복사 (카톡용)</button>
               <button class="btn btn-ghost btn-sm" onclick="saveStaffCalImage()">📷 이미지 저장</button>
             </div>
           </div>
@@ -6460,6 +6462,31 @@ function renderStaffList(){
 /* ===== 선생님 출근 달력 ===== */
 let selectedStaffFilters = []; // 빈 배열 = 전체보기, 1개 = 단독보기, 2개 이상 = 여러 명 겹쳐보기
 
+// 지금 보고 있는 달의 선생님별 현재 출근 패턴을, 그 달 하루하루의 "예외"로 고정시켜서
+// 나중에 정규 요일 패턴이 바뀌어도 이 달은 영향받지 않게 함
+function confirmStaffMonthSchedule(){
+  const year = staffCalYear, month = staffCalMonth;
+  const monthLabel = `${year}년 ${month+1}월`;
+  if(!confirm(`${monthLabel}의 선생님별 출근 스케줄을 지금 모습 그대로 확정할까요?\n확정하면, 나중에 선생님의 기본 요일을 바꿔도 이 달은 그대로 유지돼요.`)) return;
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  let count = 0;
+  teachers.forEach(t => {
+    for(let d = 1; d <= daysInMonth; d++){
+      const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const currentStatus = isTeacherWorking(t, dateStr) ? 'on' : 'off';
+      const existing = teacherExceptions.find(e => e.teacherId === t.id && e.date === dateStr);
+      if(existing){
+        if(existing.status !== currentStatus) db.ref('teacherExceptions/' + existing.id).update({ status: currentStatus });
+      }else{
+        db.ref('teacherExceptions').push({ teacherId: t.id, date: dateStr, status: currentStatus, confirmedMonth: true });
+      }
+      count++;
+    }
+  });
+  showToast(`${monthLabel} 스케줄을 확정했어요. 이제 이 달은 정규 요일이 바뀌어도 유지돼요.`);
+}
+
 function shiftStaffCal(delta){
   staffCalMonth += delta;
   if(staffCalMonth < 0){ staffCalMonth = 11; staffCalYear--; }
@@ -6507,26 +6534,33 @@ function renderStaffCal(){
   const showingAll = selectedStaffFilters.length === 0;
 
   // 범례 — 맨 앞 "전체보기" + 선생님별 필터 칩 (여러 개 동시 선택 가능, 다시 누르면 그 사람만 해제)
+  // 칩 자체를 누르면 "이 사람만 보기" 필터, × 를 누르면 "이 사람만 숨기기" (캘린더 탭과 동일한 hiddenTeacherIds 공유)
+  const someHiddenInStaff = hiddenTeacherIds.length > 0;
   const allBtn = `<span onclick="clearStaffFilter()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
       background:${showingAll ? 'var(--color-primary)' : 'var(--color-surface-alt)'};
       color:${showingAll ? '#fff' : 'var(--color-text-muted)'};
       font-weight:700;
-      border:1.5px solid ${showingAll ? 'var(--color-primary)' : 'transparent'};">전체보기</span>`;
-  legend.innerHTML = allBtn + teachers.map(t => {
+      border:1.5px solid ${showingAll ? 'var(--color-primary)' : 'transparent'};">전체보기</span>`
+    + (someHiddenInStaff ? `<span onclick="restoreAllTeachers();renderStaffCal();" style="display:inline-flex;align-items:center;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;background:var(--color-surface-alt);color:var(--color-primary-light);font-weight:700;border:1.5px solid var(--color-primary-light);">숨긴 선생님 전체 보기</span>` : '');
+  legend.innerHTML = allBtn + teachers.filter(t => !hiddenTeacherIds.includes(t.id)).map(t => {
     const isSelected = selectedStaffFilters.includes(t.id);
     const isActive = showingAll || isSelected;
-    return `<span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 10px;border-radius:20px;cursor:pointer;
+    return `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:3px 6px 3px 10px;border-radius:20px;
       background:${isActive ? t.color+'22' : 'var(--color-surface-alt)'};
       color:${isActive ? teacherPastel(t.color).text : 'var(--color-text-muted)'};
       font-weight:700;opacity:${isActive ? 1 : 0.4};
       border:1.5px solid ${isSelected ? t.color : 'transparent'};">
-      <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
+      <span onclick="toggleStaffFilter('${t.id}')" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+        <span style="width:8px;height:8px;border-radius:50%;background:${t.color};display:inline-block;"></span>${escapeHtml(t.name)}
+      </span>
+      <span onclick="event.stopPropagation();toggleTeacherVisibility('${t.id}');renderStaffCal();" title="이 선생님 숨기기" style="cursor:pointer;font-weight:800;padding:0 3px;opacity:0.6;">×</span>
     </span>`;
   }).join('');
 
-  const visibleTeachers = showingAll
+  const visibleTeachers = (showingAll
     ? teachers
-    : teachers.filter(t => selectedStaffFilters.includes(t.id));
+    : teachers.filter(t => selectedStaffFilters.includes(t.id))
+  ).filter(t => !hiddenTeacherIds.includes(t.id));
 
   const today = new Date();
   const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
@@ -6579,20 +6613,35 @@ function staffCalClickDate(dateStr){
 /* ===== 이미지 저장 ===== */
 function saveStaffCalImage(){
   const calWrap = document.getElementById('staffCalWrap');
-  const legendEl = document.getElementById('staffCalLegend');
-  const monthLabelEl = document.getElementById('staffCalMonthLabel');
   if(!calWrap){ showToast('달력을 먼저 불러와 주세요.'); return; }
+  ensureHtml2Canvas(() => doStaffCapture('save'));
+}
+
+function copyStaffCalImage(){
+  const calWrap = document.getElementById('staffCalWrap');
+  if(!calWrap){ showToast('달력을 먼저 불러와 주세요.'); return; }
+  if(!navigator.clipboard || !window.ClipboardItem){
+    showToast('이 브라우저에서는 이미지 복사가 지원되지 않아요. "이미지 저장"을 이용해 주세요.');
+    return;
+  }
+  ensureHtml2Canvas(() => doStaffCapture('copy'));
+}
+
+function ensureHtml2Canvas(callback){
   if(typeof html2canvas === 'undefined'){
     const s = document.createElement('script');
     s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload = () => doStaffCapture(calWrap, legendEl, monthLabelEl);
+    s.onload = callback;
     document.head.appendChild(s);
   }else{
-    doStaffCapture(calWrap, legendEl, monthLabelEl);
+    callback();
   }
 }
 
-function doStaffCapture(calWrap, legendEl, monthLabelEl){
+function doStaffCapture(mode){
+  const calWrap = document.getElementById('staffCalWrap');
+  const legendEl = document.getElementById('staffCalLegend');
+  const monthLabelEl = document.getElementById('staffCalMonthLabel');
   const filteredTeachers = selectedStaffFilters.map(id => teachers.find(t => t.id === id)).filter(Boolean);
   const teacherName = filteredTeachers.length === 1 ? filteredTeachers[0].name
     : filteredTeachers.length > 1 ? filteredTeachers.map(t => t.name).join('_')
@@ -6623,12 +6672,21 @@ function doStaffCapture(calWrap, legendEl, monthLabelEl){
   document.body.appendChild(container);
   html2canvas(container, { scale:2, backgroundColor:'#ffffff', useCORS:true }).then(canvas => {
     document.body.removeChild(container);
-    const link = document.createElement('a');
-    link.download = `출근일정_${monthLabelEl.textContent.replace(/\s/g,'')}_${teacherName}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-    showToast(`${teacherName} 이미지가 저장됐어요. 카톡으로 공유해 보세요!`);
-  }).catch(() => { document.body.removeChild(container); showToast('이미지 저장에 실패했습니다.'); });
+    if(mode === 'copy'){
+      canvas.toBlob(blob => {
+        if(!blob){ showToast('이미지 복사에 실패했습니다.'); return; }
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+          .then(() => showToast(`${teacherName} 이미지가 복사됐어요. 카톡 채팅창에 Ctrl+V로 붙여넣으세요!`))
+          .catch(() => showToast('이미지 복사에 실패했어요. "이미지 저장"을 이용해 주세요.'));
+      }, 'image/png');
+    }else{
+      const link = document.createElement('a');
+      link.download = `출근일정_${monthLabelEl.textContent.replace(/\s/g,'')}_${teacherName}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      showToast(`${teacherName} 이미지가 저장됐어요. 카톡으로 공유해 보세요!`);
+    }
+  }).catch(() => { document.body.removeChild(container); showToast('이미지 생성에 실패했습니다.'); });
 }
 
 function initStaffDayPicker(){
