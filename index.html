@@ -1466,7 +1466,7 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="shiftStaffCal(1)">›</button>
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-primary btn-sm" onclick="confirmStaffMonthSchedule()">📌 이번 달 확정</button>
+              <button class="btn btn-sm" id="staffMonthLockBtn" onclick="toggleStaffMonthLock()">🔓 이번 달 잠그기</button>
               <button class="btn btn-ghost btn-sm" onclick="reassignTeacherColors()">🎨 색상 재배정</button>
               <button class="btn btn-ghost btn-sm" onclick="copyStaffCalImage()">📋 이미지 복사 (카톡용)</button>
               <button class="btn btn-ghost btn-sm" onclick="saveStaffCalImage()">📷 이미지 저장</button>
@@ -1786,6 +1786,10 @@ db.ref('teacherExceptions').on('value', snap => {
   if(currentView === 'calendar'){ renderBigCalendar(); renderTeacherEditCalendar(); }
   if(currentView === 'staff'){ renderStaffDayStatus(); renderStaffEditCalendar(); renderStaffCal(); }
   if(currentView === 'attendance') renderRefTeacherCal();
+});
+db.ref('staffMonthLocks').on('value', snap => {
+  staffMonthLocks = snap.val() || {};
+  if(currentView === 'staff') renderStaffCal();
 });
 db.ref('makeupSlots').on('value', snap => {
   studentMakeupSlots = snapshotToArray(snap.val());
@@ -3525,6 +3529,11 @@ function renderTeacherDayStatus(){
 function toggleTeacherExceptionForDate(teacherId){
   const t = teacherById(teacherId);
   if(!t) return;
+  const [ey, em] = selectedEventDate.split('-').map(Number);
+  if(isStaffMonthLocked(ey, em - 1)){
+    showToast('🔒 잠긴 달이에요. 직원관리 탭에서 잠금을 먼저 풀어주세요.');
+    return;
+  }
   const currentlyWorking = isTeacherWorking(t, selectedEventDate);
   const newStatus = currentlyWorking ? 'off' : 'on';
   const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === selectedEventDate);
@@ -6245,6 +6254,11 @@ let staffEditCalYear = new Date().getFullYear();
 let staffEditCalMonth = new Date().getMonth();
 let staffCalYear = new Date().getFullYear();
 let staffCalMonth = new Date().getMonth();
+let staffMonthLocks = {}; // { "2026-08": true } - 잠긴 달 목록
+
+function isStaffMonthLocked(year, month){
+  return !!staffMonthLocks[`${year}-${String(month+1).padStart(2,'0')}`];
+}
 
 function toggleStaffFormCollapse(){
   staffFormCollapsed = !staffFormCollapsed;
@@ -6345,6 +6359,11 @@ function renderStaffEditCalendar(){
 function toggleStaffWorkDate(teacherId, dateStr){
   const teacher = teacherById(teacherId);
   if(!teacher) return;
+  const [y, m] = dateStr.split('-').map(Number);
+  if(isStaffMonthLocked(y, m - 1)){
+    showToast('🔒 잠긴 달이에요. 상단 "수정하기" 버튼으로 잠금을 먼저 풀어주세요.');
+    return;
+  }
   const currentlyWorking = isTeacherWorking(teacher, dateStr);
   const newStatus = currentlyWorking ? 'off' : 'on';
   const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === dateStr);
@@ -6464,13 +6483,22 @@ let selectedStaffFilters = []; // 빈 배열 = 전체보기, 1개 = 단독보기
 
 // 지금 보고 있는 달의 선생님별 현재 출근 패턴을, 그 달 하루하루의 "예외"로 고정시켜서
 // 나중에 정규 요일 패턴이 바뀌어도 이 달은 영향받지 않게 함
-function confirmStaffMonthSchedule(){
+function toggleStaffMonthLock(){
   const year = staffCalYear, month = staffCalMonth;
+  const monthKey = `${year}-${String(month+1).padStart(2,'0')}`;
   const monthLabel = `${year}년 ${month+1}월`;
-  if(!confirm(`${monthLabel}의 선생님별 출근 스케줄을 지금 모습 그대로 확정할까요?\n확정하면, 나중에 선생님의 기본 요일을 바꿔도 이 달은 그대로 유지돼요.`)) return;
+  const locked = isStaffMonthLocked(year, month);
+
+  if(locked){
+    if(!confirm(`${monthLabel}의 잠금을 해제하고 수정할까요?`)) return;
+    db.ref('staffMonthLocks/' + monthKey).remove();
+    showToast(`${monthLabel} 잠금을 해제했어요. 이제 수정할 수 있어요.`);
+    return;
+  }
+
+  if(!confirm(`${monthLabel}의 선생님별 출근 스케줄을 지금 모습 그대로 잠글까요?\n잠그면, 선생님의 기본 요일을 바꾸거나 달력을 클릭해도 이 달은 전혀 영향받지 않아요.\n수정하려면 다시 이 버튼을 눌러 잠금을 풀어야 해요.`)) return;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  let count = 0;
   teachers.forEach(t => {
     for(let d = 1; d <= daysInMonth; d++){
       const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -6481,10 +6509,10 @@ function confirmStaffMonthSchedule(){
       }else{
         db.ref('teacherExceptions').push({ teacherId: t.id, date: dateStr, status: currentStatus, confirmedMonth: true });
       }
-      count++;
     }
   });
-  showToast(`${monthLabel} 스케줄을 확정했어요. 이제 이 달은 정규 요일이 바뀌어도 유지돼요.`);
+  db.ref('staffMonthLocks/' + monthKey).set(true);
+  showToast(`${monthLabel}을 🔒 잠갔어요. 이제 뭘 바꿔도 이 달은 그대로 유지돼요.`);
 }
 
 function shiftStaffCal(delta){
@@ -6529,7 +6557,14 @@ function renderStaffCal(){
   const legend = document.getElementById('staffCalLegend');
   if(!label || !grid || !legend) return;
 
-  label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월`;
+  const locked = isStaffMonthLocked(staffCalYear, staffCalMonth);
+  label.textContent = `${staffCalYear}년 ${staffCalMonth + 1}월${locked ? ' 🔒' : ''}`;
+  const lockBtn = document.getElementById('staffMonthLockBtn');
+  if(lockBtn){
+    lockBtn.textContent = locked ? '🔒 잠김 · 수정하기' : '🔓 이번 달 잠그기';
+    lockBtn.classList.toggle('btn-danger-outline', locked);
+    lockBtn.classList.toggle('btn-ghost', !locked);
+  }
 
   const showingAll = selectedStaffFilters.length === 0;
 
@@ -6720,6 +6755,11 @@ function toggleStaffExceptionForDate(teacherId){
   if(!t) return;
   const dateVal = document.getElementById('staffDayPicker').value;
   if(!dateVal) return;
+  const [sy, sm] = dateVal.split('-').map(Number);
+  if(isStaffMonthLocked(sy, sm - 1)){
+    showToast('🔒 잠긴 달이에요. 상단 "수정하기" 버튼으로 잠금을 먼저 풀어주세요.');
+    return;
+  }
   const currentlyWorking = isTeacherWorking(t, dateVal);
   const newStatus = currentlyWorking ? 'off' : 'on';
   const existing = teacherExceptions.find(e => e.teacherId === teacherId && e.date === dateVal);
