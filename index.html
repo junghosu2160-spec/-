@@ -991,6 +991,7 @@
                   <tr>
                     <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th>
                     <th style="text-align:center;cursor:pointer;user-select:none;" id="scienceFilterHeader" onclick="cycleScienceFilterMode()" title="눌러서 전체/신청만 순서로 필터해요">과학특강</th>
+                    <th style="text-align:center;">시험보강</th>
                     <th style="text-align:center;cursor:pointer;user-select:none;" id="billingFilterHeader" onclick="cycleBillingFilterMode()" title="눌러서 전체/미발송만/발송만 순서로 필터해요">결제선생 발송</th>
                     <th style="text-align:right;">
                       <input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:6px;">관리
@@ -1194,6 +1195,21 @@
               <div id="extraMakeupListForDate"></div>
             </div>
           </div>
+        </div>
+
+        <div class="card section-gap">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+            <div class="card-title" style="margin:0;">시험기간 보강관리 <span class="hint" id="examMakeupCount"></span></div>
+            <div style="display:flex;gap:6px;">
+              <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;">
+                <option value="grade">학년순</option>
+                <option value="school">학교순</option>
+              </select>
+              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;"></select>
+            </div>
+          </div>
+          <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;"></div>
+          <div id="examMakeupEditPanel"></div>
         </div>
       </section>
 
@@ -1738,7 +1754,7 @@ db.ref('attendance').on('value', snap => {
 });
 db.ref('makeupSchedules').on('value', snap => {
   makeupSchedules = snapshotToArray(snap.val());
-  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
+  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); renderExamMakeupPanel(); }
   if(currentView === 'dashboard' && document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
   if(currentView === 'sms' && document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
 });
@@ -1857,7 +1873,7 @@ db.ref('.info/connected').on('value', snap => {
 function refreshCurrentView(){
   if(currentView === 'dashboard') renderDashboard();
   if(currentView === 'students'){ renderStudents(); renderSpecialLectureCard(); }
-  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); }
+  if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); renderExamMakeupPanel(); }
   if(currentView === 'calendar') renderBigCalendar();
   if(currentView === 'sms'){ applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
   if(currentView === 'scores'){ renderScoreGrid(); renderScores(); populateScoreHistorySelect(); }
@@ -2425,7 +2441,7 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); }
+  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); renderExamMakeupPanel(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
   if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); renderSpecialLectureCard(); }
   if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
@@ -4032,6 +4048,13 @@ function toggleScienceSpecial(studentId){
   db.ref('students/' + studentId).update({ scienceSpecial: !stu.scienceSpecial });
 }
 
+function toggleExamMakeup(studentId){
+  const stu = studentById(studentId);
+  if(!stu) return;
+  db.ref('students/' + studentId).update({ examMakeup: !stu.examMakeup });
+  if(currentView === 'attendance') renderExamMakeupPanel();
+}
+
 function renderScienceSpecialCard(){
   const box = document.getElementById('scienceSpecialList');
   if(!box) return;
@@ -4313,6 +4336,7 @@ function renderStudents(){
     const c = GRADE_COLORS[s.grade] || CATEGORY_COLORS['기타'];
     const sent = !!billingSentMap[s.id];
     const enrolled = !!s.scienceSpecial;
+    const examTarget = !!s.examMakeup;
     const checked = selectedStudentIds.has(s.id);
     return `
     <tr style="background:${c.bg}90;">
@@ -4328,6 +4352,9 @@ function renderStudents(){
       </td>
       <td style="text-align:center;">
         <input type="checkbox" ${enrolled ? 'checked' : ''} onchange="toggleScienceSpecial('${s.id}')" style="width:17px;height:17px;cursor:pointer;">
+      </td>
+      <td style="text-align:center;">
+        <input type="checkbox" ${examTarget ? 'checked' : ''} onchange="toggleExamMakeup('${s.id}')" style="width:17px;height:17px;cursor:pointer;">
       </td>
       <td style="text-align:center;">
         <span class="billing-badge ${sent ? 'sent' : ''}" onclick="toggleBillingSent('${s.id}')">${sent ? '● 발송완료' : '○ 미발송'}</span>
@@ -5194,6 +5221,107 @@ function bulkDismissSelectedAbsences(){
 
 // 특정 날짜에 선택 가능한 보강 시간 옵션(<option>)을 만든다.
 // 그 날짜에 설정된 보강 시간대(studentMakeupSlots) + 그 요일 정규수업 시간을 합쳐서 보여준다.
+/* ===== 시험기간 보강관리 ===== */
+let examMakeupOpenStudentId = null;
+
+function renderExamMakeupPanel(){
+  const grid = document.getElementById('examMakeupGrid');
+  const countEl = document.getElementById('examMakeupCount');
+  const schoolSel = document.getElementById('examMakeupSchoolFilter');
+  const editBox = document.getElementById('examMakeupEditPanel');
+  const sortSel = document.getElementById('examMakeupSortMode');
+  if(!grid || !countEl || !schoolSel || !editBox || !sortSel) return;
+
+  const targets = students.filter(s => s.examMakeup);
+  countEl.textContent = `${targets.length}명`;
+
+  const schools = [...new Set(targets.map(s => (s.school || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ko'));
+  const prevSchool = schoolSel.value;
+  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('');
+  if(schools.includes(prevSchool)) schoolSel.value = prevSchool;
+
+  const schoolFilter = schoolSel.value;
+  let list = targets.filter(s => !schoolFilter || (s.school || '').trim() === schoolFilter);
+  list = list.sort(sortSel.value === 'school' ? compareBySchoolThenGrade : compareByGradeThenName);
+
+  if(!list.length){
+    grid.innerHTML = `<div class="cell-muted" style="font-size:13px;grid-column:1/-1;">시험보강 대상으로 체크된 학생이 없습니다. 학생 관리에서 "시험보강" 칸을 체크해 주세요.</div>`;
+    editBox.innerHTML = '';
+    return;
+  }
+
+  const today = todayStr();
+  grid.innerHTML = list.map(s => {
+    const days = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).join('');
+    const upcoming = makeupSchedules.find(m => m.studentId === s.id && m.note === '시험기간 보강' && m.date >= today);
+    const open = examMakeupOpenStudentId === s.id;
+    const borderStyle = open ? 'border:1.5px solid var(--color-primary);' : 'border:1px solid var(--color-border);';
+    if(upcoming){
+      const shortDate = upcoming.date.slice(5).replace('-', '/');
+      return `
+        <div style="display:flex;align-items:center;gap:4px;${borderStyle}border-radius:7px;padding:5px 7px;background:var(--color-surface-alt);cursor:pointer;" onclick="openExamMakeupEditor('${s.id}')">
+          <span style="font-size:12px;font-weight:700;color:var(--color-text-muted);">✓ ${escapeHtml(s.name)}</span>
+          <span style="font-size:9px;font-weight:700;background:#FFF3D6;color:#8A6400;padding:1px 5px;border-radius:6px;margin-left:auto;">${escapeHtml(shortDate)} ${escapeHtml(upcoming.time || '')}</span>
+        </div>`;
+    }
+    return `
+      <div style="display:flex;align-items:center;gap:4px;${borderStyle}border-radius:7px;padding:5px 7px;cursor:pointer;" onclick="openExamMakeupEditor('${s.id}')">
+        <span style="font-size:12px;font-weight:700;">${escapeHtml(s.name)}</span>
+        ${gradeBadge(s.grade)}
+        <span style="font-size:10.5px;color:var(--color-text-muted);">${escapeHtml(days)}</span>
+      </div>`;
+  }).join('');
+
+  if(examMakeupOpenStudentId && list.some(s => s.id === examMakeupOpenStudentId)){
+    renderExamMakeupEditPanel();
+  }else{
+    editBox.innerHTML = '';
+  }
+}
+
+function openExamMakeupEditor(studentId){
+  examMakeupOpenStudentId = (examMakeupOpenStudentId === studentId) ? null : studentId;
+  renderExamMakeupPanel();
+}
+
+function renderExamMakeupEditPanel(){
+  const box = document.getElementById('examMakeupEditPanel');
+  const stu = studentById(examMakeupOpenStudentId);
+  if(!box) return;
+  if(!stu){ box.innerHTML = ''; return; }
+  box.innerHTML = `
+    <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;margin-top:12px;">
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${escapeHtml(stu.name)} · 보강 시간 설정</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
+        <input type="date" id="examMakeupDateInput" onchange="onExamMakeupDateChange()" style="flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+        <select id="examMakeupTimeSelect" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜 먼저 선택</option></select>
+      </div>
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">등록</button>
+    </div>`;
+}
+
+function onExamMakeupDateChange(){
+  const dateVal = document.getElementById('examMakeupDateInput').value;
+  const sel = document.getElementById('examMakeupTimeSelect');
+  if(!sel) return;
+  sel.innerHTML = makeupTimeOptionsHtml(dateVal, '');
+}
+
+function registerExamMakeup(){
+  const stu = studentById(examMakeupOpenStudentId);
+  if(!stu) return;
+  const dateVal = document.getElementById('examMakeupDateInput').value;
+  const timeVal = document.getElementById('examMakeupTimeSelect').value;
+  if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
+  if(!timeVal){ alert('시간을 선택해 주세요.'); return; }
+  db.ref('makeupSchedules').push({
+    studentId: stu.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
+  });
+  showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
+  examMakeupOpenStudentId = null;
+  renderExamMakeupPanel();
+}
+
 function makeupTimeOptionsHtml(dateVal, selectedTime){
   if(!dateVal) return `<option value="">날짜를 먼저 선택하세요</option>`;
   const slots = slotsOnDate(dateVal).sort((a,b) => a.time.localeCompare(b.time));
