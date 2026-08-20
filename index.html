@@ -991,7 +991,9 @@
                   <tr>
                     <th>이름</th><th>학년</th><th>학교</th><th>학생 연락처</th><th>학부모 연락처</th><th>시간표</th><th>메모</th>
                     <th style="text-align:center;cursor:pointer;user-select:none;" id="scienceFilterHeader" onclick="cycleScienceFilterMode()" title="눌러서 전체/신청만 순서로 필터해요">과학특강</th>
-                    <th style="text-align:center;">시험보강</th>
+                    <th style="text-align:center;">
+                      <input type="checkbox" id="examMakeupSelectAllHeader" onchange="toggleSelectAllExamMakeup(this.checked)" style="width:15px;height:15px;cursor:pointer;vertical-align:middle;margin-right:4px;">시험보강
+                    </th>
                     <th style="text-align:center;cursor:pointer;user-select:none;" id="billingFilterHeader" onclick="cycleBillingFilterMode()" title="눌러서 전체/미발송만/발송만 순서로 필터해요">결제선생 발송</th>
                     <th style="text-align:right;">
                       <input type="checkbox" id="selectAllStudentsCheckbox" onchange="toggleSelectAllStudents(this.checked)" style="width:16px;height:16px;cursor:pointer;vertical-align:middle;margin-right:6px;">관리
@@ -4055,6 +4057,15 @@ function toggleExamMakeup(studentId){
   if(currentView === 'attendance') renderExamMakeupPanel();
 }
 
+let currentStudentListIds = [];
+function toggleSelectAllExamMakeup(checked){
+  if(!currentStudentListIds.length) return;
+  const updates = {};
+  currentStudentListIds.forEach(id => { updates[id + '/examMakeup'] = checked; });
+  db.ref('students').update(updates);
+  showToast(checked ? `현재 목록 ${currentStudentListIds.length}명을 시험보강 대상으로 체크했습니다.` : `현재 목록 ${currentStudentListIds.length}명의 시험보강 체크를 해제했습니다.`);
+}
+
 function renderScienceSpecialCard(){
   const box = document.getElementById('scienceSpecialList');
   if(!box) return;
@@ -4310,6 +4321,10 @@ function renderStudents(){
   // 목록에서 사라진 학생은 선택 상태에서도 정리
   const visibleIds = new Set(list.map(s => s.id));
   selectedStudentIds.forEach(id => { if(!visibleIds.has(id)) selectedStudentIds.delete(id); });
+  currentStudentListIds = list.map(s => s.id); // "시험보강" 전체선택 등 헤더 체크박스가 지금 화면 목록 기준으로 동작하도록 저장
+
+  const examHeaderCb = document.getElementById('examMakeupSelectAllHeader');
+  if(examHeaderCb) examHeaderCb.checked = list.length > 0 && list.every(s => s.examMakeup);
 
   const hintParts = [];
   if(filterSchool) hintParts.push(filterSchool);
