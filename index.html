@@ -5250,6 +5250,7 @@ function bulkDismissSelectedAbsences(){
 // 특정 날짜에 선택 가능한 보강 시간 옵션(<option>)을 만든다.
 // 그 날짜에 설정된 보강 시간대(studentMakeupSlots) + 그 요일 정규수업 시간을 합쳐서 보여준다.
 /* ===== 시험기간 보강관리 ===== */
+const EXAM_MAKEUP_MAX = 4;
 let examMakeupOpenStudentId = null;
 
 function renderExamMakeupPanel(){
@@ -5281,15 +5282,15 @@ function renderExamMakeupPanel(){
   const today = todayStr();
   grid.innerHTML = list.map(s => {
     const days = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).join('');
-    const upcoming = makeupSchedules.find(m => m.studentId === s.id && m.note === '시험기간 보강' && m.date >= today);
+    const mine = makeupSchedules.filter(m => m.studentId === s.id && m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
     const open = examMakeupOpenStudentId === s.id;
     const borderStyle = open ? 'border:1.5px solid var(--color-primary);' : 'border:1px solid var(--color-border);';
-    if(upcoming){
-      const shortDate = upcoming.date.slice(5).replace('-', '/');
+    if(mine.length){
+      const done = mine.length >= EXAM_MAKEUP_MAX;
       return `
         <div style="display:flex;align-items:center;gap:4px;${borderStyle}border-radius:7px;padding:5px 7px;background:var(--color-surface-alt);cursor:pointer;" onclick="openExamMakeupEditor('${s.id}')">
-          <span style="font-size:12px;font-weight:700;color:var(--color-text-muted);">✓ ${escapeHtml(s.name)}</span>
-          <span style="font-size:9px;font-weight:700;background:#FFF3D6;color:#8A6400;padding:1px 5px;border-radius:6px;margin-left:auto;">${escapeHtml(shortDate)} ${escapeHtml(upcoming.time || '')}</span>
+          <span style="font-size:12px;font-weight:700;color:${done ? 'var(--color-success)' : 'var(--color-text-muted)'};">${done ? '✓' : ''} ${escapeHtml(s.name)}</span>
+          <span style="font-size:9px;font-weight:700;background:#FFF3D6;color:#8A6400;padding:1px 5px;border-radius:6px;margin-left:auto;">${mine.length}/${EXAM_MAKEUP_MAX}</span>
         </div>`;
     }
     return `
@@ -5317,15 +5318,34 @@ function renderExamMakeupEditPanel(){
   const stu = studentById(examMakeupOpenStudentId);
   if(!box) return;
   if(!stu){ box.innerHTML = ''; return; }
-  box.innerHTML = `
-    <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;margin-top:12px;">
-      <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${escapeHtml(stu.name)} · 보강 시간 설정</div>
+
+  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
+  const slotsHtml = mine.map((m, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:7px 10px;margin-bottom:5px;">
+      <span style="font-size:12px;font-weight:600;">${i + 1}회차 · ${escapeHtml(m.date)} ${escapeHtml(m.time || '')}</span>
+      <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="cancelExamMakeupSlot('${m.id}')">취소</span>
+    </div>`).join('');
+
+  const formHtml = mine.length >= EXAM_MAKEUP_MAX
+    ? `<p class="hint" style="margin-top:4px;">4회 신청이 모두 채워졌어요.</p>`
+    : `
       <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
         <input type="date" id="examMakeupDateInput" onchange="onExamMakeupDateChange()" style="flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
         <select id="examMakeupTimeSelect" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜 먼저 선택</option></select>
       </div>
-      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">등록</button>
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">${mine.length + 1}회차 등록</button>`;
+
+  box.innerHTML = `
+    <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;margin-top:12px;">
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${escapeHtml(stu.name)} · 보강 ${mine.length}/${EXAM_MAKEUP_MAX}</div>
+      ${slotsHtml}
+      ${formHtml}
     </div>`;
+}
+
+function cancelExamMakeupSlot(id){
+  if(!confirm('이 보강 일정을 취소하시겠습니까?')) return;
+  db.ref('makeupSchedules/' + id).remove();
 }
 
 function onExamMakeupDateChange(){
@@ -5338,6 +5358,8 @@ function onExamMakeupDateChange(){
 function registerExamMakeup(){
   const stu = studentById(examMakeupOpenStudentId);
   if(!stu) return;
+  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강');
+  if(mine.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청이 모두 채워졌어요.'); return; }
   const dateVal = document.getElementById('examMakeupDateInput').value;
   const timeVal = document.getElementById('examMakeupTimeSelect').value;
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
@@ -5346,7 +5368,6 @@ function registerExamMakeup(){
     studentId: stu.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
   });
   showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
-  examMakeupOpenStudentId = null;
   renderExamMakeupPanel();
 }
 

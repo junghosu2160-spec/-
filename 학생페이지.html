@@ -234,6 +234,18 @@
       </div>
     </div>
 
+    <!-- 시험보강 신청 (원장님이 "시험보강" 체크해둔 학생만 표시) -->
+    <div class="card" id="examMakeupCard" style="display:none;border:1.5px solid var(--color-accent);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <div class="card-title" style="margin:0;">시험보강 신청</div>
+        <span id="examMakeupCountBadge" style="font-size:11px;font-weight:700;background:#FFF6DC;color:#8A6400;padding:3px 9px;border-radius:999px;">-</span>
+      </div>
+      <p class="hint" style="margin:6px 0 10px;">총 4회까지 신청할 수 있어요 · 평일은 정규시간이 자동으로 채워지고, 주말은 직접 시간을 골라요</p>
+      <div id="examMakeupProgressBar" style="display:flex;gap:4px;margin-bottom:12px;"></div>
+      <div id="examMakeupSlotList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <div id="examMakeupFormWrap"></div>
+    </div>
+
     <!-- 공부 스케줄러 -->
     <div class="card">
       <div class="card-title">이번 주 공부 스케줄</div>
@@ -318,6 +330,8 @@ let studentGoal = { weeklyGoal: 5 };
 let scores = [];
 let subjectNamesData = { names: [] };
 let announcements = [];
+const EXAM_MAKEUP_MAX = 4;
+let examMakeupSlots = [];
 const EXAM_PERIODS = ['1학기 중간고사','1학기 기말고사','2학기 중간고사','2학기 기말고사'];
 
 let calYear = new Date().getFullYear();
@@ -438,6 +452,11 @@ function attachListeners(){
   db.ref('announcements').on('value', snap => {
     announcements = snapshotToArray(snap.val());
     renderAnnounceBanner();
+  });
+  db.ref('makeupSchedules').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
+    const all = snapshotToArray(snap.val());
+    examMakeupSlots = all.filter(m => m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
+    renderExamMakeupCard();
   });
   db.ref('attendance').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
     attendance = snapshotToArray(snap.val());
@@ -1026,6 +1045,66 @@ function renderAnnounceBanner(){
     const date = new Date(a.createdAt).toLocaleDateString('ko-KR', { month:'numeric', day:'numeric' });
     return `<div class="announce-item">${escapeHtml(a.message)}<div class="date">${date}</div></div>`;
   }).join('');
+}
+
+/* ===== 시험보강 신청 ===== */
+function renderExamMakeupCard(){
+  const card = document.getElementById('examMakeupCard');
+  if(!card || !currentStudent) return;
+  if(!currentStudent.examMakeup){ card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  const count = examMakeupSlots.length;
+  document.getElementById('examMakeupCountBadge').textContent = `${count}/${EXAM_MAKEUP_MAX} 신청완료`;
+
+  document.getElementById('examMakeupProgressBar').innerHTML = Array.from({ length: EXAM_MAKEUP_MAX }).map((_, i) =>
+    `<div style="flex:1;height:5px;border-radius:99px;background:${i < count ? 'var(--color-primary)' : 'var(--color-surface-alt)'};"></div>`
+  ).join('');
+
+  document.getElementById('examMakeupSlotList').innerHTML = examMakeupSlots.map((m, i) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--color-surface-alt);border-radius:10px;padding:9px 12px;">
+      <span style="font-size:13px;font-weight:600;">${i + 1}회차 · ${formatDateWithWeekday(m.date)} ${escapeHtml(m.time || '')}</span>
+      <span style="font-size:11.5px;color:var(--color-danger);cursor:pointer;" onclick="cancelExamMakeup('${m.id}')">취소</span>
+    </div>`).join('');
+
+  const formWrap = document.getElementById('examMakeupFormWrap');
+  if(count >= EXAM_MAKEUP_MAX){
+    formWrap.innerHTML = `<p class="hint" style="text-align:center;">4회 신청을 모두 완료했어요</p>`;
+    return;
+  }
+  formWrap.innerHTML = `
+    <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;">
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${count + 1}회차 신청하기</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="date" id="examMakeupDateInput" onchange="onExamMakeupDateChange()" style="flex:1;">
+        <input type="time" id="examMakeupTimeInput" style="flex:1;">
+      </div>
+      <button style="width:100%;" onclick="submitExamMakeup()">신청하기</button>
+    </div>`;
+}
+
+function onExamMakeupDateChange(){
+  const dateVal = document.getElementById('examMakeupDateInput').value;
+  const timeInput = document.getElementById('examMakeupTimeInput');
+  if(!dateVal || !timeInput) return;
+  const weekday = JS_DAY_TO_LABEL[new Date(dateVal + 'T00:00:00').getDay()];
+  const regular = currentStudent.schedule && currentStudent.schedule[weekday];
+  if(regular) timeInput.value = regular;
+}
+
+function submitExamMakeup(){
+  if(examMakeupSlots.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청을 완료했어요.'); return; }
+  const dateVal = document.getElementById('examMakeupDateInput').value;
+  const timeVal = document.getElementById('examMakeupTimeInput').value;
+  if(!dateVal || !timeVal){ alert('날짜와 시간을 모두 선택해 주세요.'); return; }
+  db.ref('makeupSchedules').push({
+    studentId: currentStudent.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
+  });
+}
+
+function cancelExamMakeup(id){
+  if(!confirm('이 보강 신청을 취소하시겠습니까?')) return;
+  db.ref('makeupSchedules/' + id).remove();
 }
 
 tryAutoLogin();
