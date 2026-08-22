@@ -1154,6 +1154,22 @@
               <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;"></select>
             </div>
           </div>
+
+          <div style="cursor:pointer;margin-bottom:10px;" onclick="toggleExamSlotPanel()">
+            <div style="font-size:12px;color:var(--color-text-muted);padding:5px 0;border-bottom:1px solid var(--color-border);">
+              <span id="examSlotToggleIcon">▸</span> 보강 가능 시간대 설정 <span class="hint">여기 만들어둔 시간대에서만 학생이 고를 수 있어요</span>
+            </div>
+          </div>
+          <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+              <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <button class="btn btn-primary btn-sm" onclick="addExamSlot()">추가</button>
+            </div>
+            <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+
           <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
           <div id="examMakeupEditPanel"></div>
         </div>
@@ -1763,6 +1779,11 @@ db.ref('makeupSchedules').on('value', snap => {
   if(currentView === 'attendance'){ renderAttendance(); renderMakeupSlotList(); renderExamMakeupPanel(); }
   if(currentView === 'dashboard' && document.getElementById('timetableHeadcount')) renderTimetableHeadcount('timetableHeadcount');
   if(currentView === 'sms' && document.getElementById('smsHeadcountRef')) renderTimetableHeadcount('smsHeadcountRef');
+});
+let examSlotOptions = [];
+db.ref('examSlotOptions').on('value', snap => {
+  examSlotOptions = snapshotToArray(snap.val()).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+  if(currentView === 'attendance'){ renderExamSlotList(); renderExamMakeupPanel(); }
 });
 db.ref('makeupDismissed').on('value', snap => {
   makeupDismissed = snap.val() || {};
@@ -2447,7 +2468,7 @@ function switchView(view){
   document.getElementById('pageTitle').textContent = VIEW_TITLES[view];
 
   if(view === 'dashboard') renderDashboard();
-  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); renderExamMakeupPanel(); }
+  if(view === 'attendance'){ renderAttendance(); renderExtraMakeupSection(); renderManualMakeupStudentList(); renderMakeupSlotList(); renderRefTeacherCal(); renderExamMakeupPanel(); renderExamSlotList(); }
   if(view === 'calendar'){ renderBigCalendar(); renderTeacherLegend(); renderTeacherList(); renderTeacherDaysPicker(); populateSchoolPeriodSchoolSelect(); renderSchoolPeriodList(); }
   if(view === 'students'){ renderStudents(); renderScheduleGrid(); renderTrashBin(); renderSpecialLectureCard(); }
   if(view === 'sms'){ renderSmsFilterPickers(); renderSmsTimePicker(); applySmsFilter(); renderTimetableHeadcount('smsHeadcountRef'); }
@@ -5253,6 +5274,53 @@ function bulkDismissSelectedAbsences(){
 const EXAM_MAKEUP_MAX = 4;
 let examMakeupOpenStudentId = null;
 
+function toggleExamSlotPanel(){
+  const panel = document.getElementById('examSlotPanel');
+  const icon = document.getElementById('examSlotToggleIcon');
+  if(!panel) return;
+  const willShow = panel.style.display === 'none';
+  panel.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+  if(willShow) renderExamSlotList();
+}
+
+function examSlotBookedCount(slot){
+  return makeupSchedules.filter(m => m.note === '시험기간 보강' && m.date === slot.date && m.time === slot.time).length;
+}
+
+function renderExamSlotList(){
+  const box = document.getElementById('examSlotList');
+  if(!box) return;
+  if(!examSlotOptions.length){
+    box.innerHTML = `<div class="cell-muted" style="font-size:12.5px;">아직 만들어둔 시간대가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = examSlotOptions.map(slot => {
+    const booked = examSlotBookedCount(slot);
+    const full = booked >= slot.capacity;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:7px 10px;">
+        <span style="font-size:12.5px;">${escapeHtml(fmtDateKR2(slot.date))} ${escapeHtml(slot.time)} · ${booked}/${slot.capacity}명${full ? ' (마감)' : ''}</span>
+        <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="deleteExamSlot('${slot.id}')">삭제</span>
+      </div>`;
+  }).join('');
+}
+
+function addExamSlot(){
+  const date = document.getElementById('examSlotDateInput').value;
+  const time = document.getElementById('examSlotTimeInput').value;
+  const capacity = parseInt(document.getElementById('examSlotCapacityInput').value, 10) || 5;
+  if(!date || !time){ alert('날짜와 시간을 모두 입력해 주세요.'); return; }
+  db.ref('examSlotOptions').push({ date, time, capacity, createdAt: Date.now() });
+  document.getElementById('examSlotDateInput').value = '';
+  document.getElementById('examSlotTimeInput').value = '';
+}
+
+function deleteExamSlot(id){
+  if(!confirm('이 시간대를 삭제하시겠습니까?')) return;
+  db.ref('examSlotOptions/' + id).remove();
+}
+
 function renderExamMakeupPanel(){
   const grid = document.getElementById('examMakeupGrid');
   const countEl = document.getElementById('examMakeupCount');
@@ -5326,13 +5394,22 @@ function renderExamMakeupEditPanel(){
       <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="cancelExamMakeupSlot('${m.id}')">취소</span>
     </div>`).join('');
 
+  const usedKeys = new Set(mine.map(m => m.date + '_' + m.time));
+  const availableSlots = examSlotOptions.filter(slot => !usedKeys.has(slot.date + '_' + slot.time));
+
   const formHtml = mine.length >= EXAM_MAKEUP_MAX
     ? `<p class="hint" style="margin-top:4px;">4회 신청이 모두 채워졌어요.</p>`
-    : `
-      <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;">
-        <input type="date" id="examMakeupDateInput" onchange="onExamMakeupDateChange()" style="flex:1;min-width:130px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-        <select id="examMakeupTimeSelect" style="flex:1;min-width:150px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜 먼저 선택</option></select>
-      </div>
+    : !examSlotOptions.length
+      ? `<p class="hint" style="margin-top:4px;">먼저 위 "보강 가능 시간대 설정"에서 시간대를 만들어 주세요.</p>`
+      : `
+      <select id="examMakeupSlotSelect" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+        <option value="">시간대 선택</option>
+        ${availableSlots.map(slot => {
+          const booked = examSlotBookedCount(slot);
+          const full = booked >= slot.capacity;
+          return `<option value="${slot.id}" ${full ? 'disabled' : ''}>${escapeHtml(fmtDateKR2(slot.date))} ${escapeHtml(slot.time)} · ${booked}/${slot.capacity}명${full ? ' (마감)' : ''}</option>`;
+        }).join('')}
+      </select>
       <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">${mine.length + 1}회차 등록</button>`;
 
   box.innerHTML = `
@@ -5348,24 +5425,17 @@ function cancelExamMakeupSlot(id){
   db.ref('makeupSchedules/' + id).remove();
 }
 
-function onExamMakeupDateChange(){
-  const dateVal = document.getElementById('examMakeupDateInput').value;
-  const sel = document.getElementById('examMakeupTimeSelect');
-  if(!sel) return;
-  sel.innerHTML = makeupTimeOptionsHtml(dateVal, '');
-}
-
 function registerExamMakeup(){
   const stu = studentById(examMakeupOpenStudentId);
   if(!stu) return;
   const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강');
   if(mine.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청이 모두 채워졌어요.'); return; }
-  const dateVal = document.getElementById('examMakeupDateInput').value;
-  const timeVal = document.getElementById('examMakeupTimeSelect').value;
-  if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
-  if(!timeVal){ alert('시간을 선택해 주세요.'); return; }
+  const slotId = document.getElementById('examMakeupSlotSelect').value;
+  const slot = examSlotOptions.find(s => s.id === slotId);
+  if(!slot){ alert('시간대를 선택해 주세요.'); return; }
+  if(examSlotBookedCount(slot) >= slot.capacity){ alert('이미 마감된 시간대예요.'); renderExamMakeupPanel(); return; }
   db.ref('makeupSchedules').push({
-    studentId: stu.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
+    studentId: stu.id, date: slot.date, time: slot.time, note: '시험기간 보강', createdAt: Date.now()
   });
   showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
   renderExamMakeupPanel();

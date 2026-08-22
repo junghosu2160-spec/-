@@ -331,7 +331,9 @@ let scores = [];
 let subjectNamesData = { names: [] };
 let announcements = [];
 const EXAM_MAKEUP_MAX = 4;
-let examMakeupSlots = [];
+let examMakeupSlots = []; // 내가 신청한 시험보강 목록
+let examSlotOptions = []; // 원장님이 만들어둔 시간대
+let allExamBookings = []; // 전체 학생들의 시험보강 예약 (마감 여부 계산용)
 const EXAM_PERIODS = ['1학기 중간고사','1학기 기말고사','2학기 중간고사','2학기 기말고사'];
 
 let calYear = new Date().getFullYear();
@@ -456,6 +458,14 @@ function attachListeners(){
   db.ref('makeupSchedules').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
     const all = snapshotToArray(snap.val());
     examMakeupSlots = all.filter(m => m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
+    renderExamMakeupCard();
+  });
+  db.ref('examSlotOptions').on('value', snap => {
+    examSlotOptions = snapshotToArray(snap.val()).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    renderExamMakeupCard();
+  });
+  db.ref('makeupSchedules').orderByChild('note').equalTo('시험기간 보강').on('value', snap => {
+    allExamBookings = snapshotToArray(snap.val());
     renderExamMakeupCard();
   });
   db.ref('attendance').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
@@ -1072,34 +1082,56 @@ function renderExamMakeupCard(){
     formWrap.innerHTML = `<p class="hint" style="text-align:center;">4회 신청을 모두 완료했어요</p>`;
     return;
   }
+
+  if(!examSlotOptions.length){
+    formWrap.innerHTML = `<p class="hint" style="text-align:center;">아직 신청할 수 있는 시간대가 없어요. 선생님께 문의해주세요.</p>`;
+    return;
+  }
+
+  const usedKeys = new Set(examMakeupSlots.map(m => m.date + '_' + m.time));
+
   formWrap.innerHTML = `
     <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;">
       <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${count + 1}회차 신청하기</div>
-      <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input type="date" id="examMakeupDateInput" onchange="onExamMakeupDateChange()" style="flex:1;">
-        <input type="time" id="examMakeupTimeInput" style="flex:1;">
-      </div>
-      <button style="width:100%;" onclick="submitExamMakeup()">신청하기</button>
+      <div id="examSlotChoices" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+      <button style="width:100%;" onclick="submitExamMakeup()">선택한 시간대로 신청</button>
     </div>`;
+
+  let selectedSlotId = null;
+  const choicesBox = document.getElementById('examSlotChoices');
+  choicesBox.innerHTML = examSlotOptions.map(slot => {
+    const key = slot.date + '_' + slot.time;
+    if(usedKeys.has(key)) return ''; // 이미 신청한 시간대는 다시 보여주지 않음
+    const booked = allExamBookings.filter(b => b.date === slot.date && b.time === slot.time).length;
+    const full = booked >= slot.capacity;
+    return `
+      <div class="exam-slot-choice" data-id="${slot.id}" style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--color-border);border-radius:8px;padding:9px 12px;${full ? 'opacity:0.5;' : 'cursor:pointer;'}" ${full ? '' : `onclick="selectExamSlot('${slot.id}')"`}>
+        <span style="font-size:12.5px;font-weight:700;${full ? 'color:var(--color-text-muted);' : ''}">${formatDateWithWeekday(slot.date)} ${escapeHtml(slot.time)}</span>
+        <span style="font-size:11px;font-weight:600;color:${full ? 'var(--color-danger)' : 'var(--color-success)'};">${full ? '마감' : '신청 가능'}</span>
+      </div>`;
+  }).join('');
 }
 
-function onExamMakeupDateChange(){
-  const dateVal = document.getElementById('examMakeupDateInput').value;
-  const timeInput = document.getElementById('examMakeupTimeInput');
-  if(!dateVal || !timeInput) return;
-  const weekday = JS_DAY_TO_LABEL[new Date(dateVal + 'T00:00:00').getDay()];
-  const regular = currentStudent.schedule && currentStudent.schedule[weekday];
-  if(regular) timeInput.value = regular;
+let selectedExamSlotId = null;
+function selectExamSlot(slotId){
+  selectedExamSlotId = slotId;
+  document.querySelectorAll('.exam-slot-choice').forEach(el => {
+    el.style.borderColor = el.dataset.id === slotId ? 'var(--color-primary)' : 'var(--color-border)';
+    el.style.borderWidth = el.dataset.id === slotId ? '1.5px' : '1px';
+  });
 }
 
 function submitExamMakeup(){
   if(examMakeupSlots.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청을 완료했어요.'); return; }
-  const dateVal = document.getElementById('examMakeupDateInput').value;
-  const timeVal = document.getElementById('examMakeupTimeInput').value;
-  if(!dateVal || !timeVal){ alert('날짜와 시간을 모두 선택해 주세요.'); return; }
+  if(!selectedExamSlotId){ alert('신청할 시간대를 선택해 주세요.'); return; }
+  const slot = examSlotOptions.find(s => s.id === selectedExamSlotId);
+  if(!slot){ alert('선택한 시간대를 찾을 수 없어요. 다시 시도해 주세요.'); return; }
+  const booked = allExamBookings.filter(b => b.date === slot.date && b.time === slot.time).length;
+  if(booked >= slot.capacity){ alert('죄송해요, 방금 그 시간대가 마감됐어요. 다른 시간대를 골라주세요.'); selectedExamSlotId = null; renderExamMakeupCard(); return; }
   db.ref('makeupSchedules').push({
-    studentId: currentStudent.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
+    studentId: currentStudent.id, date: slot.date, time: slot.time, note: '시험기간 보강', createdAt: Date.now()
   });
+  selectedExamSlotId = null;
 }
 
 function cancelExamMakeup(id){
