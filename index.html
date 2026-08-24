@@ -5377,8 +5377,15 @@ function renderExamMakeupPanel(){
 }
 
 function openExamMakeupEditor(studentId){
+  if(examMakeupOpenStudentId !== studentId) examMakeupTabMode = 'slot';
   examMakeupOpenStudentId = (examMakeupOpenStudentId === studentId) ? null : studentId;
   renderExamMakeupPanel();
+}
+
+let examMakeupTabMode = 'slot'; // 'slot' | 'regular'
+function switchExamMakeupTab(mode){
+  examMakeupTabMode = mode;
+  renderExamMakeupEditPanel();
 }
 
 function renderExamMakeupEditPanel(){
@@ -5394,23 +5401,40 @@ function renderExamMakeupEditPanel(){
       <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="cancelExamMakeupSlot('${m.id}')">취소</span>
     </div>`).join('');
 
-  const usedKeys = new Set(mine.map(m => m.date + '_' + m.time));
-  const availableSlots = examSlotOptions.filter(slot => !usedKeys.has(slot.date + '_' + slot.time));
+  let formHtml;
+  if(mine.length >= EXAM_MAKEUP_MAX){
+    formHtml = `<p class="hint" style="margin-top:4px;">4회 신청이 모두 채워졌어요.</p>`;
+  }else{
+    const tabsHtml = `
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button type="button" class="btn ${examMakeupTabMode === 'slot' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="flex:1;" onclick="switchExamMakeupTab('slot')">지정 시간대에서</button>
+        <button type="button" class="btn ${examMakeupTabMode === 'regular' ? 'btn-primary' : 'btn-ghost'} btn-sm" style="flex:1;" onclick="switchExamMakeupTab('regular')">정규수업 시간 중에서</button>
+      </div>`;
 
-  const formHtml = mine.length >= EXAM_MAKEUP_MAX
-    ? `<p class="hint" style="margin-top:4px;">4회 신청이 모두 채워졌어요.</p>`
-    : !examSlotOptions.length
-      ? `<p class="hint" style="margin-top:4px;">먼저 위 "보강 가능 시간대 설정"에서 시간대를 만들어 주세요.</p>`
-      : `
-      <select id="examMakeupSlotSelect" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-        <option value="">시간대 선택</option>
-        ${availableSlots.map(slot => {
-          const booked = examSlotBookedCount(slot);
-          const full = booked >= slot.capacity;
-          return `<option value="${slot.id}" ${full ? 'disabled' : ''}>${escapeHtml(fmtDateKR2(slot.date))} ${escapeHtml(slot.time)} · ${booked}/${slot.capacity}명${full ? ' (마감)' : ''}</option>`;
-        }).join('')}
-      </select>
-      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">${mine.length + 1}회차 등록</button>`;
+    if(examMakeupTabMode === 'regular'){
+      formHtml = tabsHtml + `
+        <input type="date" id="examMakeupRegularDate" onchange="onExamMakeupRegularDateChange()" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+        <div id="examMakeupRegularResult" style="margin-bottom:8px;"></div>
+        <button class="btn btn-primary btn-sm" style="width:100%;" id="examMakeupRegularBtn" disabled onclick="registerExamMakeupRegular()">${mine.length + 1}회차 등록</button>`;
+    }else{
+      const usedKeys = new Set(mine.map(m => m.date + '_' + m.time));
+      const availableSlots = examSlotOptions.filter(slot => !usedKeys.has(slot.date + '_' + slot.time));
+      formHtml = tabsHtml + (
+        !examSlotOptions.length
+          ? `<p class="hint" style="margin-top:4px;">먼저 위 "보강 가능 시간대 설정"에서 시간대를 만들어 주세요.</p>`
+          : `
+          <select id="examMakeupSlotSelect" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+            <option value="">시간대 선택</option>
+            ${availableSlots.map(slot => {
+              const booked = examSlotBookedCount(slot);
+              const full = booked >= slot.capacity;
+              return `<option value="${slot.id}" ${full ? 'disabled' : ''}>${escapeHtml(fmtDateKR2(slot.date))} ${escapeHtml(slot.time)} · ${booked}/${slot.capacity}명${full ? ' (마감)' : ''}</option>`;
+            }).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeup()">${mine.length + 1}회차 등록</button>`
+      );
+    }
+  }
 
   box.innerHTML = `
     <div style="background:var(--color-surface-alt);border-radius:10px;padding:12px;margin-top:12px;">
@@ -5418,6 +5442,43 @@ function renderExamMakeupEditPanel(){
       ${slotsHtml}
       ${formHtml}
     </div>`;
+}
+
+// "정규수업 시간 중에서" 탭: 날짜를 고르면 그 학생의 그 요일 정규수업 시간을 자동으로 보여줌
+function onExamMakeupRegularDateChange(){
+  const stu = studentById(examMakeupOpenStudentId);
+  const dateVal = document.getElementById('examMakeupRegularDate').value;
+  const resultBox = document.getElementById('examMakeupRegularResult');
+  const btn = document.getElementById('examMakeupRegularBtn');
+  if(!stu || !resultBox || !btn) return;
+  if(!dateVal){ resultBox.innerHTML = ''; btn.disabled = true; return; }
+
+  const weekday = weekdayLabelOf(dateVal);
+  const time = stu.schedule && stu.schedule[weekday];
+  if(time){
+    resultBox.innerHTML = `<div style="font-size:12.5px;color:var(--color-text);background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;">${escapeHtml(weekday)} ${escapeHtml(time)} (${escapeHtml(stu.name)} 정규수업 시간)</div>`;
+    btn.disabled = false;
+  }else{
+    resultBox.innerHTML = `<div class="hint" style="color:var(--color-danger);">그 날(${escapeHtml(weekday)}요일)은 ${escapeHtml(stu.name)} 학생 정규수업이 없어요.</div>`;
+    btn.disabled = true;
+  }
+}
+
+function registerExamMakeupRegular(){
+  const stu = studentById(examMakeupOpenStudentId);
+  if(!stu) return;
+  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강');
+  if(mine.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청이 모두 채워졌어요.'); return; }
+  const dateVal = document.getElementById('examMakeupRegularDate').value;
+  if(!dateVal){ alert('날짜를 선택해 주세요.'); return; }
+  const weekday = weekdayLabelOf(dateVal);
+  const time = stu.schedule && stu.schedule[weekday];
+  if(!time){ alert('그 날은 정규수업이 없어요.'); return; }
+  db.ref('makeupSchedules').push({
+    studentId: stu.id, date: dateVal, time, note: '시험기간 보강', createdAt: Date.now()
+  });
+  showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
+  renderExamMakeupPanel();
 }
 
 function cancelExamMakeupSlot(id){
