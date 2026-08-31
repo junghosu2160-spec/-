@@ -1165,7 +1165,8 @@
               <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
               <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
               <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <button class="btn btn-primary btn-sm" onclick="addExamSlot()">추가</button>
+              <button class="btn btn-primary btn-sm" id="examSlotSubmitBtn" onclick="addExamSlot()">추가</button>
+              <button class="btn btn-ghost btn-sm" id="examSlotCancelEditBtn" style="display:none;" onclick="cancelEditExamSlot()">취소</button>
             </div>
             <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
           </div>
@@ -5301,9 +5302,34 @@ function renderExamSlotList(){
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:7px 10px;">
         <span style="font-size:12.5px;">${escapeHtml(fmtDateKR2(slot.date))} ${escapeHtml(slot.time)} · ${booked}/${slot.capacity}명${full ? ' (마감)' : ''}</span>
-        <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="deleteExamSlot('${slot.id}')">삭제</span>
+        <span>
+          <span style="font-size:11px;color:var(--color-primary);cursor:pointer;margin-right:10px;" onclick="editExamSlot('${slot.id}')">수정</span>
+          <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="deleteExamSlot('${slot.id}')">삭제</span>
+        </span>
       </div>`;
   }).join('');
+}
+
+let editingExamSlotId = null;
+
+function editExamSlot(id){
+  const slot = examSlotOptions.find(s => s.id === id);
+  if(!slot) return;
+  editingExamSlotId = id;
+  document.getElementById('examSlotDateInput').value = slot.date;
+  document.getElementById('examSlotTimeInput').value = slot.time;
+  document.getElementById('examSlotCapacityInput').value = slot.capacity;
+  document.getElementById('examSlotSubmitBtn').textContent = '수정 저장';
+  document.getElementById('examSlotCancelEditBtn').style.display = 'inline-flex';
+}
+
+function cancelEditExamSlot(){
+  editingExamSlotId = null;
+  document.getElementById('examSlotDateInput').value = '';
+  document.getElementById('examSlotTimeInput').value = '';
+  document.getElementById('examSlotCapacityInput').value = '5';
+  document.getElementById('examSlotSubmitBtn').textContent = '추가';
+  document.getElementById('examSlotCancelEditBtn').style.display = 'none';
 }
 
 function addExamSlot(){
@@ -5311,6 +5337,20 @@ function addExamSlot(){
   const time = document.getElementById('examSlotTimeInput').value;
   const capacity = parseInt(document.getElementById('examSlotCapacityInput').value, 10) || 5;
   if(!date || !time){ alert('날짜와 시간을 모두 입력해 주세요.'); return; }
+
+  if(editingExamSlotId){
+    const oldSlot = examSlotOptions.find(s => s.id === editingExamSlotId);
+    // 시간대를 바꾸면 그 시간대로 이미 신청한 학생들 기록도 같이 옮겨줘야 어긋나지 않음
+    if(oldSlot && (oldSlot.date !== date || oldSlot.time !== time)){
+      const affected = makeupSchedules.filter(m => m.note === '시험기간 보강' && m.date === oldSlot.date && m.time === oldSlot.time);
+      affected.forEach(m => db.ref('makeupSchedules/' + m.id).update({ date, time }));
+    }
+    db.ref('examSlotOptions/' + editingExamSlotId).update({ date, time, capacity });
+    showToast('시간대가 수정되었습니다.');
+    cancelEditExamSlot();
+    return;
+  }
+
   db.ref('examSlotOptions').push({ date, time, capacity, createdAt: Date.now() });
   document.getElementById('examSlotDateInput').value = '';
   document.getElementById('examSlotTimeInput').value = '';
@@ -5395,11 +5435,20 @@ function renderExamMakeupEditPanel(){
   if(!stu){ box.innerHTML = ''; return; }
 
   const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
-  const slotsHtml = mine.map((m, i) => `
-    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--color-surface);border:1px solid var(--color-border);border-radius:8px;padding:7px 10px;margin-bottom:5px;">
-      <span style="font-size:12px;font-weight:600;">${i + 1}회차 · ${escapeHtml(m.date)} ${escapeHtml(m.time || '')}</span>
+  const roundColors = [
+    { bg:'#DCEEFF', border:'#9ECFFA', text:'#123D73' }, // 1회차 - 파랑
+    { bg:'#DFF7E9', border:'#82D9A8', text:'#0F4A2E' }, // 2회차 - 초록
+    { bg:'#EEEAFB', border:'#C9B8F5', text:'#4B2E9E' }, // 3회차 - 보라
+    { bg:'#FFE1EC', border:'#FFA3C4', text:'#8A2456' }, // 4회차 - 핑크
+  ];
+  const slotsHtml = mine.map((m, i) => {
+    const c = roundColors[i] || roundColors[roundColors.length - 1];
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;background:${c.bg};border:1px solid ${c.border};border-radius:8px;padding:7px 10px;margin-bottom:5px;">
+      <span style="font-size:12px;font-weight:700;color:${c.text};">${i + 1}회차 · ${escapeHtml(m.date)} ${escapeHtml(m.time || '')}</span>
       <span style="font-size:11px;color:var(--color-danger);cursor:pointer;" onclick="cancelExamMakeupSlot('${m.id}')">취소</span>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   let formHtml;
   if(mine.length >= EXAM_MAKEUP_MAX){
