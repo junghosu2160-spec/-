@@ -4698,13 +4698,17 @@ function cycleElementaryStatus(studentId, date){
   }
 }
 
-// 초등부 카드용: 등원 요일+시간을 한 줄로 압축 (예: "월수 16:00", 시간이 요일마다 다르면 "월 16:00·수 17:00")
-function elemScheduleCompact(s){
+// 초등부 카드용: 등원 요일+시간을 한 줄로 압축해서 보여주되, 지정한 요일(보통 오늘)만 진하게 강조
+function elemScheduleCompactHtml(s, targetWeekday){
   const entries = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).map(d => ({ d, t: s.schedule[d] }));
   if(!entries.length) return '';
-  const times = [...new Set(entries.map(e => e.t))];
-  if(times.length === 1) return `${entries.map(e => e.d).join('')} ${times[0]}`;
-  return entries.map(e => `${e.d} ${e.t}`).join('·');
+  return entries.map((e, i) => {
+    const text = `${e.d} ${e.t}`;
+    const piece = e.d === targetWeekday
+      ? `<span style="color:var(--color-text);font-weight:800;background:#FFF3D6;padding:0 3px;border-radius:4px;">${escapeHtml(text)}</span>`
+      : `<span style="color:#C9CDD6;">${escapeHtml(text)}</span>`;
+    return (i > 0 ? '·' : '') + piece;
+  }).join('');
 }
 
 function elementaryCardHtml(s, date){
@@ -4715,10 +4719,10 @@ function elementaryCardHtml(s, date){
   else if(status === '지각'){ cls = '지각'; label = '● 지각' + (rec.checkInTime ? ' ' + rec.checkInTime : ''); }
   else if(status === '결석'){ cls = '결석'; label = '● 결석'; }
 
-  const sched = elemScheduleCompact(s);
+  const sched = elemScheduleCompactHtml(s, weekdayLabelOf(date));
   return `
     <div class="elem-card ${cls}" onclick="cycleElementaryStatus('${s.id}','${date}')" title="눌러서 출석→지각→결석→대기중 순서로 바꿔요">
-      <div class="elem-card-name">${escapeHtml(s.name)} <span class="cell-muted" style="font-weight:400;font-size:10.5px;">${escapeHtml(s.grade)}${sched ? ' · ' + escapeHtml(sched) : ''}</span></div>
+      <div class="elem-card-name">${escapeHtml(s.name)} <span class="cell-muted" style="font-weight:400;font-size:10.5px;">${escapeHtml(s.grade)}</span>${sched ? ' <span style="font-size:10.5px;">· ' + sched + '</span>' : ''}</div>
       <div class="elem-card-status">${label}</div>
     </div>`;
 }
