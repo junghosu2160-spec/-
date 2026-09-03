@@ -4698,17 +4698,17 @@ function cycleElementaryStatus(studentId, date){
   }
 }
 
-// 초등부 카드용: 등원 요일+시간을 한 줄로 압축해서 보여주되, 지정한 요일(보통 오늘)만 진하게 강조
+// 초등부 카드용: 등원 요일은 전부 보여주되, 오늘 요일에만 시간을 붙이고 강조 (예: "월 수 목 16:00")
 function elemScheduleCompactHtml(s, targetWeekday){
-  const entries = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).map(d => ({ d, t: s.schedule[d] }));
-  if(!entries.length) return '';
-  return entries.map((e, i) => {
-    const text = `${e.d} ${e.t}`;
-    const piece = e.d === targetWeekday
-      ? `<span style="color:var(--color-text);font-weight:800;background:#FFF3D6;padding:0 3px;border-radius:4px;">${escapeHtml(text)}</span>`
-      : `<span style="color:#C9CDD6;">${escapeHtml(text)}</span>`;
-    return (i > 0 ? '·' : '') + piece;
-  }).join('');
+  const days = WEEKDAYS.filter(d => s.schedule && s.schedule[d]);
+  if(!days.length) return '';
+  return days.map(d => {
+    if(d === targetWeekday){
+      const t = s.schedule[d];
+      return `<span style="color:var(--color-text);font-weight:800;background:#FFF3D6;padding:0 4px;border-radius:4px;">${escapeHtml(d)} ${escapeHtml(t)}</span>`;
+    }
+    return `<span style="color:#9AA3B2;">${escapeHtml(d)}</span>`;
+  }).join(' ');
 }
 
 function elementaryCardHtml(s, date){
@@ -4734,7 +4734,12 @@ function renderElementaryBundleHtml(list, date){
   elemMakeupPanelStudentIds = allElem.map(s => s.id);
   elemMakeupPanelDate = date;
 
-  const sorted = [...list].sort(compareByGradeThenName);
+  const weekday = weekdayLabelOf(date);
+  const sorted = [...list].sort((a, b) => {
+    const ta = getDayTime(a, weekday) || '99:99';
+    const tb = getDayTime(b, weekday) || '99:99';
+    return ta.localeCompare(tb) || a.name.localeCompare(b.name, 'ko');
+  });
   return `
     <div class="att-group">
       <div class="att-group-title" style="color:var(--color-success);">

@@ -202,8 +202,10 @@
   <div id="directorNoteBanner" style="display:none;"></div>
 
   <div class="card" id="elemAbsenceCard" style="display:none;">
-    <div class="card-title">📋 보강관리</div>
-    <div id="elemAbsenceList"></div>
+    <div class="card-title" style="cursor:pointer;display:flex;align-items:center;gap:6px;" onclick="toggleElemAbsenceCard()">
+      <span id="elemAbsenceToggleIcon">▸</span> 📋 보강관리 <span id="elemAbsenceCountLabel" class="cell-muted" style="font-weight:400;font-size:12px;"></span>
+    </div>
+    <div id="elemAbsenceList" style="display:none;"></div>
   </div>
 
   <div class="work-cal-card">
@@ -589,7 +591,11 @@ function renderList(){
   }else{
     list = elementaryStudents.filter(s => getDayTime(s, weekday) || getTodayRecord(s.id));
   }
-  list = list.sort((a,b)=> a.name.localeCompare(b.name,'ko'));
+  list = list.sort((a,b) => {
+    const ta = getDayTime(a, weekday) || '99:99';
+    const tb = getDayTime(b, weekday) || '99:99';
+    return ta.localeCompare(tb) || a.name.localeCompare(b.name, 'ko');
+  });
 
   // 통계 (오늘 등원 예정 기준, 검색과 무관하게 항상 오늘 기준으로 계산)
   const expectedToday = elementaryStudents.filter(s => getDayTime(s, weekday) || getTodayRecord(s.id));
@@ -624,6 +630,11 @@ function fmtDateKR3(dateStr){
 }
 
 let elemPanelOpenKey = null; // 지금 펼쳐진 학생_날짜 key (한 번에 하나만 펼침)
+let elemAbsenceCardOpen = false; // "보강관리" 카드 전체 접기/펼치기 (기본은 접힌 상태)
+function toggleElemAbsenceCard(){
+  elemAbsenceCardOpen = !elemAbsenceCardOpen;
+  renderElemAbsenceList();
+}
 
 function toggleElemPanel(key){
   elemPanelOpenKey = (elemPanelOpenKey === key) ? null : key;
@@ -678,7 +689,12 @@ function renderElemAbsenceList(){
     totalRemaining: g.entries.reduce((sum,e) => sum + e.remaining, 0)
   })).sort((a,b) => b.totalRemaining - a.totalRemaining);
 
-  box.innerHTML = `<div class="elem-mk-count">보강 남은 학생 ${studentGroups.length}명</div>` + studentGroups.map(g => {
+  document.getElementById('elemAbsenceCountLabel').textContent = `보강 남은 학생 ${studentGroups.length}명`;
+  document.getElementById('elemAbsenceToggleIcon').textContent = elemAbsenceCardOpen ? '▾' : '▸';
+  box.style.display = elemAbsenceCardOpen ? 'block' : 'none';
+  if(!elemAbsenceCardOpen) return; // 접혀있으면 내용은 그릴 필요 없음
+
+  box.innerHTML = studentGroups.map(g => {
     const key = g.stu.id;
     const isOpen = elemPanelOpenKey === key;
 
