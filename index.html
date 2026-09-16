@@ -657,6 +657,32 @@
   .att-row-main strong{font-size:13.5px;}
   .att-overdue-tag{font-size:11px;font-weight:800;color:var(--color-danger);background:#fff;padding:2px 8px;border-radius:999px;}
   .makeup-time-tag{font-size:10.5px;font-weight:800;color:var(--color-primary);background:var(--color-primary-soft);padding:2px 8px;border-radius:999px;}
+
+  /* 결석 줄 안에서 바로 잡는 보강 */
+  .att-main-card{border-color:var(--color-text-muted);}
+  .att-name-btn{cursor:pointer;border-bottom:1.5px solid var(--color-primary);}
+  .att-name-btn:hover{color:var(--color-primary);}
+  .att-mk{
+    flex:1 1 100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-top:8px;padding:8px 11px;border-radius:9px;font-size:12.5px;font-weight:700;
+  }
+  .att-mk.todo{background:var(--color-danger-soft);color:var(--color-danger);}
+  .att-mk.done{background:#E7F5EC;color:#17915F;}
+  .att-mk.off{background:var(--color-surface-alt);color:var(--color-text-muted);font-weight:600;}
+  .att-mk .att-mk-sp{margin-left:auto;display:flex;gap:6px;}
+  .att-mk .att-mk-form{flex:1 1 100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  .att-mk .att-mk-form input[type="date"],
+  .att-mk .att-mk-form select{
+    padding:6px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;background:#fff;
+  }
+  .stu-month-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;
+    justify-content:center;z-index:210;padding:20px;}
+  .stu-month-box{background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-md);
+    width:min(560px,100%);height:min(78vh,760px);display:flex;flex-direction:column;overflow:hidden;}
+  .stu-month-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--color-border);}
+  .stu-month-head b{font-size:15px;}
+  .stu-month-head .btn{margin-left:auto;}
+  .stu-month-box iframe{flex:1;width:100%;border:0;}
   .att-time-info{display:flex;gap:10px;font-size:12px;color:var(--color-text-muted);flex:0 0 auto;}
   .att-memo-input{flex:1 1 140px;min-width:120px;padding:7px 10px;font-size:12.5px;}
   .avg-mini{display:flex;justify-content:space-between;padding:8px 0;font-size:13px;border-bottom:1px dashed var(--color-border);}
@@ -1142,48 +1168,13 @@
             </div>
           </div>
         </div>
-
-        <div class="card section-gap">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-            <div class="card-title" style="margin:0;">시험기간 보강관리 <span class="hint" id="examMakeupCount"></span></div>
-            <div style="display:flex;gap:6px;">
-              <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;">
-                <option value="grade">학년순</option>
-                <option value="school">학교순</option>
-              </select>
-              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;"></select>
-            </div>
-          </div>
-
-          <div style="cursor:pointer;margin-bottom:10px;" onclick="toggleExamSlotPanel()">
-            <div style="font-size:12px;color:var(--color-text-muted);padding:5px 0;border-bottom:1px solid var(--color-border);">
-              <span id="examSlotToggleIcon">▸</span> 보강 가능 시간대 설정 <span class="hint">여기 만들어둔 시간대에서만 학생이 고를 수 있어요</span>
-            </div>
-          </div>
-          <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-              <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <button class="btn btn-primary btn-sm" id="examSlotSubmitBtn" onclick="addExamSlot()">추가</button>
-              <button class="btn btn-ghost btn-sm" id="examSlotCancelEditBtn" style="display:none;" onclick="cancelEditExamSlot()">취소</button>
-            </div>
-            <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
-          </div>
-
-          <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
-          <div id="examMakeupEditPanel"></div>
+        <!-- ===== 출결 체크 (이 화면의 메인 · 전체 너비) ===== -->
+        <div class="card section-gap att-main-card">
+          <div id="attGroups"></div>
         </div>
 
-        <div class="grid grid-2 section-gap" style="align-items:start;">
-          <!-- 왼쪽: 출결 체크 -->
-          <div>
-            <div class="card">
-              <div id="attGroups"></div>
-            </div>
-          </div>
-
-          <!-- 오른쪽: 보강 예약 + 추가보강 (기본 접힘) -->
+        <!-- ===== 결석 → 보강 예약 (접힘) ===== -->
+        <div class="section-gap">
           <div class="card">
             <div style="cursor:pointer;" onclick="toggleWeeklyMakeupCard()">
               <div class="card-title" style="margin-bottom:0;"><span id="weeklyMakeupToggleIcon">▸</span> 결석 → 보강 예약 <span class="hint">날짜+시간까지 정해야 캘린더·학생관리에 나타나요 · 눌러서 펼치기</span></div>
@@ -1234,6 +1225,47 @@
             </div>
           </div>
         </div>
+
+        <!-- ===== 시험기간 보강관리 (접힘 · 맨 아래) ===== -->
+        <div class="card section-gap">
+          <div style="cursor:pointer;" onclick="toggleExamMakeupCard()">
+            <div class="card-title" style="margin-bottom:0;">
+              <span id="examMakeupToggleIcon">▸</span> 시험기간 보강관리
+              <span class="hint" id="examMakeupCount"></span>
+              <span class="hint">· 학교별 시험 기간에 미리 몰아서 배정 · 눌러서 펼치기</span>
+            </div>
+          </div>
+          <div id="examMakeupCardBody" style="display:none;margin-top:12px;">
+            <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px;">
+
+              <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;">
+                <option value="grade">학년순</option>
+                <option value="school">학교순</option>
+              </select>
+              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;"></select>
+            
+            </div>
+          <div style="cursor:pointer;margin-bottom:10px;" onclick="toggleExamSlotPanel()">
+            <div style="font-size:12px;color:var(--color-text-muted);padding:5px 0;border-bottom:1px solid var(--color-border);">
+              <span id="examSlotToggleIcon">▸</span> 보강 가능 시간대 설정 <span class="hint">여기 만들어둔 시간대에서만 학생이 고를 수 있어요</span>
+            </div>
+          </div>
+          <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+              <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <button class="btn btn-primary btn-sm" id="examSlotSubmitBtn" onclick="addExamSlot()">추가</button>
+              <button class="btn btn-ghost btn-sm" id="examSlotCancelEditBtn" style="display:none;" onclick="cancelEditExamSlot()">취소</button>
+            </div>
+            <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+
+          <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
+          <div id="examMakeupEditPanel"></div>
+          </div>
+        </div>
+
       </section>
 
       <!-- ================= 캘린더 ================= -->
@@ -4573,7 +4605,7 @@ function attRowHtml(s, date, isToday, nowTime, t){
   return `
     <div class="att-row ${overdue ? 'overdue' : ''} ${t === 'MAKEUP' ? 'makeup-scheduled' : ''}">
       <div class="att-row-main">
-        <strong>${escapeHtml(s.name)}</strong>
+        <strong class="att-name-btn" onclick="openStudentMonthView('${s.id}','${escapeHtml(s.name)}')">${escapeHtml(s.name)}</strong>
         ${gradeBadge(s.grade)}
         ${scheduleDays ? `<span class="cell-muted" style="font-size:10.5px;font-weight:400;">${escapeHtml(scheduleDays)}</span>` : ''}
         ${makeupSetTime ? `<span class="makeup-time-tag">🗓 ${escapeHtml(makeupSetTime)}</span>` : ''}
@@ -4588,7 +4620,104 @@ function attRowHtml(s, date, isToday, nowTime, t){
         <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
         <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
       </div>
+      ${status === '결석' ? absentMakeupStripHtml(s, date) : ''}
     </div>`;
+}
+
+/* =========================================================
+   결석 줄 안에서 바로 잡는 보강 (자료는 기존 makeupSchedules 그대로)
+========================================================= */
+function attMkUid(studentId, date){
+  return ('mk_' + studentId + '_' + date).replace(/[^A-Za-z0-9_]/g, '_');
+}
+
+function attMakeupFormHtml(studentId, absenceDate, uid, m){
+  const dIn = uid + '_d', tSel = uid + '_t';
+  const dv = m && m.date ? m.date : '';
+  const tv = m && m.time ? m.time : '';
+  return `
+    <input type="date" id="${dIn}" value="${escapeHtml(dv)}" onchange="onMakeupDateChange('${dIn}','${tSel}')">
+    <select id="${tSel}">${makeupTimeOptionsHtml(dv, tv)}</select>
+    <button class="btn btn-primary btn-sm" onclick="scheduleMakeup('${studentId}','${dIn}','${absenceDate}','${tSel}',${m ? `'${m.id}'` : 'null'})">확정</button>
+    <button class="btn btn-ghost btn-sm" onclick="closeAttMakeupForm('${uid}')">닫기</button>`;
+}
+
+function absentMakeupStripHtml(s, date){
+  const uid = attMkUid(s.id, date);
+  const m = makeupSchedules.find(x => x.studentId === s.id && x.note === `${date} 결석 보강`);
+  const dismissed = !!makeupDismissed[`${s.id}_${date}`];
+
+  if(m){
+    const when = `${escapeHtml(m.date)}${m.time ? ' ' + escapeHtml(m.time) : ' (시간 미정)'}`;
+    return `
+      <div class="att-mk done">
+        <span>✓ 보강 ${when}</span>
+        <span class="att-mk-sp">
+          <button class="btn btn-ghost btn-sm" onclick="openAttMakeupForm('${uid}')">바꾸기</button>
+          <button class="btn btn-danger-outline btn-sm" onclick="cancelMakeup('${s.id}','${date}')">취소</button>
+        </span>
+        <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, m)}</div>
+      </div>`;
+  }
+  if(dismissed){
+    return `
+      <div class="att-mk off">
+        <span>보강 안 함으로 처리됨</span>
+        <span class="att-mk-sp"><button class="btn btn-ghost btn-sm" onclick="undismissMakeup('${s.id}','${date}')">되돌리기</button></span>
+      </div>`;
+  }
+  return `
+    <div class="att-mk todo">
+      <span>보강 아직 안 잡힘</span>
+      <span class="att-mk-sp">
+        <button class="btn btn-primary btn-sm" onclick="openAttMakeupForm('${uid}')">보강 잡기</button>
+        <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${s.id}','${date}')">보강 안 함</button>
+      </span>
+      <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, null)}</div>
+    </div>`;
+}
+
+function openAttMakeupForm(uid){
+  document.querySelectorAll('.att-mk-form').forEach(el => { if(el.id !== uid) el.style.display = 'none'; });
+  const box = document.getElementById(uid);
+  if(!box) return;
+  box.style.display = (box.style.display === 'none') ? 'flex' : 'none';
+  if(box.style.display === 'flex'){
+    const d = document.getElementById(uid + '_d');
+    if(d && !d.value){ d.value = todayStr(); onMakeupDateChange(uid + '_d', uid + '_t'); }
+  }
+}
+function closeAttMakeupForm(uid){
+  const box = document.getElementById(uid);
+  if(box) box.style.display = 'none';
+}
+function undismissMakeup(studentId, date){
+  db.ref(`makeupDismissed/${studentId}_${date}`).remove();
+  showToast('보강 목록에 다시 올렸습니다.');
+}
+
+function toggleExamMakeupCard(){
+  const body = document.getElementById('examMakeupCardBody');
+  const icon = document.getElementById('examMakeupToggleIcon');
+  if(!body) return;
+  const willShow = body.style.display === 'none';
+  body.style.display = willShow ? 'block' : 'none';
+  if(icon) icon.textContent = willShow ? '▾' : '▸';
+}
+
+/* 학생 이름 클릭 → 그 학생 화면(이번 달 등원 일정) */
+function openStudentMonthView(studentId, name){
+  const ov = document.getElementById('stuMonthOverlay');
+  if(!ov) return;
+  document.getElementById('stuMonthTitle').textContent = `${name} 학생 화면`;
+  document.getElementById('stuMonthFrame').src = `학생페이지.html?admin=${studentId}`;
+  ov.style.display = 'flex';
+}
+function closeStudentMonthView(){
+  const ov = document.getElementById('stuMonthOverlay');
+  if(!ov) return;
+  ov.style.display = 'none';
+  document.getElementById('stuMonthFrame').src = '';
 }
 
 // 한 타임 그룹을 좌우 인원수 균등하게 2단으로 배치 (학년군 구분 없이)
@@ -4744,6 +4873,15 @@ function renderElementaryBundleHtml(list, date){
     <div class="att-group">
       <div class="att-group-title" style="color:var(--color-success);">
         🎒 초등부 <span class="cnt">${sorted.length}명</span>
+        ${(() => {
+          const need = sorted.filter(s => {
+            const r = getAttendanceRecord(s.id, date);
+            if(!r || r.status !== '결석') return false;
+            if(makeupDismissed[`${s.id}_${date}`]) return false;
+            return !makeupSchedules.some(m => m.studentId === s.id && m.note === `${date} 결석 보강`);
+          }).length;
+          return need ? `<span class="cnt" style="color:var(--color-danger);font-weight:800;">· 보강 필요 ${need}명</span>` : '';
+        })()}
         ${sorted.length ? `<button type="button" class="elem-makeup-btn" style="background:var(--color-danger-soft);color:var(--color-danger);border-color:#F09595;" onclick="markAllElementaryAbsent('${date}')">전체 결석 처리</button>` : ''}
         <button type="button" class="elem-makeup-btn" onclick="toggleElemMakeupPanel()">📋 보강관리</button>
       </div>
@@ -7666,5 +7804,15 @@ function closeStudentPageFrame(){
   document.querySelectorAll('[id^="studentPageChip_"]').forEach(el => { el.style.background = ''; el.style.color = ''; });
 }
 </script>
+<!-- 학생 이름 클릭 → 그 학생 화면(이번 달 등원) -->
+<div class="stu-month-overlay" id="stuMonthOverlay" style="display:none;" onclick="if(event.target===this) closeStudentMonthView()">
+  <div class="stu-month-box">
+    <div class="stu-month-head">
+      <b id="stuMonthTitle">학생 화면</b>
+      <button class="btn btn-ghost btn-sm" onclick="closeStudentMonthView()">닫기</button>
+    </div>
+    <iframe id="stuMonthFrame" src=""></iframe>
+  </div>
+</div>
 </body>
 </html>
