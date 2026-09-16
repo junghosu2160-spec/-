@@ -508,6 +508,28 @@
   .week-bundle-range{font-size:11px;color:var(--color-text-muted);}
   .week-bundle-count{margin-left:auto;font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:#FEF2E9;color:#BA7517;}
   .week-bundle-arrow{font-size:11px;color:var(--color-text-muted);}
+  .slot-editor-mini .field label{font-size:10.5px;margin-bottom:3px;}
+  .slot-editor-mini input{padding:6px 8px;font-size:12px;}
+  .slot-editor-mini .teacher-chip{font-size:10.5px;padding:2px 7px;}
+  .slot-editor-mini #slotInputRows > div{padding:5px 0 !important;font-size:12px;}
+  .slot-editor-mini #slotInputRows input{width:52px;text-align:center;}
+  .exam-mk-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .exam-mk-title{display:flex;align-items:center;gap:7px;cursor:pointer;flex:1 1 auto;min-width:0;}
+  .exam-mk-title b{font-size:14.5px;font-weight:800;}
+  .exam-mk-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--color-surface-alt);color:var(--color-text-muted);}
+  .exam-mk-desc{font-size:11.5px;}
+  .exam-mk-tools{display:flex;align-items:center;gap:6px;margin-left:auto;flex:0 0 auto;}
+  .exam-mk-tools select{font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);}
+  .exam-slot-btn{font-size:11.5px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;
+    background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;font-weight:700;white-space:nowrap;}
+  .exam-slot-btn:hover{background:var(--color-surface-alt);}
+  @media (max-width:860px){ .exam-mk-desc{display:none;} .exam-mk-tools{margin-left:0;width:100%;} }
+  .wk-clean-btn{font-size:11px;padding:3px 9px;opacity:0;transition:opacity .15s;}
+  .week-bundle-head:hover .wk-clean-btn{opacity:1;}
+  .old-week-toggle{margin-top:10px;padding:9px 14px;border:1px dashed var(--color-border);border-radius:var(--radius-md);
+    font-size:12px;font-weight:700;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;gap:7px;}
+  .old-week-toggle:hover{background:var(--color-surface-alt);}
+  @media (max-width:860px){ .wk-clean-btn{opacity:1;} }
   .week-bundle-body{padding:10px 12px;border-top:1px solid var(--color-border);}
   .wk-name-wrap{display:flex;flex-wrap:wrap;gap:6px;}
   .wk-name-tag{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:16px;font-size:12px;font-weight:700;border:1px solid var(--color-border);background:var(--color-surface-alt);}
@@ -662,23 +684,36 @@
   .att-main-card{border-color:var(--color-text-muted);}
   .att-name-btn{cursor:pointer;border-bottom:1.5px solid var(--color-primary);}
   .att-name-btn:hover{color:var(--color-primary);}
-  .att-mk{
-    flex:1 1 100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-    margin-top:8px;padding:8px 11px;border-radius:9px;font-size:12.5px;font-weight:700;
+  /* 결석 줄 안의 보강 표시 — 같은 줄에 작은 칩 하나로 */
+  .att-mk-chip{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;cursor:pointer;
+    padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;
+    border:1px solid transparent;transition:filter .12s;
   }
-  .att-mk.todo{background:var(--color-danger-soft);color:var(--color-danger);}
-  .att-mk.done{background:#E7F5EC;color:#17915F;}
-  .att-mk.off{background:var(--color-surface-alt);color:var(--color-text-muted);font-weight:600;}
-  .att-mk .att-mk-sp{margin-left:auto;display:flex;gap:6px;}
-  .att-mk .att-mk-form{flex:1 1 100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px;}
-  .att-mk .att-mk-form input[type="date"],
-  .att-mk .att-mk-form select{
+  .att-mk-chip:hover{filter:brightness(0.95);}
+  .att-mk-chip.todo{background:var(--color-danger-soft);color:var(--color-danger);border-color:#F4C4C4;}
+  .att-mk-chip.done{background:#E7F5EC;color:#17915F;border-color:#BFE5CE;}
+  .att-mk-chip.off{background:var(--color-surface-alt);color:var(--color-text-muted);font-weight:600;}
+  .att-mk-x{
+    flex:0 0 auto;border:0;background:transparent;color:var(--color-text-muted);cursor:pointer;
+    font-size:11px;line-height:1;padding:4px 2px;opacity:0;transition:opacity .12s;
+  }
+  .att-mk-x-ph{flex:0 0 auto;width:15px;}
+  .att-row:hover .att-mk-x{opacity:.65;}
+  .att-mk-x:hover{opacity:1 !important;color:var(--color-danger);}
+  .att-mk-form{
+    flex:1 1 100%;order:99;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+    margin-top:8px;padding:8px 10px;background:var(--color-surface-alt);border-radius:9px;
+  }
+  .att-mk-form input[type="date"],
+  .att-mk-form select{
     padding:6px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;background:#fff;
   }
+  @media (max-width:860px){ .att-mk-x{opacity:.65;} }
   .stu-month-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;
     justify-content:center;z-index:210;padding:20px;}
   .stu-month-box{background:var(--color-surface);border-radius:var(--radius-md);box-shadow:var(--shadow-md);
-    width:min(560px,100%);height:min(78vh,760px);display:flex;flex-direction:column;overflow:hidden;}
+    width:min(460px,100%);height:min(62vh,500px);display:flex;flex-direction:column;overflow:hidden;}
   .stu-month-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--color-border);}
   .stu-month-head b{font-size:15px;}
   .stu-month-head .btn{margin-left:auto;}
@@ -1086,6 +1121,28 @@
                 <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
               </div>
               <div class="cal-grid" id="slotCalGrid"></div>
+          <div id="slotEditor" class="slot-editor-mini" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:10px 11px;margin-top:10px;">
+            <div id="slotEditorTitle" style="font-weight:800;font-size:12.5px;margin-bottom:2px;"></div>
+            <p class="cell-muted" style="font-size:11px;margin:0 0 8px;line-height:1.45;">이날 출근 선생님을 참고해서 정원을 정해보세요.</p>
+
+            <div id="slotTeacherChips" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:9px;"></div>
+
+            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:2px 9px;">
+              <div id="slotInputRows"></div>
+            </div>
+
+            <div class="form-row" style="margin-top:9px;gap:6px;">
+              <div class="field" style="flex:1;">
+                <label>새 시간대 (선택)</label>
+                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
+              </div>
+              <div class="field" style="flex:0 0 62px;">
+                <label>정원</label>
+                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
+              </div>
+            </div>
+            <button class="btn btn-primary" style="width:100%;margin-top:7px;font-size:12.5px;padding:8px;" onclick="saveSlotEditor()">저장</button>
+          </div>
             </div>
 
             <div>
@@ -1106,34 +1163,6 @@
               <div class="bigcal-grid" id="refTeacherCalGrid" style="gap:3px;"></div>
             </div>
           </div>
-
-          <div id="slotEditor" style="display:none;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:18px;margin-top:16px;">
-            <div id="slotEditorTitle" style="font-weight:800;font-size:16px;margin-bottom:4px;"></div>
-            <p class="cell-muted" style="font-size:12.5px;margin:0 0 12px;">이날 출근하는 선생님을 참고해서 시간대별 정원을 정해보세요.</p>
-
-            <div id="slotTeacherChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;"></div>
-
-            <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:4px 14px;">
-              <div id="slotInputRows"></div>
-            </div>
-
-            <div class="form-row" style="margin-top:14px;">
-              <div class="field" style="flex:1;">
-                <label>새 시간대 (선택)</label>
-                <input type="text" id="newSlotTime" placeholder="예: 저녁 8시">
-              </div>
-              <div class="field" style="flex:0 0 100px;">
-                <label>정원</label>
-                <input type="number" id="newSlotCapacity" placeholder="3" min="1">
-              </div>
-            </div>
-            <button class="btn btn-primary" style="width:100%;margin-top:8px;font-size:15px;padding:12px;" onclick="saveSlotEditor()">저장</button>
-          </div>
-        </div>
-
-        <div class="card" id="todayAbsentAlertCard" style="display:none;background:var(--color-danger-soft);border-color:var(--color-danger);padding:10px 14px;">
-          <div style="font-size:12.5px;font-weight:800;color:var(--color-danger);">🔴 오늘 결석 → 보강 필요한 학생</div>
-          <div id="todayAbsentAlertList"></div>
         </div>
 
         <div class="card section-gap" style="padding:10px 14px;">
@@ -1168,6 +1197,43 @@
             </div>
           </div>
         </div>
+        <!-- ===== 시험기간 보강관리 (펼침 · 출결 위) ===== -->
+        <div class="card section-gap">
+          <div class="exam-mk-head">
+            <div class="exam-mk-title" onclick="toggleExamMakeupCard()">
+              <span id="examMakeupToggleIcon">▾</span>
+              <b>시험기간 보강관리</b>
+              <span class="exam-mk-count" id="examMakeupCount"></span>
+              <span class="hint exam-mk-desc">학교별 시험 기간에 미리 몰아서 배정</span>
+            </div>
+            <div class="exam-mk-tools" id="examMakeupTools">
+              <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()">
+                <option value="grade">학년순</option>
+                <option value="school">학교순</option>
+              </select>
+              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()"></select>
+              <button type="button" class="exam-slot-btn" onclick="toggleExamSlotPanel()">
+                <span id="examSlotToggleIcon">▸</span> 시간대 설정
+              </button>
+            </div>
+          </div>
+          <div id="examMakeupCardBody" style="display:block;margin-top:10px;">
+          <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+              <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+              <button class="btn btn-primary btn-sm" id="examSlotSubmitBtn" onclick="addExamSlot()">추가</button>
+              <button class="btn btn-ghost btn-sm" id="examSlotCancelEditBtn" style="display:none;" onclick="cancelEditExamSlot()">취소</button>
+            </div>
+            <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+
+          <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
+          <div id="examMakeupEditPanel"></div>
+          </div>
+        </div>
+
         <!-- ===== 출결 체크 (이 화면의 메인 · 전체 너비) ===== -->
         <div class="card section-gap att-main-card">
           <div id="attGroups"></div>
@@ -1226,45 +1292,6 @@
           </div>
         </div>
 
-        <!-- ===== 시험기간 보강관리 (접힘 · 맨 아래) ===== -->
-        <div class="card section-gap">
-          <div style="cursor:pointer;" onclick="toggleExamMakeupCard()">
-            <div class="card-title" style="margin-bottom:0;">
-              <span id="examMakeupToggleIcon">▸</span> 시험기간 보강관리
-              <span class="hint" id="examMakeupCount"></span>
-              <span class="hint">· 학교별 시험 기간에 미리 몰아서 배정 · 눌러서 펼치기</span>
-            </div>
-          </div>
-          <div id="examMakeupCardBody" style="display:none;margin-top:12px;">
-            <div style="display:flex;gap:6px;justify-content:flex-end;margin-bottom:10px;">
-
-              <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;">
-                <option value="grade">학년순</option>
-                <option value="school">학교순</option>
-              </select>
-              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;"></select>
-            
-            </div>
-          <div style="cursor:pointer;margin-bottom:10px;" onclick="toggleExamSlotPanel()">
-            <div style="font-size:12px;color:var(--color-text-muted);padding:5px 0;border-bottom:1px solid var(--color-border);">
-              <span id="examSlotToggleIcon">▸</span> 보강 가능 시간대 설정 <span class="hint">여기 만들어둔 시간대에서만 학생이 고를 수 있어요</span>
-            </div>
-          </div>
-          <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
-              <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <input type="time" id="examSlotTimeInput" style="flex:1;min-width:100px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <input type="number" id="examSlotCapacityInput" placeholder="정원" value="5" min="1" style="width:70px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
-              <button class="btn btn-primary btn-sm" id="examSlotSubmitBtn" onclick="addExamSlot()">추가</button>
-              <button class="btn btn-ghost btn-sm" id="examSlotCancelEditBtn" style="display:none;" onclick="cancelEditExamSlot()">취소</button>
-            </div>
-            <div id="examSlotList" style="display:flex;flex-direction:column;gap:5px;"></div>
-          </div>
-
-          <div id="examMakeupGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;"></div>
-          <div id="examMakeupEditPanel"></div>
-          </div>
-        </div>
 
       </section>
 
@@ -4616,11 +4643,11 @@ function attRowHtml(s, date, isToday, nowTime, t){
         <button class="status-btn ${status==='지각'?'active':''}" data-status="지각" onclick="setAttendanceStatus('${s.id}','${date}','지각')">지각</button>
         <button class="status-btn ${status==='결석'?'active':''}" data-status="결석" onclick="setAttendanceStatus('${s.id}','${date}','결석')">결석</button>
       </div>
+      ${status === '결석' ? absentMakeupStripHtml(s, date) : ''}
       <div class="att-time-info">
         <span>등원 ${escapeHtml(rec && rec.checkInTime ? rec.checkInTime : '-')}</span>
         <span>하원 ${escapeHtml(rec && rec.checkOutTime ? rec.checkOutTime : '-')}</span>
       </div>
-      ${status === '결석' ? absentMakeupStripHtml(s, date) : ''}
     </div>`;
 }
 
@@ -4646,35 +4673,24 @@ function absentMakeupStripHtml(s, date){
   const uid = attMkUid(s.id, date);
   const m = makeupSchedules.find(x => x.studentId === s.id && x.note === `${date} 결석 보강`);
   const dismissed = !!makeupDismissed[`${s.id}_${date}`];
+  const shortD = d => { const p = (d||'').split('-'); return p.length===3 ? `${parseInt(p[1],10)}/${parseInt(p[2],10)}` : (d||''); };
 
   if(m){
-    const when = `${escapeHtml(m.date)}${m.time ? ' ' + escapeHtml(m.time) : ' (시간 미정)'}`;
+    const when = m.time ? `${shortD(m.date)} ${escapeHtml(m.time)}` : `${shortD(m.date)} 시간미정`;
     return `
-      <div class="att-mk done">
-        <span>✓ 보강 ${when}</span>
-        <span class="att-mk-sp">
-          <button class="btn btn-ghost btn-sm" onclick="openAttMakeupForm('${uid}')">바꾸기</button>
-          <button class="btn btn-danger-outline btn-sm" onclick="cancelMakeup('${s.id}','${date}')">취소</button>
-        </span>
-        <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, m)}</div>
-      </div>`;
+      <span class="att-mk-chip done" onclick="openAttMakeupForm('${uid}')" title="눌러서 날짜·시간 바꾸기">✓ 보강 ${when}</span>
+      <button class="att-mk-x" onclick="cancelMakeup('${s.id}','${date}')" title="보강 예약 취소">✕</button>
+      <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, m)}</div>`;
   }
   if(dismissed){
     return `
-      <div class="att-mk off">
-        <span>보강 안 함으로 처리됨</span>
-        <span class="att-mk-sp"><button class="btn btn-ghost btn-sm" onclick="undismissMakeup('${s.id}','${date}')">되돌리기</button></span>
-      </div>`;
+      <span class="att-mk-chip off" onclick="undismissMakeup('${s.id}','${date}')" title="눌러서 되돌리기">보강 안 함</span>
+      <span class="att-mk-x-ph"></span>`;
   }
   return `
-    <div class="att-mk todo">
-      <span>보강 아직 안 잡힘</span>
-      <span class="att-mk-sp">
-        <button class="btn btn-primary btn-sm" onclick="openAttMakeupForm('${uid}')">보강 잡기</button>
-        <button class="btn btn-ghost btn-sm" onclick="dismissMakeup('${s.id}','${date}')">보강 안 함</button>
-      </span>
-      <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, null)}</div>
-    </div>`;
+    <span class="att-mk-chip todo" onclick="openAttMakeupForm('${uid}')">+ 보강 잡기</span>
+    <button class="att-mk-x" onclick="dismissMakeup('${s.id}','${date}')" title="보강 안 함으로 처리">✕</button>
+    <div class="att-mk-form" id="${uid}" style="display:none;">${attMakeupFormHtml(s.id, date, uid, null)}</div>`;
 }
 
 function openAttMakeupForm(uid){
@@ -4703,15 +4719,49 @@ function toggleExamMakeupCard(){
   const willShow = body.style.display === 'none';
   body.style.display = willShow ? 'block' : 'none';
   if(icon) icon.textContent = willShow ? '▾' : '▸';
+  const tools = document.getElementById('examMakeupTools');
+  if(tools) tools.style.display = willShow ? 'flex' : 'none';
 }
 
 /* 학생 이름 클릭 → 그 학생 화면(이번 달 등원 일정) */
 function openStudentMonthView(studentId, name){
   const ov = document.getElementById('stuMonthOverlay');
   if(!ov) return;
-  document.getElementById('stuMonthTitle').textContent = `${name} 학생 화면`;
-  document.getElementById('stuMonthFrame').src = `학생페이지.html?admin=${studentId}`;
+  document.getElementById('stuMonthTitle').textContent = `${name} 학생 이번 달 등원`;
+  const fr = document.getElementById('stuMonthFrame');
+  fr.onload = function(){ trimStudentMonthFrame(fr); };
+  fr.src = `학생페이지.html?admin=${studentId}`;
   ov.style.display = 'flex';
+}
+
+/* 학생페이지 중 '출결 달력' 카드만 남기고 나머지는 숨김 */
+function trimStudentMonthFrame(fr){
+  let tries = 0;
+  const tick = function(){
+    tries++;
+    let doc = null;
+    try { doc = fr.contentDocument; } catch(e){ return; }
+    if(!doc){ return; }
+    const grid = doc.getElementById('attCalGrid');
+    const calCard = grid ? grid.closest('.card') : null;
+    if(!calCard){ if(tries < 40) setTimeout(tick, 150); return; }
+
+    if(!doc.getElementById('__adminTrimStyle')){
+      const st = doc.createElement('style');
+      st.id = '__adminTrimStyle';
+      st.textContent = 'body{background:#fff !important;}'
+        + '.wrap{padding:0 !important;max-width:none !important;}'
+        + '#loginScreen,#announceBanner,.top-greeting,#absencePanel{display:none !important;}'
+        + '#appScreen > .card{display:none !important;}'
+        + '#appScreen > .card.__adminKeep{display:block !important;border:0 !important;box-shadow:none !important;margin:0 !important;}';
+      doc.head.appendChild(st);
+    }
+    calCard.classList.add('__adminKeep');
+    // 달력 아래 안내문은 학부모용이라 관리자 화면에선 숨김
+    const hint = calCard.querySelector('p.hint');
+    if(hint) hint.style.display = 'none';
+  };
+  tick();
 }
 function closeStudentMonthView(){
   const ov = document.getElementById('stuMonthOverlay');
@@ -5065,6 +5115,24 @@ function toggleWeeklyAbsentWeek(weekKey){
   renderWeeklyAbsentList();
 }
 
+/* 2주보다 오래된 주는 접어두고, 눌렀을 때만 펼침 */
+let weeklyAbsentShowOld = false;
+function toggleWeeklyAbsentOld(){
+  weeklyAbsentShowOld = !weeklyAbsentShowOld;
+  renderWeeklyAbsentList();
+}
+
+/* 한 주 전체를 '보강 안 함'으로 정리 (기록은 그대로 남고 목록에서만 빠짐) */
+function dismissWholeWeek(weekKey, label){
+  const pairs = (window.__weekDismissTargets && window.__weekDismissTargets[weekKey]) || [];
+  if(!pairs.length) return;
+  if(!confirm(`${label} 미예약 ${pairs.length}명을 모두 '보강 안 함'으로 정리할까요?\n\n출결 기록은 그대로 남고, 이 목록에서만 사라집니다.\n나중에 학생별로 다시 되돌릴 수 있어요.`)) return;
+  const updates = {};
+  pairs.forEach(p => { updates[`${p.studentId}_${p.date}`] = true; });
+  db.ref('makeupDismissed').update(updates);
+  showToast(`${label} ${pairs.length}명을 정리했습니다.`);
+}
+
 function toggleWeeklyAbsentRow(id){
   weeklyAbsentOpenId = (weeklyAbsentOpenId === id) ? null : id;
   renderWeeklyAbsentList();
@@ -5240,14 +5308,26 @@ function renderWeeklyAbsentList(){
       if(!groups[wk]) groups[wk] = [];
       groups[wk].push(a);
     });
-    const weekKeys = Object.keys(groups).sort((a,b) => b.localeCompare(a)); // 최근 주 먼저
+    const allWeekKeys = Object.keys(groups).sort((a,b) => b.localeCompare(a)); // 최근 주 먼저
 
-    // 최초 렌더 시엔 "이번 주"만 펼쳐둠
+    // 최초 렌더 시엔 "이번 주 + 지난 주"를 펼쳐둠
     if(weeklyAbsentOpenWeeks === null){
-      weeklyAbsentOpenWeeks = new Set([thisMonday]);
+      weeklyAbsentOpenWeeks = new Set([thisMonday, addDaysStr(thisMonday, -7)]);
     }
 
-    return weekKeys.map(wk => {
+    // 주 단위 '한 번에 정리' 버튼이 쓸 대상 목록을 미리 담아둠
+    window.__weekDismissTargets = {};
+    allWeekKeys.forEach(wk => {
+      window.__weekDismissTargets[wk] = groups[wk].map(a => ({ studentId: a.studentId, date: a.date }));
+    });
+
+    // 이번 주 · 지난 주 · 다음 주까지만 기본으로 보이고, 그보다 오래된 주는 접어둠
+    const recentCutoff = addDaysStr(thisMonday, -7);
+    const recentKeys = allWeekKeys.filter(wk => wk >= recentCutoff);
+    const oldKeys = allWeekKeys.filter(wk => wk < recentCutoff);
+    const oldCount = oldKeys.reduce((n, wk) => n + groups[wk].length, 0);
+
+    const renderWeek = wk => {
       const rows = groups[wk].sort((a,b)=> a.date.localeCompare(b.date) || a.stu.name.localeCompare(b.stu.name,'ko'));
       const sunday = addDaysStr(wk, 6);
       const label = wk === thisMonday ? '이번 주'
@@ -5287,6 +5367,7 @@ function renderWeeklyAbsentList(){
             <span class="week-bundle-title">${label}</span>
             <span class="week-bundle-range">${rangeLabel}</span>
             <span class="week-bundle-count">미예약 ${rows.length}명</span>
+            <button class="btn btn-ghost btn-sm wk-clean-btn" onclick="event.stopPropagation();dismissWholeWeek('${wk}','${label}')">이 주 정리</button>
             <span class="week-bundle-arrow">${isOpen ? '▾' : '▸'}</span>
           </div>
           ${isOpen ? `<div class="week-bundle-body">
@@ -5300,7 +5381,18 @@ function renderWeeklyAbsentList(){
             ${openRowHtml}
           </div>` : ''}
         </div>`;
-    }).join('');
+    };
+
+    let out = recentKeys.map(renderWeek).join('');
+    if(!recentKeys.length) out = `<div class="cell-muted" style="font-size:13px;">최근 2주 안에 보강 예약이 필요한 학생이 없습니다.</div>`;
+    if(oldKeys.length){
+      out += `<div class="old-week-toggle" onclick="toggleWeeklyAbsentOld()">
+        <span>${weeklyAbsentShowOld ? '▾' : '▸'}</span>
+        지난 기록 더 보기 <span class="hint">${oldKeys.length}주 · 미예약 ${oldCount}명</span>
+      </div>`;
+      if(weeklyAbsentShowOld) out += `<div style="opacity:0.75;">${oldKeys.map(renderWeek).join('')}</div>`;
+    }
+    return out;
   };
 
   let html = `
@@ -7397,6 +7489,12 @@ function renderMakeupSlotList(){
 function selectSlotDate(dateStr){
   selectedSlotDate = dateStr;
   renderMakeupSlotList();
+  // 보강 정원 달력에서 날짜를 누르면 아래 출결 명단도 그 날짜로 함께 이동
+  const attInput = document.getElementById('attDate');
+  if(attInput && attInput.value !== dateStr){
+    attInput.value = dateStr;
+    if(typeof renderAttendance === 'function') renderAttendance();
+  }
 }
 
 function renderSlotEditor(){
