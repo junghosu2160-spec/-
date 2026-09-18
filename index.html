@@ -5029,8 +5029,8 @@ function updateHolidayToggleUI(){
   const shown = holidayNameOf(date);
   label.textContent = shown ? (shown + ' · 쉼') : '휴무일 지정';
   btn.classList.toggle('is-holiday', !!shown);
-  btn.classList.toggle('btn-primary', isHoliday);
-  btn.classList.toggle('btn-ghost', !isHoliday);
+  btn.classList.toggle('btn-primary', !!shown);
+  btn.classList.toggle('btn-ghost', !shown);
 }
 
 function markAllElementaryAbsent(date){
