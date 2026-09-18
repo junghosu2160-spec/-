@@ -246,6 +246,107 @@ let mathholicLinks = [];
 let announcements = [];
 let holidays = {}; // {"YYYY-MM-DD": "광복절"} 또는 예전 자료는 true
 
+/* ===== 대한민국 공휴일 자동 표시 (관리자 프로그램과 같은 계산) ===== */
+const LUNAR_HOLIDAYS = {
+  2026: { seol:"2026-02-17", buddha:"2026-05-24", chuseok:"2026-09-25" },
+  2027: { seol:"2027-02-07", buddha:"2027-05-13", chuseok:"2027-09-15" },
+  2028: { seol:"2028-01-27", buddha:"2028-05-02", chuseok:"2028-10-03" },
+  2029: { seol:"2029-02-13", buddha:"2029-05-20", chuseok:"2029-09-22" },
+  2030: { seol:"2030-02-03", buddha:"2030-05-09", chuseok:"2030-09-12" },
+  2031: { seol:"2031-01-23", buddha:"2031-05-28", chuseok:"2031-10-01" },
+  2032: { seol:"2032-02-11", buddha:"2032-05-16", chuseok:"2032-09-19" },
+  2033: { seol:"2033-01-31", buddha:"2033-05-06", chuseok:"2033-09-08" },
+  2034: { seol:"2034-02-19", buddha:"2034-05-25", chuseok:"2034-09-27" },
+  2035: { seol:"2035-02-08", buddha:"2035-05-15", chuseok:"2035-09-16" }
+};
+
+function shiftDateStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function koreanHolidaysOf(year){
+  const L = LUNAR_HOLIDAYS[year];
+  const dowOf = ds => new Date(ds + 'T00:00:00').getDay();
+
+  // 1) 공휴일 항목 모으기 (같은 날에 둘이 겹칠 수 있음)
+  //    sub=대체공휴일 대상 여부, satLost=토요일에 걸려도 대체를 주는지
+  //    (설·추석 연휴는 일요일에만 대체가 생기고 토요일은 그냥 넘어갑니다)
+  const items = [];
+  [['01-01','신정',false,false], ['03-01','삼일절',true,true],
+   ['05-05','어린이날',true,true], ['06-06','현충일',false,false],
+   ['07-17','제헌절',true,true],   ['08-15','광복절',true,true],
+   ['10-03','개천절',true,true],   ['10-09','한글날',true,true],
+   ['12-25','성탄절',true,true]
+  ].forEach(([md,name,sub,satLost]) => items.push({ date:`${year}-${md}`, name, sub, satLost }));
+
+  if(L){
+    items.push({ date:L.buddha, name:'부처님오신날', sub:true, satLost:true });
+    [[-1,'설날 연휴'],[0,'설날'],[1,'설날 연휴']].forEach(([o,nm]) =>
+      items.push({ date:shiftDateStr(L.seol, o), name:nm, sub:true, satLost:false }));
+    [[-1,'추석 연휴'],[0,'추석'],[1,'추석 연휴']].forEach(([o,nm]) =>
+      items.push({ date:shiftDateStr(L.chuseok, o), name:nm, sub:true, satLost:false }));
+  }
+
+  // 2) 날짜별로 정리
+  const byDate = {};
+  items.forEach(it => { (byDate[it.date] = byDate[it.date] || []).push(it); });
+  const result = {};
+  Object.keys(byDate).forEach(ds => { result[ds] = byDate[ds][0].name; });
+
+  // 3) 날짜별로 "날린 날" 세기 — 겹친 만큼 + 주말에 걸린 만큼
+  const lostAt = {};
+  Object.keys(byDate).forEach(ds => {
+    const list = byDate[ds];
+    if(!list.some(it => it.sub)) return;         // 신정·현충일만 있는 날은 대체 없음
+    const w = dowOf(ds);
+    let lost = list.length - 1;                  // 같은 날에 겹친 개수
+    if(w === 0) lost += 1;                                          // 일요일
+    else if(w === 6 && list.some(it => it.sub && it.satLost)) lost += 1;  // 토요일
+    if(lost > 0) lostAt[ds] = lost;
+  });
+
+  // 4) 이어진 공휴일 덩어리 단위로, 덩어리가 끝난 다음 평일부터 대체공휴일 배정
+  const days = Object.keys(result).sort();
+  let i = 0;
+  while(i < days.length){
+    let j = i, lost = lostAt[days[i]] || 0;
+    while(j + 1 < days.length && shiftDateStr(days[j], 1) === days[j+1]){
+      j++; lost += (lostAt[days[j]] || 0);
+    }
+    let cur = shiftDateStr(days[j], 1);
+    for(let k = 0; k < lost; k++){
+      let guard = 0;
+      while(guard++ < 20){
+        const w = dowOf(cur);
+        if(w !== 0 && w !== 6 && !result[cur]) break;
+        cur = shiftDateStr(cur, 1);
+      }
+      result[cur] = '대체공휴일';
+      cur = shiftDateStr(cur, 1);
+    }
+    i = j + 1;
+  }
+  return result;
+}
+
+const AUTO_HOLIDAY_CACHE = {};
+const OFF_MARK = '__수업함__';
+function autoHolidayName(dateStr){
+  const y = parseInt((dateStr || '').slice(0,4), 10);
+  if(!y || !LUNAR_HOLIDAYS[y]) return null;
+  if(!AUTO_HOLIDAY_CACHE[y]) AUTO_HOLIDAY_CACHE[y] = koreanHolidaysOf(y);
+  return AUTO_HOLIDAY_CACHE[y][dateStr] || null;
+}
+function holidayNameOf(dateStr){
+  const v = holidays[dateStr];
+  if(v === OFF_MARK || v === false) return null;
+  if(v) return (typeof v === 'string' && v.trim()) ? v.trim() : '공휴일';
+  return autoHolidayName(dateStr);
+}
+
+
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
 let selectedAbsenceDate = null;
@@ -427,8 +528,7 @@ function renderAttCalendar(){
 
     let cls = 'cal-day';
     let onclick = '';
-    const holRaw = holidays[dateStr];
-    const holName = holRaw ? ((typeof holRaw === 'string' && holRaw.trim()) ? holRaw.trim() : '공휴일') : null;
+    const holName = holidayNameOf(dateStr);
     if(rec){
       if(rec.status === '결석'){ cls += ' absent'; absentCount++; }
       else{ cls += ' att'; attCount++; if(makeupDoneDates.has(dateStr)) cls += ' extra'; }

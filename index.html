@@ -1315,7 +1315,6 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
               <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="autoFillHolidays()" style="margin-left:8px;">🏖 공휴일 자동 채우기</button>
             </div>
             <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);" id="eventTypeLegend">
               <span class="event-type-toggle" data-type="시험" onclick="toggleEventTypeVisibility('시험')"><i class="dot event-dot-시험"></i>시험</span>
@@ -3267,6 +3266,7 @@ function renderEventListForSelectedDate(){
   if(!listEl || !labelEl) return;
 
   labelEl.textContent = formatDateKR(selectedEventDate);
+  syncHolidayBtn('dashHolidayBtn');
 
   const dayEvents = events.filter(e => e.date === selectedEventDate)
     .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
@@ -3280,12 +3280,21 @@ function renderEventListForSelectedDate(){
   `).join('') : `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
 }
 
+function syncHolidayBtn(id){
+  const b = document.getElementById(id);
+  if(!b) return;
+  const nm = holidayNameOf(selectedEventDate);
+  b.textContent = nm ? ('🏖 ' + nm) : '🏖 휴무일 지정';
+  b.classList.toggle('is-holiday', !!nm);
+}
+
 function renderBigEventListForSelectedDate(){
   const listEl = document.getElementById('bigEventList');
   const labelEl = document.getElementById('bigEventDayLabel');
   if(!listEl || !labelEl) return;
 
   labelEl.textContent = formatDateKR(selectedEventDate);
+  syncHolidayBtn('bigHolidayBtn');
 
   const dayEvents = events.filter(e => e.date === selectedEventDate)
     .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
@@ -3425,42 +3434,25 @@ function koreanHolidaysOf(year){
   return result;
 }
 
-/* 캘린더의 "공휴일 자동 채우기" — 지금 보고 있는 해의 공휴일을 한 번에 넣어줌 */
-function autoFillHolidays(){
-  const year = dashCalYear;
-  const all = koreanHolidaysOf(year);
-  const toAdd = Object.keys(all).filter(ds => !holidays[ds]).sort();
-
-  if(!toAdd.length){
-    alert(`${year}년 공휴일은 이미 다 들어가 있습니다.`);
-    return;
-  }
-
-  const lines = toAdd.map(ds => {
-    const [y,m,d] = ds.split('-');
-    return `  ${parseInt(m,10)}/${parseInt(d,10)}(${weekdayLabelOf(ds)})  ${all[ds]}`;
-  }).join('\n');
-
-  const already = Object.keys(all).length - toAdd.length;
-  const msg = `${year}년 공휴일 ${toAdd.length}개를 달력에 넣을까요?\n\n${lines}\n\n`
-    + (already ? `(이미 들어가 있는 ${already}개는 그대로 둡니다)\n` : '')
-    + `학원 사정으로 쉬는 날은 나중에 날짜를 눌러서 따로 추가하시면 됩니다.\n`
-    + `잘못 들어간 날은 그 날짜를 눌러서 지울 수 있어요.`;
-
-  if(!confirm(msg)) return;
-
-  const updates = {};
-  toAdd.forEach(ds => { updates[ds] = all[ds]; });
-  db.ref('holidays').update(updates);
-  showToast(`${year}년 공휴일 ${toAdd.length}개를 넣었습니다.`);
+/* 계산해둔 연도별 공휴일을 기억해서 다시 계산하지 않게 */
+const AUTO_HOLIDAY_CACHE = {};
+function autoHolidayName(dateStr){
+  const y = parseInt((dateStr || '').slice(0,4), 10);
+  if(!y || !LUNAR_HOLIDAYS[y]) return null;
+  if(!AUTO_HOLIDAY_CACHE[y]) AUTO_HOLIDAY_CACHE[y] = koreanHolidaysOf(y);
+  return AUTO_HOLIDAY_CACHE[y][dateStr] || null;
 }
 
-function isHolidayDate(dateStr){ return !!holidays[dateStr]; }
+/* 이 날이 공휴일인가 — 나라 공휴일은 자동, holidays{}는 직접 넣거나 끈 것 */
 function holidayNameOf(dateStr){
   const v = holidays[dateStr];
-  if(!v) return null;
-  return (typeof v === 'string' && v.trim()) ? v.trim() : '공휴일';
+  if(v === OFF_MARK || v === false) return null;              // 자동 공휴일인데 "수업함"으로 끈 날
+  if(v) return (typeof v === 'string' && v.trim()) ? v.trim() : '공휴일';
+  return autoHolidayName(dateStr);                            // 나라 공휴일 자동 표시
 }
+function isHolidayDate(dateStr){ return !!holidayNameOf(dateStr); }
+/* 자동 공휴일을 끈 표시 */
+const OFF_MARK = '__수업함__';
 function defaultHolidayName(dateStr){ return FIXED_HOLIDAY_NAMES[(dateStr||'').slice(5)] || ''; }
 /* 큰 달력(선생님 출근·캘린더)용 — 날짜 옆에 붙는 이름표 */
 function holidayTagHtml(dateStr){
@@ -4979,18 +4971,27 @@ function toggleHolidayForCurrentDate(){
 /* 캘린더·대시보드에서도 쓰는 공통 함수 (아무 날짜나) */
 function toggleHolidayFor(date){
   if(!date) return;
-  const isHoliday = !!holidays[date];
+  const auto = autoHolidayName(date);          // 나라 공휴일이면 이름
+  const manual = holidays[date];               // 직접 넣었거나 끈 것
+  const shownNow = holidayNameOf(date);        // 지금 달력에 보이는 이름 (없으면 null)
 
-  if(isHoliday){
-    // 이미 공휴일 — 이름만 바꿀지 / 아예 해제할지 물어봄
-    const curName = holidayNameOf(date);
-    const edited = prompt(`${fmtDateKR2(date)} · 현재 "${curName}"\n\n이름을 고치려면 새로 적고 확인,\n공휴일 처리를 아예 해제하려면 비워두고 확인하세요.`, curName === '공휴일' ? '' : curName);
-    if(edited === null) return; // 취소
+  // ── 지금 공휴일로 보이는 날 ──
+  if(shownNow){
+    if(auto && (manual === undefined || manual === null)){
+      // 나라 공휴일 — 학원이 수업하는 날로 바꿀지 물어봄
+      if(confirm(`${fmtDateKR2(date)}은 "${auto}"입니다.\n\n달력에 자동으로 표시되는 날이에요.\n이날 학원은 수업을 하나요?\n\n[확인] 수업함 — 달력에서 공휴일 표시를 뺍니다\n[취소] 그대로 쉼`)){
+        db.ref('holidays/' + date).set(OFF_MARK);
+        showToast(`${auto} — 수업하는 날로 바꿨어요.`);
+      }
+      return;
+    }
+    // 직접 넣은 휴무일 — 이름 고치기 / 해제
+    const edited = prompt(`${fmtDateKR2(date)} · 현재 "${shownNow}"\n\n이름을 고치려면 새로 적고 확인,\n휴무를 해제하려면 비워두고 확인하세요.`, shownNow === '공휴일' ? '' : shownNow);
+    if(edited === null) return;
     const trimmed = edited.trim();
     if(!trimmed){
-      if(!confirm(`${fmtDateKR2(date)}의 공휴일 처리를 해제할까요?`)) return;
       db.ref('holidays/' + date).remove();
-      showToast('공휴일 처리를 해제했어요.');
+      showToast(auto ? `해제했어요. (${auto}이라 다시 공휴일로 표시됩니다)` : '휴무를 해제했어요.');
       return;
     }
     db.ref('holidays/' + date).set(trimmed);
@@ -4998,19 +4999,26 @@ function toggleHolidayFor(date){
     return;
   }
 
-  const suggested = defaultHolidayName(date);
-  const nameInput = prompt(`${fmtDateKR2(date)}을(를) 공휴일로 처리합니다.\n\n달력에 표시할 이름을 적어주세요. (예: 광복절, 대체공휴일, 추석)\n비워두면 "공휴일"로 표시돼요.\n\n이날 이미 기록된 결석은 전부 "보강없음"으로 자동 처리되고,\n앞으로 이날은 자동 결석 처리 대상에서도 빠집니다.`, suggested);
-  if(nameInput === null) return; // 취소
+  // ── 공휴일이 아닌 날 ──
+  if(manual === OFF_MARK || manual === false){
+    // 나라 공휴일인데 "수업함"으로 꺼둔 날 — 되돌리기
+    if(confirm(`${fmtDateKR2(date)}은 "${auto}"인데 지금은 수업하는 날로 되어 있어요.\n\n다시 쉬는 날로 돌릴까요?`)){
+      db.ref('holidays/' + date).remove();
+      showToast(`${auto} — 다시 쉬는 날로 돌렸어요.`);
+    }
+    return;
+  }
 
-  db.ref('holidays/' + date).set(nameInput.trim() || '공휴일');
+  // 학원 자체 휴무일 추가
+  const nameInput = prompt(`${fmtDateKR2(date)}을(를) 휴무일로 지정합니다.\n\n달력에 표시할 이름을 적어주세요. (예: 학원 휴무, 임시공휴일, 워크숍)\n비워두면 "휴무"로 표시돼요.\n\n이날 이미 기록된 결석은 전부 "보강없음"으로 자동 처리되고,\n앞으로 이날은 자동 결석 처리 대상에서도 빠집니다.`, '학원 휴무');
+  if(nameInput === null) return;
 
-  // 그날 이미 기록된 결석 전원을 보강없음 처리
+  db.ref('holidays/' + date).set(nameInput.trim() || '휴무');
+
   const absencesToday = attendance.filter(a => a.date === date && a.status === '결석');
-  absencesToday.forEach(a => {
-    db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true);
-  });
+  absencesToday.forEach(a => { db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true); });
 
-  showToast(`"${nameInput.trim() || '공휴일'}"(으)로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
+  showToast(`"${nameInput.trim() || '휴무'}"(으)로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
 }
 
 function updateHolidayToggleUI(){
@@ -5018,9 +5026,9 @@ function updateHolidayToggleUI(){
   const label = document.getElementById('holidayToggleLabel');
   if(!btn || !label) return;
   const date = document.getElementById('attDate').value || todayStr();
-  const isHoliday = !!holidays[date];
-  label.textContent = isHoliday ? (holidayNameOf(date) + ' · 수정') : '공휴일 처리';
-  btn.classList.toggle('is-holiday', isHoliday);
+  const shown = holidayNameOf(date);
+  label.textContent = shown ? (shown + ' · 쉼') : '휴무일 지정';
+  btn.classList.toggle('is-holiday', !!shown);
   btn.classList.toggle('btn-primary', isHoliday);
   btn.classList.toggle('btn-ghost', !isHoliday);
 }
@@ -6523,7 +6531,7 @@ function autoMarkPastAbsences(){
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if(holidays[dateStr]) continue; // 공휴일로 처리된 날은 자동 결석 처리 대상에서 제외
+    if(isHolidayDate(dateStr)) continue; // 공휴일·휴무일은 자동 결석 처리 대상에서 제외 (나라 공휴일 포함)
     const weekday = weekdayLabelOf(dateStr);
     students.forEach(s => {
       const scheduledTime = getDayTime(s, weekday);
