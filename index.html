@@ -385,6 +385,7 @@
   .bigcal-cell.holiday{background:#FCEFEF;border:1.5px solid #E4AEB3;}
   .bigcal-cell.holiday .bc-num{color:#AE5560;}
   .cal-cell.holiday .cal-num{background:#FCEFEF;box-shadow:0 0 0 1.5px #E4AEB3 inset;color:#AE5560;font-weight:800;}
+  .holiday-btn.is-holiday{background:#FCEFEF;border-color:#E4AEB3;color:#AE5560;font-weight:800;}
   .hol-tag{font-size:10.5px;font-weight:800;color:#AE5560;letter-spacing:-.2px;white-space:nowrap;flex-shrink:0;}
   .mc-day.mc-holiday{box-shadow:0 0 0 1.5px #E4AEB3 inset;}
   .hol-tag-mini{display:block;font-size:8px;font-weight:800;color:#AE5560;line-height:1.1;margin-top:1px;
@@ -936,7 +937,10 @@
             </div>
 
             <div class="event-day-panel">
-              <h4 id="eventDayLabel" style="margin:0 0 8px 0;font-size:12.5px;font-weight:700;">날짜를 선택해 주세요</h4>
+              <div style="display:flex;align-items:center;gap:6px;margin:0 0 8px 0;flex-wrap:wrap;">
+                <h4 id="eventDayLabel" style="margin:0;font-size:12.5px;font-weight:700;">날짜를 선택해 주세요</h4>
+                <button type="button" class="btn btn-ghost btn-sm holiday-btn" id="dashHolidayBtn" onclick="toggleHolidayFor(selectedEventDate)" style="margin-left:auto;font-size:11px;padding:4px 9px;">🏖 공휴일</button>
+              </div>
               <div id="eventList"></div>
               <div class="form-row" style="margin:10px 0 0 0;">
                 <select id="eventType" style="flex:0 0 90px;padding:8px;border:1px solid var(--color-border);border-radius:6px;font-size:12.5px;">
@@ -1311,6 +1315,7 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
               <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="autoFillHolidays()" style="margin-left:8px;">🏖 공휴일 자동 채우기</button>
             </div>
             <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);" id="eventTypeLegend">
               <span class="event-type-toggle" data-type="시험" onclick="toggleEventTypeVisibility('시험')"><i class="dot event-dot-시험"></i>시험</span>
@@ -1334,7 +1339,10 @@
 
         <div class="grid grid-2 section-gap">
           <div class="card">
-            <h4 id="bigEventDayLabel" style="margin:0 0 10px 0;font-size:14px;font-weight:800;">날짜를 선택해 주세요</h4>
+            <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px 0;flex-wrap:wrap;">
+              <h4 id="bigEventDayLabel" style="margin:0;font-size:14px;font-weight:800;">날짜를 선택해 주세요</h4>
+              <button type="button" class="btn btn-ghost btn-sm holiday-btn" id="bigHolidayBtn" onclick="toggleHolidayFor(selectedEventDate)" style="margin-left:auto;">🏖 공휴일로 지정</button>
+            </div>
             <div id="bigEventList"></div>
             <div class="form-row" style="margin:12px 0 0 0;">
               <select id="bigEventType" style="flex:0 0 100px;padding:10px;border:1px solid var(--color-border);border-radius:8px;font-size:13px;">
@@ -3330,6 +3338,123 @@ const FIXED_HOLIDAY_NAMES = {
   '01-01':'신정', '03-01':'삼일절', '05-05':'어린이날', '06-06':'현충일',
   '08-15':'광복절', '10-03':'개천절', '10-09':'한글날', '12-25':'성탄절'
 };
+/* ===== 대한민국 공휴일 자동 계산 =====
+   음력 공휴일(설날·부처님오신날·추석)은 해마다 양력 날짜가 달라서 표로 넣어둡니다.
+   나머지는 날짜가 고정이고, 대체공휴일은 규칙대로 계산합니다. */
+const LUNAR_HOLIDAYS = {
+  2026: { seol:"2026-02-17", buddha:"2026-05-24", chuseok:"2026-09-25" },
+  2027: { seol:"2027-02-07", buddha:"2027-05-13", chuseok:"2027-09-15" },
+  2028: { seol:"2028-01-27", buddha:"2028-05-02", chuseok:"2028-10-03" },
+  2029: { seol:"2029-02-13", buddha:"2029-05-20", chuseok:"2029-09-22" },
+  2030: { seol:"2030-02-03", buddha:"2030-05-09", chuseok:"2030-09-12" },
+  2031: { seol:"2031-01-23", buddha:"2031-05-28", chuseok:"2031-10-01" },
+  2032: { seol:"2032-02-11", buddha:"2032-05-16", chuseok:"2032-09-19" },
+  2033: { seol:"2033-01-31", buddha:"2033-05-06", chuseok:"2033-09-08" },
+  2034: { seol:"2034-02-19", buddha:"2034-05-25", chuseok:"2034-09-27" },
+  2035: { seol:"2035-02-08", buddha:"2035-05-15", chuseok:"2035-09-16" }
+};
+
+function shiftDateStr(dateStr, days){
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function koreanHolidaysOf(year){
+  const L = LUNAR_HOLIDAYS[year];
+  const dowOf = ds => new Date(ds + 'T00:00:00').getDay();
+
+  // 1) 공휴일 항목 모으기 (같은 날에 둘이 겹칠 수 있음)
+  //    sub=대체공휴일 대상 여부, satLost=토요일에 걸려도 대체를 주는지
+  //    (설·추석 연휴는 일요일에만 대체가 생기고 토요일은 그냥 넘어갑니다)
+  const items = [];
+  [['01-01','신정',false,false], ['03-01','삼일절',true,true],
+   ['05-05','어린이날',true,true], ['06-06','현충일',false,false],
+   ['07-17','제헌절',true,true],   ['08-15','광복절',true,true],
+   ['10-03','개천절',true,true],   ['10-09','한글날',true,true],
+   ['12-25','성탄절',true,true]
+  ].forEach(([md,name,sub,satLost]) => items.push({ date:`${year}-${md}`, name, sub, satLost }));
+
+  if(L){
+    items.push({ date:L.buddha, name:'부처님오신날', sub:true, satLost:true });
+    [[-1,'설날 연휴'],[0,'설날'],[1,'설날 연휴']].forEach(([o,nm]) =>
+      items.push({ date:shiftDateStr(L.seol, o), name:nm, sub:true, satLost:false }));
+    [[-1,'추석 연휴'],[0,'추석'],[1,'추석 연휴']].forEach(([o,nm]) =>
+      items.push({ date:shiftDateStr(L.chuseok, o), name:nm, sub:true, satLost:false }));
+  }
+
+  // 2) 날짜별로 정리
+  const byDate = {};
+  items.forEach(it => { (byDate[it.date] = byDate[it.date] || []).push(it); });
+  const result = {};
+  Object.keys(byDate).forEach(ds => { result[ds] = byDate[ds][0].name; });
+
+  // 3) 날짜별로 "날린 날" 세기 — 겹친 만큼 + 주말에 걸린 만큼
+  const lostAt = {};
+  Object.keys(byDate).forEach(ds => {
+    const list = byDate[ds];
+    if(!list.some(it => it.sub)) return;         // 신정·현충일만 있는 날은 대체 없음
+    const w = dowOf(ds);
+    let lost = list.length - 1;                  // 같은 날에 겹친 개수
+    if(w === 0) lost += 1;                                          // 일요일
+    else if(w === 6 && list.some(it => it.sub && it.satLost)) lost += 1;  // 토요일
+    if(lost > 0) lostAt[ds] = lost;
+  });
+
+  // 4) 이어진 공휴일 덩어리 단위로, 덩어리가 끝난 다음 평일부터 대체공휴일 배정
+  const days = Object.keys(result).sort();
+  let i = 0;
+  while(i < days.length){
+    let j = i, lost = lostAt[days[i]] || 0;
+    while(j + 1 < days.length && shiftDateStr(days[j], 1) === days[j+1]){
+      j++; lost += (lostAt[days[j]] || 0);
+    }
+    let cur = shiftDateStr(days[j], 1);
+    for(let k = 0; k < lost; k++){
+      let guard = 0;
+      while(guard++ < 20){
+        const w = dowOf(cur);
+        if(w !== 0 && w !== 6 && !result[cur]) break;
+        cur = shiftDateStr(cur, 1);
+      }
+      result[cur] = '대체공휴일';
+      cur = shiftDateStr(cur, 1);
+    }
+    i = j + 1;
+  }
+  return result;
+}
+
+/* 캘린더의 "공휴일 자동 채우기" — 지금 보고 있는 해의 공휴일을 한 번에 넣어줌 */
+function autoFillHolidays(){
+  const year = dashCalYear;
+  const all = koreanHolidaysOf(year);
+  const toAdd = Object.keys(all).filter(ds => !holidays[ds]).sort();
+
+  if(!toAdd.length){
+    alert(`${year}년 공휴일은 이미 다 들어가 있습니다.`);
+    return;
+  }
+
+  const lines = toAdd.map(ds => {
+    const [y,m,d] = ds.split('-');
+    return `  ${parseInt(m,10)}/${parseInt(d,10)}(${weekdayLabelOf(ds)})  ${all[ds]}`;
+  }).join('\n');
+
+  const already = Object.keys(all).length - toAdd.length;
+  const msg = `${year}년 공휴일 ${toAdd.length}개를 달력에 넣을까요?\n\n${lines}\n\n`
+    + (already ? `(이미 들어가 있는 ${already}개는 그대로 둡니다)\n` : '')
+    + `학원 사정으로 쉬는 날은 나중에 날짜를 눌러서 따로 추가하시면 됩니다.\n`
+    + `잘못 들어간 날은 그 날짜를 눌러서 지울 수 있어요.`;
+
+  if(!confirm(msg)) return;
+
+  const updates = {};
+  toAdd.forEach(ds => { updates[ds] = all[ds]; });
+  db.ref('holidays').update(updates);
+  showToast(`${year}년 공휴일 ${toAdd.length}개를 넣었습니다.`);
+}
+
 function isHolidayDate(dateStr){ return !!holidays[dateStr]; }
 function holidayNameOf(dateStr){
   const v = holidays[dateStr];
@@ -4846,8 +4971,14 @@ function renderAttGroupsHtml(list, date, weekday, isToday, nowTime, emptyMsg){
 // 그날 등원 예정인 초등부 전원을 한 번에 결석 처리 (방학 등으로 결석이 많을 때)
 // 특정 날짜를 공휴일로 처리/해제. 공휴일로 처리하면 그날 이미 기록된 결석들을 전부 "보강없음"으로 일괄 처리해서
 // 결석→보강예약 목록에서 자동으로 빠지게 하고, 자동 결석 처리 대상에서도 제외함
+/* 출결 화면 버튼 — 지금 보고 있는 날짜로 */
 function toggleHolidayForCurrentDate(){
-  const date = document.getElementById('attDate').value || todayStr();
+  toggleHolidayFor(document.getElementById('attDate').value || todayStr());
+}
+
+/* 캘린더·대시보드에서도 쓰는 공통 함수 (아무 날짜나) */
+function toggleHolidayFor(date){
+  if(!date) return;
   const isHoliday = !!holidays[date];
 
   if(isHoliday){
@@ -4889,6 +5020,7 @@ function updateHolidayToggleUI(){
   const date = document.getElementById('attDate').value || todayStr();
   const isHoliday = !!holidays[date];
   label.textContent = isHoliday ? (holidayNameOf(date) + ' · 수정') : '공휴일 처리';
+  btn.classList.toggle('is-holiday', isHoliday);
   btn.classList.toggle('btn-primary', isHoliday);
   btn.classList.toggle('btn-ghost', !isHoliday);
 }
