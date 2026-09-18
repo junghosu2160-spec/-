@@ -87,6 +87,10 @@
   .cal-day.extra{background:var(--color-extra-soft); color:var(--color-extra); font-weight:700;}
   .cal-day.upcoming{border:1.5px solid var(--color-primary); color:var(--color-primary); font-weight:700; cursor:pointer;}
   .cal-day.upcoming:active{opacity:0.6;}
+  .cal-day.holiday{background:#FCEFEF; box-shadow:0 0 0 1.5px #E4AEB3 inset; color:#AE5560; font-weight:800;
+    flex-direction:column; gap:0; line-height:1.15;}
+  .cal-day.holiday .hol-nm{font-size:8px; font-weight:800; max-width:100%; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap;}
 
   .legend{display:flex; gap:10px; margin-top:8px; font-size:11px; color:var(--color-text-muted); flex-wrap:wrap;}
   .legend span{display:flex; align-items:center; gap:4px;}
@@ -240,6 +244,7 @@ let elemMakeupProgress = [];
 let parentMessages = [];
 let mathholicLinks = [];
 let announcements = [];
+let holidays = {}; // {"YYYY-MM-DD": "광복절"} 또는 예전 자료는 true
 
 let calYear = new Date().getFullYear();
 let calMonth = new Date().getMonth();
@@ -370,6 +375,10 @@ function attachListeners(){
     mathholicLinks = snapshotToArray(snap.val());
     renderReport();
   });
+  db.ref('holidays').on('value', snap => {
+    holidays = snap.val() || {};
+    renderAttCalendar();
+  });
   db.ref('announcements').on('value', snap => {
     announcements = snapshotToArray(snap.val());
     renderAnnounceBanner();
@@ -418,12 +427,18 @@ function renderAttCalendar(){
 
     let cls = 'cal-day';
     let onclick = '';
+    const holRaw = holidays[dateStr];
+    const holName = holRaw ? ((typeof holRaw === 'string' && holRaw.trim()) ? holRaw.trim() : '공휴일') : null;
     if(rec){
       if(rec.status === '결석'){ cls += ' absent'; absentCount++; }
       else{ cls += ' att'; attCount++; if(makeupDoneDates.has(dateStr)) cls += ' extra'; }
     }else if(isClassDay && dateStr >= today){
       cls += ' upcoming';
       onclick = ` onclick="openAbsencePanel('${dateStr}')"`;
+    }
+    if(holName){
+      html += `<div class="cal-day holiday" title="${holName.replace(/"/g,'&quot;')}"><span>${d}</span><span class="hol-nm">${holName.replace(/</g,'&lt;')}</span></div>`;
+      continue;
     }
     html += `<div class="${cls}"${onclick}>${d}</div>`;
   }

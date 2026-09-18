@@ -381,6 +381,14 @@
   .bigcal-cell:hover{border-color:var(--color-primary-light);}
   .bigcal-cell.selected{border-color:var(--color-primary);border-width:2px;}
   .bigcal-cell.today .bc-num{color:var(--color-primary);}
+  /* ── 공휴일 표시 (연한 레드) ── */
+  .bigcal-cell.holiday{background:#FCEFEF;border:1.5px solid #E4AEB3;}
+  .bigcal-cell.holiday .bc-num{color:#AE5560;}
+  .cal-cell.holiday .cal-num{background:#FCEFEF;box-shadow:0 0 0 1.5px #E4AEB3 inset;color:#AE5560;font-weight:800;}
+  .hol-tag{font-size:10.5px;font-weight:800;color:#AE5560;letter-spacing:-.2px;white-space:nowrap;flex-shrink:0;}
+  .mc-day.mc-holiday{box-shadow:0 0 0 1.5px #E4AEB3 inset;}
+  .hol-tag-mini{display:block;font-size:8px;font-weight:800;color:#AE5560;line-height:1.1;margin-top:1px;
+    max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .bc-dateline{display:flex;align-items:center;flex-wrap:wrap;gap:4px;row-gap:3px;}
   .bc-num{font-size:13px;font-weight:800;color:var(--color-text);flex-shrink:0;}
   .bc-chip{
@@ -3156,7 +3164,7 @@ function renderDashCalendar(){
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
-    cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
+    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -3231,7 +3239,7 @@ function renderBigCalendar(){
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
-    cells += `<div class="bigcal-cell${cls}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
+    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -3315,6 +3323,32 @@ let selectedTeacherDays = [];
 function teacherById(id){ return teachers.find(t => t.id === id); }
 
 // 특정 날짜에 해당 조교가 실제로 근무하는지 (개인 예외가 있으면 예외를 우선 적용)
+/* ===== 공휴일 이름 =====
+   holidays[날짜] 는 예전 자료에선 true, 새로 저장하는 건 이름 문자열입니다.
+   둘 다 그대로 읽어서 씁니다. (기존 자료 안 건드림) */
+const FIXED_HOLIDAY_NAMES = {
+  '01-01':'신정', '03-01':'삼일절', '05-05':'어린이날', '06-06':'현충일',
+  '08-15':'광복절', '10-03':'개천절', '10-09':'한글날', '12-25':'성탄절'
+};
+function isHolidayDate(dateStr){ return !!holidays[dateStr]; }
+function holidayNameOf(dateStr){
+  const v = holidays[dateStr];
+  if(!v) return null;
+  return (typeof v === 'string' && v.trim()) ? v.trim() : '공휴일';
+}
+function defaultHolidayName(dateStr){ return FIXED_HOLIDAY_NAMES[(dateStr||'').slice(5)] || ''; }
+/* 큰 달력(선생님 출근·캘린더)용 — 날짜 옆에 붙는 이름표 */
+function holidayTagHtml(dateStr){
+  const nm = holidayNameOf(dateStr);
+  return nm ? `<span class="hol-tag">${escapeHtml(nm)}</span>` : '';
+}
+/* 작은 달력용 — 숫자 아래 줄여서 표시 */
+function holidayMiniHtml(dateStr){
+  const nm = holidayNameOf(dateStr);
+  return nm ? `<span class="hol-tag-mini" title="${escapeHtml(nm)}">${escapeHtml(nm)}</span>` : '';
+}
+function holidayClass(dateStr){ return isHolidayDate(dateStr) ? ' holiday' : ''; }
+
 function isTeacherWorking(teacher, dateStr){
   const exception = teacherExceptions.find(e => e.teacherId === teacher.id && e.date === dateStr);
   if(exception) return exception.status === 'on';
@@ -3415,7 +3449,7 @@ function renderTeacherEditCalendar(){
     const isException = teacherExceptions.some(e => e.teacherId === teacher.id && e.date === dateStr);
     let cls = working ? 'teacher-cal-work' : '';
     if(isException) cls += ' teacher-cal-exception';
-    cells += `<div class="cal-cell ${cls}" onclick="toggleTeacherWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근일 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
+    cells += `<div class="cal-cell ${cls}${holidayClass(dateStr)}" onclick="toggleTeacherWorkDate('${teacher.id}','${dateStr}')" title="${holidayNameOf(dateStr) ? holidayNameOf(dateStr) + ' · ' : ''}${working ? '출근일 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
   }
   document.getElementById('teacherEditCalGrid').innerHTML = cells;
 }
@@ -4817,15 +4851,27 @@ function toggleHolidayForCurrentDate(){
   const isHoliday = !!holidays[date];
 
   if(isHoliday){
-    if(!confirm(`${fmtDateKR2(date)}의 공휴일 처리를 해제할까요?`)) return;
-    db.ref('holidays/' + date).remove();
-    showToast('공휴일 처리를 해제했어요.');
+    // 이미 공휴일 — 이름만 바꿀지 / 아예 해제할지 물어봄
+    const curName = holidayNameOf(date);
+    const edited = prompt(`${fmtDateKR2(date)} · 현재 "${curName}"\n\n이름을 고치려면 새로 적고 확인,\n공휴일 처리를 아예 해제하려면 비워두고 확인하세요.`, curName === '공휴일' ? '' : curName);
+    if(edited === null) return; // 취소
+    const trimmed = edited.trim();
+    if(!trimmed){
+      if(!confirm(`${fmtDateKR2(date)}의 공휴일 처리를 해제할까요?`)) return;
+      db.ref('holidays/' + date).remove();
+      showToast('공휴일 처리를 해제했어요.');
+      return;
+    }
+    db.ref('holidays/' + date).set(trimmed);
+    showToast(`"${trimmed}"(으)로 바꿨어요.`);
     return;
   }
 
-  if(!confirm(`${fmtDateKR2(date)}을(를) 공휴일로 처리할까요?\n이날 이미 기록된 결석은 전부 "보강없음"으로 자동 처리되고, 앞으로 이날은 자동 결석 처리 대상에서도 빠져요.`)) return;
+  const suggested = defaultHolidayName(date);
+  const nameInput = prompt(`${fmtDateKR2(date)}을(를) 공휴일로 처리합니다.\n\n달력에 표시할 이름을 적어주세요. (예: 광복절, 대체공휴일, 추석)\n비워두면 "공휴일"로 표시돼요.\n\n이날 이미 기록된 결석은 전부 "보강없음"으로 자동 처리되고,\n앞으로 이날은 자동 결석 처리 대상에서도 빠집니다.`, suggested);
+  if(nameInput === null) return; // 취소
 
-  db.ref('holidays/' + date).set(true);
+  db.ref('holidays/' + date).set(nameInput.trim() || '공휴일');
 
   // 그날 이미 기록된 결석 전원을 보강없음 처리
   const absencesToday = attendance.filter(a => a.date === date && a.status === '결석');
@@ -4833,7 +4879,7 @@ function toggleHolidayForCurrentDate(){
     db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true);
   });
 
-  showToast(`공휴일로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
+  showToast(`"${nameInput.trim() || '공휴일'}"(으)로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
 }
 
 function updateHolidayToggleUI(){
@@ -4842,7 +4888,7 @@ function updateHolidayToggleUI(){
   if(!btn || !label) return;
   const date = document.getElementById('attDate').value || todayStr();
   const isHoliday = !!holidays[date];
-  label.textContent = isHoliday ? '공휴일 해제' : '공휴일 처리';
+  label.textContent = isHoliday ? (holidayNameOf(date) + ' · 수정') : '공휴일 처리';
   btn.classList.toggle('btn-primary', isHoliday);
   btn.classList.toggle('btn-ghost', !isHoliday);
 }
@@ -4990,7 +5036,9 @@ function renderAttDatePopupCal(){
     let cls = 'cal-cell';
     if(dateStr === today) cls += ' teacher-cal-work';
     if(dateStr === selectedDate) cls += ' selected';
-    html += `<div class="${cls}" style="aspect-ratio:auto;min-height:28px;" onclick="selectAttDate('${dateStr}')"><span class="cal-num" style="font-size:11px;">${d}</span></div>`;
+    cls += holidayClass(dateStr);
+    const holNm = holidayNameOf(dateStr);
+    html += `<div class="${cls}" style="aspect-ratio:auto;min-height:28px;" onclick="selectAttDate('${dateStr}')" ${holNm ? `title="${escapeHtml(holNm)}"` : ''}><span class="cal-num" style="font-size:11px;">${d}</span></div>`;
   }
   grid.innerHTML = html;
 }
@@ -6948,7 +6996,7 @@ function renderStaffEditCalendar(){
     const isException = teacherExceptions.some(e => e.teacherId === teacher.id && e.date === dateStr);
     let cls = working ? 'teacher-cal-work' : '';
     if(isException) cls += ' teacher-cal-exception';
-    cells += `<div class="cal-cell ${cls}" onclick="toggleStaffWorkDate('${teacher.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
+    cells += `<div class="cal-cell ${cls}${holidayClass(dateStr)}" onclick="toggleStaffWorkDate('${teacher.id}','${dateStr}')" title="${holidayNameOf(dateStr) ? holidayNameOf(dateStr) + ' · ' : ''}${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}"><span class="cal-num">${d}</span></div>`;
   }
   document.getElementById('staffEditCalGrid').innerHTML = cells;
 }
@@ -7028,7 +7076,8 @@ function renderStaffMiniCal(t){
     const dow = new Date(ds+'T00:00:00').getDay();
     const colorStyle = working ? `background:${t.color};` : '';
     const numColor = !working ? (dow===0?'color:#D64550;':dow===6?'color:#378ADD;':'') : '';
-    cells += `<div class="mc-day ${working?'work':''} ${isToday?'today-ring':''}" style="${colorStyle}${numColor}">${d}</div>`;
+    const holNmMini = holidayNameOf(ds);
+    cells += `<div class="mc-day ${working?'work':''} ${isToday?'today-ring':''}${holNmMini?' mc-holiday':''}" style="${colorStyle}${numColor}"${holNmMini?` title="${escapeHtml(holNmMini)}"`:''}>${d}</div>`;
   }
   return `
     <div class="teacher-mini-cal">
@@ -7215,8 +7264,8 @@ function renderStaffCal(){
       const working = workingTeachers.length > 0;
       const darkT = teacherPastel(t.color).text;
       const bgStyle = working ? `background:${t.color}22;` : '';
-      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="toggleStaffWorkDate('${t.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}">
-        <span class="bc-num" style="color:${working ? darkT : numColor};font-weight:${working ? 800 : 400};">${d}</span>
+      cells += `<div class="bigcal-cell${holidayClass(dateStr)}" style="min-height:52px;cursor:pointer;${todayStyle}${bgStyle}" onclick="toggleStaffWorkDate('${t.id}','${dateStr}')" title="${working ? '출근 (눌러서 휴무로)' : '휴무 (눌러서 출근으로)'}">
+        <span class="bc-num" style="color:${working ? darkT : numColor};font-weight:${working ? 800 : 400};">${d}</span>${holidayTagHtml(dateStr)}
         ${working ? `<div style="font-size:10px;color:${darkT};margin-top:2px;font-weight:700;">출근</div>` : ''}
       </div>`;
     }else{
@@ -7224,8 +7273,8 @@ function renderStaffCal(){
       const names = workingTeachers.map(t =>
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('');
-      cells += `<div class="bigcal-cell" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
-        <div class="bc-dateline"><span class="bc-num" style="color:${numColor};">${d}</span>${names}</div>
+      cells += `<div class="bigcal-cell${holidayClass(dateStr)}" style="min-height:52px;cursor:pointer;${todayStyle}" onclick="staffCalClickDate('${dateStr}')">
+        <div class="bc-dateline"><span class="bc-num" style="color:${numColor};">${d}</span>${holidayTagHtml(dateStr)}${names}</div>
       </div>`;
     }
   }
@@ -7448,7 +7497,7 @@ function renderRefTeacherCal(){
       const p = teacherPastel(t.color);
       return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};font-size:9px;padding:1px 4px;" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`;
     }).join('');
-    html += `<div class="bigcal-cell" style="min-height:44px;${todayStyle}"><div class="bc-dateline"><span class="bc-num" style="font-size:11px;color:${numColor};">${d}</span>${names}</div></div>`;
+    html += `<div class="bigcal-cell${holidayClass(dateStr)}" style="min-height:44px;${todayStyle}"><div class="bc-dateline"><span class="bc-num" style="font-size:11px;color:${numColor};">${d}</span>${names}</div>${holidayMiniHtml(dateStr)}</div>`;
   }
   grid.innerHTML = html;
 }
@@ -7476,8 +7525,10 @@ function renderMakeupSlotList(){
     let cls = 'cal-cell';
     if(totalCap > 0) cls += ' teacher-cal-work';
     if(dateStr === selectedSlotDate) cls += ' selected';
+    cls += holidayClass(dateStr);
     html += `<div class="${cls}" style="aspect-ratio:auto;min-height:38px;flex-direction:column;${isPast ? 'opacity:0.4;' : ''}" onclick="selectSlotDate('${dateStr}')">
       <span class="cal-num" style="font-size:11px;">${d}</span>
+      ${holidayMiniHtml(dateStr)}
       ${totalCap > 0 ? `<div style="font-size:8.5px;color:${remain <= 0 ? 'var(--color-danger)' : 'var(--color-primary)'};font-weight:800;">${remain <= 0 ? '마감' : `${remain}/${totalCap}자리`}</div>` : ''}
     </div>`;
   }
