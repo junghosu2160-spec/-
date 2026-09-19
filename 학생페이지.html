@@ -591,6 +591,7 @@ function attachListeners(){
     makeupSlots = snapshotToArray(snap.val());
     renderAttCalendar();
     if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
+    if(typeof renderExamMakeupCard === 'function') renderExamMakeupCard();
   });
   db.ref('absenceRequests').on('value', snap => {
     absenceRequests = snapshotToArray(snap.val());
@@ -1208,7 +1209,8 @@ function renderExamMakeupCard(){
     return;
   }
 
-  if(!examSlotOptions.length){
+  const allSlots = combinedExamSlots();
+  if(!allSlots.length){
     formWrap.innerHTML = `<p class="hint" style="text-align:center;">아직 신청할 수 있는 시간대가 없어요. 선생님께 문의해주세요.</p>`;
     return;
   }
@@ -1224,14 +1226,14 @@ function renderExamMakeupCard(){
 
   let selectedSlotId = null;
   const choicesBox = document.getElementById('examSlotChoices');
-  choicesBox.innerHTML = examSlotOptions.map(slot => {
+  choicesBox.innerHTML = allSlots.map(slot => {
     const key = slot.date + '_' + slot.time;
     if(usedKeys.has(key)) return ''; // 이미 신청한 시간대는 다시 보여주지 않음
-    const booked = allExamBookings.filter(b => b.date === slot.date && b.time === slot.time).length;
+    const booked = examSlotTaken(slot);
     const full = booked >= slot.capacity;
     return `
       <div class="exam-slot-choice" data-id="${slot.id}" style="display:flex;align-items:center;justify-content:space-between;border:1px solid var(--color-border);border-radius:8px;padding:9px 12px;${full ? 'opacity:0.5;' : 'cursor:pointer;'}" ${full ? '' : `onclick="selectExamSlot('${slot.id}')"`}>
-        <span style="font-size:12.5px;font-weight:700;${full ? 'color:var(--color-text-muted);' : ''}">${formatDateWithWeekday(slot.date)} ${escapeHtml(slot.time)}</span>
+        <span style="font-size:12.5px;font-weight:700;${full ? 'color:var(--color-text-muted);' : ''}">${formatDateWithWeekday(slot.date)} ${escapeHtml(fmtSlotTime(slot.time))}</span>
         <span style="font-size:11px;font-weight:600;color:${full ? 'var(--color-danger)' : 'var(--color-success)'};">${full ? '마감' : '신청 가능'}</span>
       </div>`;
   }).join('');
@@ -1246,12 +1248,37 @@ function selectExamSlot(slotId){
   });
 }
 
+/* ===== 시험기간 보강 시간대 = 시험보강 전용 + 원장님이 보강 정원 달력에서 연 자리 ===== */
+function fmtSlotTime(t){
+  const v = String(t || '').trim();
+  if(/^\d{1,2}$/.test(v)) return v.padStart(2,'0') + ':00';
+  return v;
+}
+function combinedExamSlots(){
+  const today = todayStr();
+  const out = examSlotOptions.map(sl => Object.assign({}, sl));
+  const keys = new Set(out.map(sl => sl.date + '_' + sl.time));
+  makeupSlots.forEach(sl => {
+    if(!sl || !sl.date || sl.date < today || !(sl.capacity > 0)) return;
+    const k = sl.date + '_' + sl.time;
+    if(keys.has(k)) return;
+    keys.add(k);
+    out.push({ id: 'ms_' + sl.id, srcId: sl.id, date: sl.date, time: sl.time, capacity: sl.capacity, fromMakeupSlot: true });
+  });
+  return out.sort((a,b) => a.date.localeCompare(b.date) || fmtSlotTime(a.time).localeCompare(fmtSlotTime(b.time)));
+}
+function examSlotTaken(slot){
+  let n = allExamBookings.filter(b => b.date === slot.date && b.time === slot.time).length;
+  if(slot.fromMakeupSlot) n += slotBookedCount(slot.srcId);
+  return n;
+}
+
 function submitExamMakeup(){
   if(examMakeupSlots.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청을 완료했어요.'); return; }
   if(!selectedExamSlotId){ alert('신청할 시간대를 선택해 주세요.'); return; }
-  const slot = examSlotOptions.find(s => s.id === selectedExamSlotId);
+  const slot = combinedExamSlots().find(s => s.id === selectedExamSlotId);
   if(!slot){ alert('선택한 시간대를 찾을 수 없어요. 다시 시도해 주세요.'); return; }
-  const booked = allExamBookings.filter(b => b.date === slot.date && b.time === slot.time).length;
+  const booked = examSlotTaken(slot);
   if(booked >= slot.capacity){ alert('죄송해요, 방금 그 시간대가 마감됐어요. 다른 시간대를 골라주세요.'); selectedExamSlotId = null; renderExamMakeupCard(); return; }
   db.ref('makeupSchedules').push({
     studentId: currentStudent.id, date: slot.date, time: slot.time, note: '시험기간 보강', createdAt: Date.now()
