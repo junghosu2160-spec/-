@@ -5745,7 +5745,8 @@ function fmtSlotTime(t){
    같은 날짜·시간은 하나로 합칩니다. */
 function combinedExamSlots(){
   const today = todayStr();
-  const out = examSlotOptions.map(sl => Object.assign({}, sl));
+  // 지난 날짜 시간대는 목록에서 숨김 (자료는 그대로 남음)
+  const out = examSlotOptions.filter(sl => sl && sl.date && sl.date >= today).map(sl => Object.assign({}, sl));
   const keys = new Set(out.map(sl => sl.date + '_' + sl.time));
   studentMakeupSlots.forEach(sl => {
     if(!sl || !sl.date || sl.date < today || !(sl.capacity > 0)) return;
