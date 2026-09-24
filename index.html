@@ -632,6 +632,11 @@
   .event-item.시험{border-left-color:var(--color-danger);}
   .event-item.상담{border-left-color:var(--color-accent-dark);}
   .event-item.기타{border-left-color:#64748B;}
+  .event-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:#1A1A1A;margin:0;flex-shrink:0;}
+  .event-item.done{opacity:.6;}
+  .event-item.done .ev-title{text-decoration:line-through;color:var(--color-text-muted);}
+  .bc-chip.done{text-decoration:line-through;opacity:.5;}
+  #examOnlyBtn.on{background:var(--color-danger);border-color:var(--color-danger);color:#fff;font-weight:800;}
   .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
@@ -1316,6 +1321,7 @@
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(-1)">‹</button>
               <div class="cal-month-label" id="bigCalMonthLabel" style="font-size:16px;">-</div>
               <button type="button" class="btn btn-ghost btn-sm" onclick="dashCalShiftMonth(1)">›</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="examOnlyBtn" onclick="toggleExamOnly()" style="margin-left:8px;">📕 시험일정만 보기</button>
             </div>
             <div style="display:flex;gap:14px;font-size:12px;color:var(--color-text-muted);" id="eventTypeLegend">
               <span class="event-type-toggle" data-type="시험" onclick="toggleEventTypeVisibility('시험')"><i class="dot event-dot-시험"></i>시험</span>
@@ -3142,7 +3148,7 @@ function renderDashCalendar(){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
+    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}${e.done ? ' done' : ''}">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
@@ -3175,6 +3181,19 @@ function renderDashCalTeacherLegend(){
     }).join('');
 }
 
+/* 시험일정만 보기 — 켜면 시험 외 일정과 선생님 이름칩을 감춥니다 (자료는 그대로) */
+let examOnlyMode = false;
+function toggleExamOnly(){
+  examOnlyMode = !examOnlyMode;
+  renderBigCalendar();
+}
+function syncExamOnlyBtn(){
+  const b = document.getElementById('examOnlyBtn');
+  if(!b) return;
+  b.classList.toggle('on', examOnlyMode);
+  b.textContent = examOnlyMode ? '📕 시험일정만 보는 중 · 해제' : '📕 시험일정만 보기';
+}
+
 function renderBigCalendar(){
   const grid = document.getElementById('bigCalGrid');
   const label = document.getElementById('bigCalMonthLabel');
@@ -3182,6 +3201,7 @@ function renderBigCalendar(){
 
   label.textContent = `${dashCalYear}년 ${dashCalMonth + 1}월`;
   renderEventTypeLegend();
+  syncExamOnlyBtn();
 
   const firstWeekday = new Date(dashCalYear, dashCalMonth, 1).getDay();
   const daysInMonth = new Date(dashCalYear, dashCalMonth + 1, 0).getDate();
@@ -3193,13 +3213,16 @@ function renderBigCalendar(){
   }
   for(let d = 1; d <= daysInMonth; d++){
     const dateStr = `${dashCalYear}-${String(dashCalMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const dayEvents = events.filter(e => e.date === dateStr && !hiddenEventTypes.includes(e.type));
+    const dayEvents = events.filter(e => e.date === dateStr
+      && !hiddenEventTypes.includes(e.type)
+      && (!examOnlyMode || e.type === '시험'));
     let cls = '';
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
 
     // 방학·시험기간은 시작일/종료일에만 그 학교 색으로 강조 표시 (중간 날짜는 깨끗하게 유지)
-    const periodMarkers = schoolPeriods.filter(p => p.startDate === dateStr || p.endDate === dateStr);
+    const periodMarkers = schoolPeriods.filter(p => (p.startDate === dateStr || p.endDate === dateStr)
+      && (!examOnlyMode || String(p.type || '').includes('시험')));
     let borderStyle = '';
     let periodLabelsHtml = '';
     if(periodMarkers.length){
@@ -3212,13 +3235,13 @@ function renderBigCalendar(){
       }).join('');
     }
     // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
-    const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
+    const hasGijakTeam = !examOnlyMode && events.some(e => e.date === dateStr && e.type === '기작팀');
     if(hasGijakTeam){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}">${escapeHtml(e.title)}</span>`).join('');
-    const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
+    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}${e.done ? ' done' : ''}">${escapeHtml(e.title)}</span>`).join('');
+    const workingTeachers = examOnlyMode ? [] : teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
       teacherNamesHtml = workingTeachers.map(t =>
@@ -3256,13 +3279,7 @@ function renderEventListForSelectedDate(){
   const dayEvents = events.filter(e => e.date === selectedEventDate)
     .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
 
-  listEl.innerHTML = dayEvents.length ? dayEvents.map(e => `
-    <div class="event-item ${e.type}">
-      <span class="event-type-tag ${e.type}">${e.type}</span>
-      <span style="flex:1;">${escapeHtml(e.title)}</span>
-      <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
-    </div>
-  `).join('') : `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
+  listEl.innerHTML = eventListHtml(dayEvents);
 }
 
 function syncHolidayBtn(id){
@@ -3271,6 +3288,37 @@ function syncHolidayBtn(id){
   const nm = holidayNameOf(selectedEventDate);
   b.textContent = nm ? ('🏖 ' + nm) : '🏖 휴무일 지정';
   b.classList.toggle('is-holiday', !!nm);
+}
+
+/* 일정 한 줄 — 체크하면 완료(줄 긋기), 완료된 것만 모아서 한 번에 삭제 */
+function eventListHtml(dayEvents){
+  if(!dayEvents.length) return `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
+  const doneCount = dayEvents.filter(e => e.done).length;
+  let html = dayEvents.map(e => `
+    <div class="event-item ${e.type}${e.done ? ' done' : ''}">
+      <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleEventDone('${e.id}', this.checked)" title="끝난 일정이면 체크">
+      <span class="event-type-tag ${e.type}">${e.type}</span>
+      <span class="ev-title" style="flex:1;">${escapeHtml(e.title)}</span>
+      <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
+    </div>`).join('');
+  if(doneCount){
+    html += `<div style="display:flex;margin-top:8px;">
+      <button class="btn btn-danger-outline btn-sm" style="margin-left:auto;" onclick="deleteDoneEvents()">🗑 완료된 일정 ${doneCount}개 지우기</button>
+    </div>`;
+  }
+  return html;
+}
+
+function toggleEventDone(id, on){
+  db.ref('events/' + id + '/done').set(on ? true : null);
+}
+
+function deleteDoneEvents(){
+  const list = events.filter(e => e.date === selectedEventDate && e.done);
+  if(!list.length) return;
+  if(!confirm(`${fmtDateKR2(selectedEventDate)}의 완료된 일정 ${list.length}개를 지울까요?`)) return;
+  list.forEach(e => db.ref('events/' + e.id).remove());
+  showToast(`일정 ${list.length}개를 지웠습니다.`);
 }
 
 function renderBigEventListForSelectedDate(){
@@ -3284,13 +3332,7 @@ function renderBigEventListForSelectedDate(){
   const dayEvents = events.filter(e => e.date === selectedEventDate)
     .sort((a,b)=> (a.createdAt||0) - (b.createdAt||0));
 
-  listEl.innerHTML = dayEvents.length ? dayEvents.map(e => `
-    <div class="event-item ${e.type}">
-      <span class="event-type-tag ${e.type}">${e.type}</span>
-      <span style="flex:1;">${escapeHtml(e.title)}</span>
-      <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
-    </div>
-  `).join('') : `<div class="cell-muted" style="font-size:12.5px;">등록된 일정이 없습니다.</div>`;
+  listEl.innerHTML = eventListHtml(dayEvents);
 }
 
 function addEvent(fromBig){
@@ -6070,10 +6112,31 @@ function cancelMakeup(studentId, absenceDate){
 }
 
 // 수동 보강 부여 관련 함수
+/* 같은 이름이 둘 이상이면 학년(필요하면 학교)까지 붙여서 구분 */
+function studentPickLabel(s){
+  const sameName = students.filter(x => x.name === s.name);
+  if(sameName.length <= 1) return s.name;
+  const sameGrade = sameName.filter(x => (x.grade||'') === (s.grade||''));
+  if(sameGrade.length <= 1) return `${s.name} (${s.grade || '학년없음'})`;
+  return `${s.name} (${s.grade || '학년없음'} · ${(s.school||'').trim() || '학교없음'})`;
+}
+/* 입력창에 적힌 글자로 학생 찾기 — 위 표시 이름 우선, 이름만 적었는데 한 명뿐이면 그 학생 */
+function findStudentByPick(text){
+  const v = String(text || '').trim();
+  if(!v) return null;
+  const byLabel = students.find(s => studentPickLabel(s) === v);
+  if(byLabel) return byLabel;
+  const byName = students.filter(s => s.name === v);
+  if(byName.length === 1) return byName[0];
+  if(byName.length > 1) return 'AMBIGUOUS';
+  return null;
+}
+
 function renderManualMakeupStudentList(){
   const dl = document.getElementById('manualMakeupStudentList');
   if(!dl) return;
-  dl.innerHTML = students.map(s => `<option value="${escapeHtml(s.name)}">`).join('');
+  dl.innerHTML = students.slice().sort(compareByGradeThenName)
+    .map(s => `<option value="${escapeHtml(studentPickLabel(s))}">`).join('');
 }
 
 function renderManualMakeupTimeOptions(){
@@ -6090,7 +6153,8 @@ function addManualMakeup(){
   const timeVal = document.getElementById('manualMakeupTime').value;
   const noteVal = document.getElementById('manualMakeupNote').value.trim();
   if(!nameVal){ alert('학생 이름을 입력해 주세요.'); return; }
-  const stu = students.find(s => s.name === nameVal);
+  const stu = findStudentByPick(nameVal);
+  if(stu === 'AMBIGUOUS'){ alert(`"${nameVal}" 학생이 두 명 이상입니다.\n목록에서 학년까지 붙은 이름(예: ${nameVal} (중2))을 골라 주세요.`); return; }
   if(!stu){ alert('등록된 학생 이름과 일치하지 않습니다.'); return; }
   if(!dateVal){ alert('보강 날짜를 선택해 주세요.'); return; }
   db.ref('makeupSchedules').push({
@@ -7782,7 +7846,7 @@ function renderExtraMakeupSection(){
     const g = s.grade || '';
     return g.startsWith('중') || g.startsWith('고');
   }).sort((a,b) => a.name.localeCompare(b.name, 'ko'));
-  datalist.innerHTML = midHigh.map(s => `<option value="${escapeHtml(s.name)}">`).join('');
+  datalist.innerHTML = midHigh.map(s => `<option value="${escapeHtml(studentPickLabel(s))}">`).join('');
 
   const extras = absenceRequests.filter(r => r.type === 'extra_makeup' && r.extraDate === dateVal && r.status !== 'rejected');
   listBox.innerHTML = extras.length
@@ -7804,7 +7868,8 @@ function addExtraMakeup(){
 
   if(!dateVal){ alert('날짜를 먼저 선택해 주세요.'); return; }
   if(!selVal){ alert('시간대를 선택해 주세요.'); return; }
-  const student = students.find(s => s.name === studentName);
+  const student = findStudentByPick(studentName);
+  if(student === 'AMBIGUOUS'){ alert(`"${studentName}" 학생이 두 명 이상입니다.\n목록에서 학년까지 붙은 이름을 골라 주세요.`); return; }
   if(!student){ alert('학생 이름을 정확히 입력하거나 목록에서 선택해 주세요.'); return; }
 
   const isSlot = selVal.startsWith('slot:');
