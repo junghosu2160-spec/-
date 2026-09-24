@@ -636,7 +636,7 @@
   .event-item.done{opacity:.6;}
   .event-item.done .ev-title{text-decoration:line-through;color:var(--color-text-muted);}
   .bc-chip.done{text-decoration:line-through;opacity:.5;}
-  .bc-chip.clickdel{cursor:pointer;}
+  .bc-chip.clickdel{cursor:pointer;padding-top:3px;padding-bottom:3px;}
   .bc-chip.clickdel:hover{outline:1.5px solid var(--color-danger);outline-offset:1px;filter:brightness(.97);}
   #examOnlyBtn.on{background:var(--color-danger);border-color:var(--color-danger);color:#fff;font-weight:800;}
   .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
@@ -1966,6 +1966,7 @@ db.ref('announcements').on('value', snap => {
 db.ref('schoolPeriods').on('value', snap => {
   schoolPeriods = snapshotToArray(snap.val());
   if(currentView === 'calendar'){ renderBigCalendar(); renderSchoolPeriodList(); }
+  if(currentView === 'dashboard') renderDashCalendar();
 });
 db.ref('examSubjects').on('value', snap => {
   examSubjects = snap.val() || {};
@@ -3143,7 +3144,7 @@ function renderDashCalendar(){
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
-        return `<span class="bc-chip" style="background:${pc}18;border-color:${pc};color:${pc};">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}18;border-color:${pc};color:${pc};" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
@@ -3151,7 +3152,7 @@ function renderDashCalendar(){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}${e.done ? ' done' : ''}">${escapeHtml(e.title)}</span>`).join('');
+    const chips = dayEvents.map(e => `<span class="bc-chip clickdel ${e.type}${e.done ? ' done' : ''}" title="눌러서 이 일정 삭제" onclick="event.stopPropagation();deleteEventFromCal('${e.id}')">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
