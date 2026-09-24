@@ -638,7 +638,21 @@
   .bc-chip.done{text-decoration:line-through;opacity:.5;}
   .bc-chip.clickdel{cursor:pointer;padding-top:3px;padding-bottom:3px;}
   .bc-chip.clickdel:hover{outline:1.5px solid var(--color-danger);outline-offset:1px;filter:brightness(.97);}
+  .bc-chip.clickmark{cursor:pointer;padding-top:3px;padding-bottom:3px;}
+  .bc-chip.clickmark:hover{outline:1.5px solid var(--color-text-muted);outline-offset:1px;}
   #examOnlyBtn.on{background:var(--color-danger);border-color:var(--color-danger);color:#fff;font-weight:800;}
+  .event-type-sel{
+    font-size:10px;font-weight:800;padding:2px 20px 2px 8px;border-radius:999px;flex-shrink:0;
+    border:1px solid transparent;cursor:pointer;font-family:inherit;appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'><path d='M1 2.5L4 5.5L7 2.5' fill='none' stroke='%23666' stroke-width='1.4' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 6px center;
+  }
+  .event-type-sel:hover{border-color:var(--color-border);}
+  .event-type-sel.시험{background-color:var(--color-danger-soft);color:var(--color-danger);}
+  .event-type-sel.상담{background-color:#FFF6DC;color:var(--color-accent-dark);}
+  .event-type-sel.기타{background-color:#E7EBEF;color:#475569;}
+  .event-type-sel.기작팀{background-color:#FBE4F5;color:#B4308F;}
+  .event-item.done .event-type-sel{opacity:.7;}
   .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
   .event-type-tag.상담{background:#FFF6DC;color:var(--color-accent-dark);}
@@ -846,7 +860,7 @@
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-24 (a)</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-24 (c)</div>
     </div>
   </aside>
 
@@ -3153,7 +3167,7 @@ function renderDashCalendar(){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip clickdel ${e.type}${e.done ? ' done' : ''}" title="눌러서 이 일정 삭제" onclick="event.stopPropagation();deleteEventFromCal('${e.id}')">${escapeHtml(e.title)}</span>`).join('');
+    const chips = dayEvents.map(e => `<span class="bc-chip clickmark ${e.type}${e.done ? ' done' : ''}" title="${e.done ? '눌러서 줄 긋기 해제' : '눌러서 끝난 일정으로 줄 긋기'}" onclick="event.stopPropagation();toggleEventDone('${e.id}', ${e.done ? 'false' : 'true'})">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
@@ -3186,14 +3200,7 @@ function renderDashCalTeacherLegend(){
     }).join('');
 }
 
-/* 캘린더 칸에서 글씨를 눌러 바로 지우기 */
-function deleteEventFromCal(id){
-  const e = events.find(x => x.id === id);
-  if(!e) return;
-  if(!confirm(`"${e.title}" 일정을 지울까요?`)) return;
-  db.ref('events/' + id).remove();
-  showToast('일정을 지웠습니다.');
-}
+/* 달력 칸에서 기간 글씨를 눌러 지우기 (기간은 체크박스가 없어서 삭제로 동작) */
 function deletePeriodFromCal(id){
   const p = schoolPeriods.find(x => x.id === id);
   if(!p) return;
@@ -3261,7 +3268,7 @@ function renderBigCalendar(){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip clickdel ${e.type}${e.done ? ' done' : ''}" title="눌러서 이 일정 삭제" onclick="event.stopPropagation();deleteEventFromCal('${e.id}')">${escapeHtml(e.title)}</span>`).join('');
+    const chips = dayEvents.map(e => `<span class="bc-chip clickmark ${e.type}${e.done ? ' done' : ''}" title="${e.done ? '눌러서 줄 긋기 해제' : '눌러서 끝난 일정으로 줄 긋기'}" onclick="event.stopPropagation();toggleEventDone('${e.id}', ${e.done ? 'false' : 'true'})">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = examOnlyMode ? [] : teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
@@ -3318,7 +3325,9 @@ function eventListHtml(dayEvents){
   let html = dayEvents.map(e => `
     <div class="event-item ${e.type}${e.done ? ' done' : ''}">
       <input type="checkbox" ${e.done ? 'checked' : ''} onchange="toggleEventDone('${e.id}', this.checked)" title="끝난 일정이면 체크">
-      <span class="event-type-tag ${e.type}">${e.type}</span>
+      <select class="event-type-sel ${e.type}" title="종류 바꾸기" onchange="changeEventType('${e.id}', this.value)">
+        ${EVENT_TYPES.map(t => `<option value="${t}" ${t === e.type ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
       <span class="ev-title" style="flex:1;">${escapeHtml(e.title)}</span>
       <button class="btn btn-ghost btn-sm" onclick="deleteEvent('${e.id}')">삭제</button>
     </div>`).join('');
@@ -3328,6 +3337,14 @@ function eventListHtml(dayEvents){
     </div>`;
   }
   return html;
+}
+
+const EVENT_TYPES = ['시험', '상담', '기타', '기작팀'];
+
+function changeEventType(id, type){
+  if(!EVENT_TYPES.includes(type)) return;
+  db.ref('events/' + id + '/type').set(type);
+  showToast(`종류를 "${type}"(으)로 바꿨습니다.`);
 }
 
 function toggleEventDone(id, on){
