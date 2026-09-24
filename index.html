@@ -636,6 +636,8 @@
   .event-item.done{opacity:.6;}
   .event-item.done .ev-title{text-decoration:line-through;color:var(--color-text-muted);}
   .bc-chip.done{text-decoration:line-through;opacity:.5;}
+  .bc-chip.clickdel{cursor:pointer;}
+  .bc-chip.clickdel:hover{outline:1.5px solid var(--color-danger);outline-offset:1px;filter:brightness(.97);}
   #examOnlyBtn.on{background:var(--color-danger);border-color:var(--color-danger);color:#fff;font-weight:800;}
   .event-type-tag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;flex-shrink:0;}
   .event-type-tag.시험{background:var(--color-danger-soft);color:var(--color-danger);}
@@ -3181,6 +3183,22 @@ function renderDashCalTeacherLegend(){
     }).join('');
 }
 
+/* 캘린더 칸에서 글씨를 눌러 바로 지우기 */
+function deleteEventFromCal(id){
+  const e = events.find(x => x.id === id);
+  if(!e) return;
+  if(!confirm(`"${e.title}" 일정을 지울까요?`)) return;
+  db.ref('events/' + id).remove();
+  showToast('일정을 지웠습니다.');
+}
+function deletePeriodFromCal(id){
+  const p = schoolPeriods.find(x => x.id === id);
+  if(!p) return;
+  if(!confirm(`"${p.school} ${p.type}" (${p.startDate} ~ ${p.endDate}) 를 지울까요?\n시작·끝 표시가 함께 사라집니다.`)) return;
+  db.ref('schoolPeriods/' + id).remove();
+  showToast('기간을 지웠습니다.');
+}
+
 /* 시험일정만 보기 — 켜면 시험 외 일정과 선생님 이름칩을 감춥니다 (자료는 그대로) */
 let examOnlyMode = false;
 function toggleExamOnly(){
@@ -3231,7 +3249,7 @@ function renderBigCalendar(){
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
-        return `<span class="bc-chip" style="background:${pc}18;border-color:${pc};color:${pc};">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}18;border-color:${pc};color:${pc};" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
@@ -3240,7 +3258,7 @@ function renderBigCalendar(){
       borderStyle = `style="border:2.5px solid #B4308F;"`;
     }
 
-    const chips = dayEvents.map(e => `<span class="bc-chip ${e.type}${e.done ? ' done' : ''}">${escapeHtml(e.title)}</span>`).join('');
+    const chips = dayEvents.map(e => `<span class="bc-chip clickdel ${e.type}${e.done ? ' done' : ''}" title="눌러서 이 일정 삭제" onclick="event.stopPropagation();deleteEventFromCal('${e.id}')">${escapeHtml(e.title)}</span>`).join('');
     const workingTeachers = examOnlyMode ? [] : teachers.filter(t => !hiddenTeacherIds.includes(t.id) && isTeacherWorking(t, dateStr));
     let teacherNamesHtml = '';
     if(workingTeachers.length <= 4){
