@@ -1256,6 +1256,7 @@
 
         <!-- ===== 출결 체크 (이 화면의 메인 · 전체 너비) ===== -->
         <div class="card section-gap att-main-card">
+          <div id="holidayAbsentNotice"></div>
           <div id="attGroups"></div>
         </div>
 
@@ -5062,6 +5063,9 @@ function toggleHolidayFor(date){
 
   const absencesToday = attendance.filter(a => a.date === date && a.status === '결석');
   absencesToday.forEach(a => { db.ref(`makeupDismissed/${a.studentId}_${a.date}`).set(true); });
+  if(absencesToday.length && confirm(`이 날 결석으로 기록된 학생이 ${absencesToday.length}명 있어요.\n쉬는 날이니 결석 기록도 같이 지울까요?`)){
+    absencesToday.forEach(a => db.ref('attendance/' + a.id).remove());
+  }
 
   showToast(`"${nameInput.trim() || '휴무'}"(으)로 처리했어요.${absencesToday.length ? ` (결석 ${absencesToday.length}건 보강없음 처리됨)` : ''}`);
 }
@@ -5076,6 +5080,35 @@ function updateHolidayToggleUI(){
   btn.classList.toggle('is-holiday', !!shown);
   btn.classList.toggle('btn-primary', !!shown);
   btn.classList.toggle('btn-ghost', !shown);
+}
+
+/* 공휴일·휴무일인데 결석 기록이 남아 있으면 알려주고 한 번에 지울 수 있게 */
+function holidayAbsenceRecords(date){
+  return attendance.filter(a => a.date === date && a.status === '결석');
+}
+function renderHolidayAbsentNotice(date){
+  const box = document.getElementById('holidayAbsentNotice');
+  if(!box) return;
+  const nm = holidayNameOf(date);
+  if(!nm){ box.innerHTML = ''; return; }
+  const recs = holidayAbsenceRecords(date);
+  box.innerHTML = `
+    <div style="background:#FCEFEF;border:1.5px solid #E4AEB3;border-radius:10px;padding:10px 13px;margin-bottom:12px;
+                display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:12.5px;font-weight:800;color:#AE5560;">🏖 ${escapeHtml(nm)} · 쉬는 날</span>
+      <span class="cell-muted" style="font-size:11.5px;">
+        ${recs.length ? `결석으로 기록된 학생이 ${recs.length}명 있어요. 쉬는 날이니 지우는 게 맞습니다.`
+                      : '이 날은 자동 결석 처리를 하지 않아요. 보강 온 학생만 아래에서 출석 체크하시면 됩니다.'}
+      </span>
+      ${recs.length ? `<button class="btn btn-danger-outline btn-sm" style="margin-left:auto;" onclick="clearHolidayAbsences('${date}')">🗑 결석 기록 ${recs.length}건 지우기</button>` : ''}
+    </div>`;
+}
+function clearHolidayAbsences(date){
+  const recs = holidayAbsenceRecords(date);
+  if(!recs.length) return;
+  if(!confirm(`${fmtDateKR2(date)}(${holidayNameOf(date)})의 결석 기록 ${recs.length}건을 지울까요?\n\n출석·지각으로 체크된 학생은 그대로 둡니다.`)) return;
+  recs.forEach(r => db.ref('attendance/' + r.id).remove());
+  showToast(`결석 기록 ${recs.length}건을 지웠습니다.`);
 }
 
 function markAllElementaryAbsent(date){
@@ -5331,6 +5364,7 @@ function renderAttendance(){
     renderElemMakeupPanel();
   }
 
+  renderHolidayAbsentNotice(date);
   renderWeeklyAbsentList();
   updateAttDatePickerLabel();
   renderTodayAbsentAlert();
