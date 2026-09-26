@@ -394,13 +394,13 @@
   .bc-dateline{display:flex;align-items:center;flex-wrap:wrap;gap:4px;row-gap:3px;}
   .bc-num{font-size:13px;font-weight:800;color:var(--color-text);flex-shrink:0;}
   .bc-chip{
-    font-size:10.5px;font-weight:500;padding:2px 6px 2px 7px;border-radius:0;border-left:3px solid;
-    background:var(--color-surface-alt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:11px;font-weight:700;padding:3px 6px 3px 7px;border-radius:0;border-left:3px solid;
+    background:var(--color-surface-alt);color:#111111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .bc-chip.시험{border-color:#722F45;color:#1A1A1A;}
-  .bc-chip.상담{border-color:#7A4FE0;color:#1A1A1A;}
-  .bc-chip.기타{border-color:#3E3E3E;color:#1A1A1A;}
-  .bc-chip.기작팀{border-color:#B4308F;color:#1A1A1A;}
+  .bc-chip.시험{border-color:#722F45;color:#111111;}
+  .bc-chip.상담{border-color:#7A4FE0;color:#111111;}
+  .bc-chip.기타{border-color:#3E3E3E;color:#111111;}
+  .bc-chip.기작팀{border-color:#B4308F;color:#111111;}
   .bc-teacher-name{
     font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:6px;
     white-space:nowrap;
@@ -524,16 +524,17 @@
   .slot-editor-mini #slotInputRows > div{padding:5px 0 !important;font-size:12px;}
   .slot-editor-mini #slotInputRows input{width:52px;text-align:center;}
   .exam-mk-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .exam-mk-title{display:flex;align-items:center;gap:7px;cursor:pointer;flex:1 1 auto;min-width:0;}
+  .exam-mk-title{display:flex;align-items:center;gap:7px;cursor:pointer;flex:0 0 auto;min-width:0;}
   .exam-mk-title b{font-size:14.5px;font-weight:800;}
   .exam-mk-count{font-size:11px;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--color-surface-alt);color:var(--color-text-muted);}
   .exam-mk-desc{font-size:11.5px;}
-  .exam-mk-tools{display:flex;align-items:center;gap:6px;margin-left:auto;flex:0 0 auto;}
+  .exam-mk-tools{display:flex;align-items:center;gap:6px;flex:1 1 auto;flex-wrap:wrap;}
+  .exam-mk-tools select{font-weight:700;}
   .exam-mk-tools select{font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);}
   .exam-slot-btn{font-size:11.5px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;
     background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;font-weight:700;white-space:nowrap;}
   .exam-slot-btn:hover{background:var(--color-surface-alt);}
-  @media (max-width:860px){ .exam-mk-desc{display:none;} .exam-mk-tools{margin-left:0;width:100%;} }
+  @media (max-width:860px){ .exam-mk-desc{display:none;} .exam-mk-tools{width:100%;} }
   .wk-clean-btn{font-size:11px;padding:3px 9px;opacity:0;transition:opacity .15s;}
   .week-bundle-head:hover .wk-clean-btn{opacity:1;}
   .old-week-toggle{margin-top:10px;padding:9px 14px;border:1px dashed var(--color-border);border-radius:var(--radius-md);
@@ -903,7 +904,7 @@
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (n)</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (q)</div>
     </div>
   </aside>
 
@@ -1289,17 +1290,18 @@
               <span id="examMakeupToggleIcon">▾</span>
               <b>시험기간 보강관리</b>
               <span class="exam-mk-count" id="examMakeupCount"></span>
-              <span class="hint exam-mk-desc">학교별 시험 기간에 미리 몰아서 배정</span>
             </div>
             <div class="exam-mk-tools" id="examMakeupTools">
+              <select id="examMakeupTermFilter" onchange="setExamMakeupTerm(this.value)"></select>
+              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()"></select>
               <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()">
                 <option value="grade">학년순</option>
                 <option value="school">학교순</option>
               </select>
-              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()"></select>
               <button type="button" class="exam-slot-btn" onclick="toggleExamSlotPanel()">
                 <span id="examSlotToggleIcon">▸</span> 시간대 설정
               </button>
+              <span class="hint exam-mk-desc" style="margin-left:auto;">학교별 시험 기간에 미리 몰아서 배정</span>
             </div>
           </div>
           <div id="examMakeupCardBody" style="display:block;margin-top:10px;">
@@ -3239,10 +3241,9 @@ function renderDashCalendar(){
       && (!examOnlyMode || String(p.type || '').includes('시험')));
     let bandStyle = '';
     if(spanPeriods.length && !isHolidayDate(dateStr)){
+      // 시험기간만 배경을 칠한다 (방학은 칠하지 않음 — 한 달이 통째로 물들어서)
       const ex = spanPeriods.filter(p => String(p.type || '').includes('시험'));
-      const pick = ex[0] || spanPeriods[0];
-      const bc = getSchoolColor(pick.school);
-      bandStyle = `background:${bc}${ex.length ? '1F' : '12'};`;
+      if(ex.length) bandStyle = `background:${getSchoolColor(ex[0].school)}24;`;
     }
     const periodMarkers = schoolPeriods.filter(p => p.startDate === dateStr || p.endDate === dateStr);
     let borderStyle = '';
@@ -3254,7 +3255,7 @@ function renderDashCalendar(){
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
         const gtxt = (p.grades && p.grades.length) ? ' ' + p.grades.join('·') : '';
-        return `<span class="bc-chip clickdel" style="background:${pc}22;border-color:${pc};color:var(--color-text);" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
@@ -3404,7 +3405,6 @@ function importHaksa2026(){
   students.forEach(s => { const sc=(s.school||'').trim(); if(sc && s.grade) have[sc + '|' + s.grade] = true; });
 
   HAKSA_2026.periods.forEach(p => {
-    if(p.end < today) return;
     const sc = haksaMatchSchool(p.school);
     if(!sc){ miss.add(p.school); return; }
     let gs = null;
@@ -3430,7 +3430,6 @@ function importHaksa2026(){
       .forEach(x => stale.push(x.id));
   });
   HAKSA_2026.offs.forEach(o => {
-    if(o.date < today) return;
     const sc = haksaMatchSchool(o.school);
     if(!sc){ miss.add(o.school); return; }
     const title = `${sc} ${o.label}`;
@@ -3445,13 +3444,13 @@ function importHaksa2026(){
       `\n(지금 명단의 학교 이름: ${mineNames.join(', ') || '없음'})`
     : '';
   if(!nP && !nE && !nD){
-    alert('새로 넣을 것이 없습니다.\n\n남은 학사일정이 이미 전부 들어가 있습니다.' + missMsg);
+    alert('새로 넣을 것이 없습니다.\n\n2학기 학사일정이 이미 전부 들어가 있습니다.' + missMsg);
     return;
   }
   const msg = `2026학년도 학사일정을 넣습니다.\n\n` +
     `· 기간(시험기간·방학) ${nP}건\n· 일정(재량휴업일 등) ${nE}건\n` +
     (nD ? `· 겹치는 시험 일정 ${nD}건 정리\n` : '') + `\n` +
-    `오늘(${today}) 이후 것만 넣고, 이미 있는 것은 건너뜁니다.` +
+    `2학기 전체를 넣습니다. 이미 있는 것은 건너뜁니다.` +
     missMsg + `\n\n넣을까요?`;
   if(!confirm(msg)) return;
 
@@ -3591,8 +3590,9 @@ function renderExamChecklist(){
       : `<span class="ec-date none">시험기간 미등록</span>`;
     const done = g.items.filter(it => map[it.key]).length;
     const full = g.items.length > 0 && done === g.items.length;
+    const km = kindMeta[g.kind];
     const items = g.items.map(it => {
-      const c = GRADE_COLORS[it.grade] || { bg:'#ECECEC', text:'#666666' };
+      const c = { bg: km.soft, text: km.color };
       const on = !!map[it.key];
       const st = on
         ? `background:${c.text};border-color:${c.text};color:#fff;text-decoration:line-through;`
@@ -3603,7 +3603,6 @@ function renderExamChecklist(){
       return `<span class="ec-it" style="${st}" onclick="toggleExamCheck('${ecJs(it.key)}')">` +
              `<span class="mk">${on ? '✓' : '○'}</span>${escapeHtml(it.label)}${x}</span>`;
     }).join('');
-    const km = kindMeta[g.kind];
     return `${head}<div class="ec-school" style="border-left:3px solid ${km.color}55;">
       <div class="ec-top">
         <span class="ec-name">${escapeHtml(g.school)}</span>${dateHtml}
@@ -3706,10 +3705,9 @@ function renderBigCalendar(){
       && (!examOnlyMode || String(p.type || '').includes('시험')));
     let bandStyle = '';
     if(spanPeriods.length && !isHolidayDate(dateStr)){
+      // 시험기간만 배경을 칠한다 (방학은 칠하지 않음 — 한 달이 통째로 물들어서)
       const ex = spanPeriods.filter(p => String(p.type || '').includes('시험'));
-      const pick = ex[0] || spanPeriods[0];
-      const bc = getSchoolColor(pick.school);
-      bandStyle = `background:${bc}${ex.length ? '1F' : '12'};`;
+      if(ex.length) bandStyle = `background:${getSchoolColor(ex[0].school)}24;`;
     }
     // 방학·시험기간은 시작일/종료일에만 그 학교 색으로 강조 표시 (중간 날짜는 깨끗하게 유지)
     const periodMarkers = schoolPeriods.filter(p => (p.startDate === dateStr || p.endDate === dateStr)
@@ -3723,7 +3721,7 @@ function renderBigCalendar(){
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
         const gtxt = (p.grades && p.grades.length) ? ' ' + p.grades.join('·') : '';
-        return `<span class="bc-chip clickdel" style="background:${pc}22;border-color:${pc};color:var(--color-text);" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
@@ -6474,6 +6472,42 @@ function deleteExamSlot(id){
   db.ref('examSlotOptions/' + id).remove();
 }
 
+/* ===== 시험(학기)별 보강 회차 ===== */
+let examMakeupTerm = null;   // 't2m' 등
+function examMakeupTermKey(){
+  if(!examMakeupTerm){
+    const m = new Date().getMonth() + 1;
+    const t = EXAM_TERMS.find(x => x.pick.indexOf(m) >= 0);
+    examMakeupTerm = (t || EXAM_TERMS[EXAM_TERMS.length - 1]).key;
+  }
+  return examMakeupTerm;
+}
+function setExamMakeupTerm(k){ examMakeupTerm = k; examMakeupOpenStudentId = null; renderExamMakeupPanel(); }
+// 기록에 시험이 안 적혀 있으면 날짜를 보고 어느 시험인지 판단 (예전 기록 그대로 살림)
+function makeupTermOf(m){
+  if(m.term) return m.term;
+  const mm = Number(String(m.date || '').slice(5,7));
+  const t = EXAM_TERMS.find(x => x.pick.indexOf(mm) >= 0);
+  return t ? t.key : null;
+}
+// 지금 고른 시험의 보강만
+function examMakeupsOf(studentId){
+  const key = examMakeupTermKey();
+  return makeupSchedules.filter(m => m.studentId === studentId && m.note === '시험기간 보강'
+    && makeupTermOf(m) === key).sort((a,b) => a.date.localeCompare(b.date));
+}
+function renderExamMakeupTermSelect(){
+  const sel = document.getElementById('examMakeupTermFilter');
+  if(!sel) return;
+  const cur = examMakeupTermKey();
+  sel.innerHTML = EXAM_TERMS.map(t => {
+    const n = makeupSchedules.filter(m => m.note === '시험기간 보강' && makeupTermOf(m) === t.key).length;
+    return `<option value="${t.key}"${t.key === cur ? ' selected' : ''}>${t.label}${n ? ` (${n}건)` : ''}</option>`;
+  }).join('');
+  const t = EXAM_TERMS.find(x => x.key === cur);
+  if(t){ sel.style.background = t.soft; sel.style.color = t.color; sel.style.borderColor = t.color; }
+}
+
 function examGroupLabel(school, grade){
   const num = String(grade || '').replace(/[^0-9]/g, '');
   return num ? (school + num) : (school + ' ' + grade);
@@ -6507,6 +6541,15 @@ function renderExamMakeupPickInfo(school, grade){
     : `<b>${escapeHtml(who)}</b> — 등록된 시험기간이 없습니다 · 해당 학생 ${n}명`;
 }
 
+function markExamMakeupTargets(school, grade){
+  const cand = students.filter(x => (!school || (x.school||'').trim()===school) && (!grade || x.grade===grade) && !x.examMakeup);
+  if(!cand.length) return;
+  const who = school ? (grade ? examGroupLabel(school, grade) : school) : '전체';
+  if(!confirm(`${who} ${cand.length}명을 시험보강 대상으로 넣을까요?\n\n${cand.map(x=>x.name).join(', ')}`)) return;
+  cand.forEach(x => db.ref('students/' + x.id + '/examMakeup').set(true));
+  showToast(`${who} ${cand.length}명을 시험보강 대상으로 넣었습니다.`);
+}
+
 function renderExamMakeupPanel(){
   const grid = document.getElementById('examMakeupGrid');
   const countEl = document.getElementById('examMakeupCount');
@@ -6515,23 +6558,29 @@ function renderExamMakeupPanel(){
   const sortSel = document.getElementById('examMakeupSortMode');
   if(!grid || !countEl || !schoolSel || !editBox || !sortSel) return;
 
+  renderExamMakeupTermSelect();
   const targets = students.filter(s => s.examMakeup);
   countEl.textContent = `${targets.length}명`;
 
-  // 학교 + 학년 묶음 (강동중2 · 강동중3 · 동부고1 …) — 학생 명단에서 자동
+  // 학교 + 학년 묶음 (강동중2 · 강동중3 · 동부고1 …)
+  // 시험보강 체크가 안 된 학년도 목록에 나와야 고를 수 있으므로 전체 학생 기준으로 만든다
   const groupMap = {};
-  targets.forEach(s => {
+  students.forEach(s => {
     const sc = (s.school || '').trim();
-    if(!sc) return;
+    if(!sc || !s.grade) return;
+    if(!(s.grade.startsWith('중') || s.grade.startsWith('고'))) return;
     if(!groupMap[sc]) groupMap[sc] = [];
-    if(s.grade && groupMap[sc].indexOf(s.grade) < 0) groupMap[sc].push(s.grade);
+    if(groupMap[sc].indexOf(s.grade) < 0) groupMap[sc].push(s.grade);
   });
   const schools = Object.keys(groupMap).sort((a,b) => a.localeCompare(b, 'ko'));
   const prevSchool = schoolSel.value;
   schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => {
     const gs = groupMap[sc].sort((a,b) => GRADES.indexOf(a) - GRADES.indexOf(b));
     const opts = [`<option value="${escapeHtml(sc)}|">${escapeHtml(sc)} 전체</option>`].concat(
-      gs.map(g => `<option value="${escapeHtml(sc)}|${escapeHtml(g)}">${escapeHtml(examGroupLabel(sc, g))}</option>`));
+      gs.map(g => {
+        const n = targets.filter(x => (x.school||'').trim()===sc && x.grade===g).length;
+        return `<option value="${escapeHtml(sc)}|${escapeHtml(g)}">${escapeHtml(examGroupLabel(sc, g))}${n ? '' : ' (대상 없음)'}</option>`;
+      }));
     return `<optgroup label="${escapeHtml(sc)}">${opts.join('')}</optgroup>`;
   }).join('');
   if([...schoolSel.options].some(o => o.value === prevSchool)) schoolSel.value = prevSchool;
@@ -6544,7 +6593,15 @@ function renderExamMakeupPanel(){
   list = list.sort(sortSel.value === 'school' ? compareBySchoolThenGrade : compareByGradeThenName);
 
   if(!list.length){
-    grid.innerHTML = `<div class="cell-muted" style="font-size:13px;grid-column:1/-1;">시험보강 대상으로 체크된 학생이 없습니다. 학생 관리에서 "시험보강" 칸을 체크해 주세요.</div>`;
+    const cand = students.filter(x => (!fSchool || (x.school||'').trim()===fSchool) && (!fGrade || x.grade===fGrade) && !x.examMakeup);
+    const who = fSchool ? (fGrade ? examGroupLabel(fSchool, fGrade) : fSchool) : '';
+    grid.innerHTML = cand.length
+      ? `<div class="cell-muted" style="font-size:13px;grid-column:1/-1;line-height:1.8;">
+           ${escapeHtml(who || '이 조건')} — 시험보강 대상으로 체크된 학생이 없습니다. 여기 ${cand.length}명이 있어요.<br>
+           <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="markExamMakeupTargets('${ecJs(fSchool)}','${ecJs(fGrade)}')">
+             ✓ ${escapeHtml(who || '')} ${cand.length}명 시험보강 대상으로 넣기</button>
+         </div>`
+      : `<div class="cell-muted" style="font-size:13px;grid-column:1/-1;">해당하는 학생이 없습니다.</div>`;
     editBox.innerHTML = '';
     return;
   }
@@ -6552,7 +6609,7 @@ function renderExamMakeupPanel(){
   const today = todayStr();
   grid.innerHTML = list.map(s => {
     const days = WEEKDAYS.filter(d => s.schedule && s.schedule[d]).join('');
-    const mine = makeupSchedules.filter(m => m.studentId === s.id && m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
+    const mine = examMakeupsOf(s.id);
     const open = examMakeupOpenStudentId === s.id;
     const borderStyle = open ? 'border:1.5px solid var(--color-primary);' : 'border:1px solid var(--color-border);';
     if(mine.length){
@@ -6599,7 +6656,7 @@ function renderExamMakeupEditPanel(){
   if(!box) return;
   if(!stu){ box.innerHTML = ''; return; }
 
-  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강').sort((a,b) => a.date.localeCompare(b.date));
+  const mine = examMakeupsOf(stu.id);
   const slotsHtml = mine.map((m, i) => {
     const c = EXAM_MAKEUP_ROUND_COLORS[i] || EXAM_MAKEUP_ROUND_COLORS[EXAM_MAKEUP_ROUND_COLORS.length - 1];
     return `
@@ -6664,14 +6721,14 @@ function onExamMakeupRegularDateChange(){
 function registerExamMakeupRegular(){
   const stu = studentById(examMakeupOpenStudentId);
   if(!stu) return;
-  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강');
-  if(mine.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청이 모두 채워졌어요.'); return; }
+  const mine = examMakeupsOf(stu.id);
+  if(mine.length >= EXAM_MAKEUP_MAX){ const tl=(EXAM_TERMS.find(t=>t.key===examMakeupTermKey())||{}).label||''; alert(`${tl} 보강 4회가 모두 채워졌어요.\n\n다른 시험 보강을 잡으시려면 위에서 시험을 바꿔주세요.`); return; }
   const dateVal = document.getElementById('examMakeupRegularDate').value;
   const timeVal = document.getElementById('examMakeupRegularTimeSelect').value;
   if(!dateVal){ alert('날짜를 선택해 주세요.'); return; }
   if(!timeVal){ alert('시간을 선택해 주세요.'); return; }
   db.ref('makeupSchedules').push({
-    studentId: stu.id, date: dateVal, time: timeVal, note: '시험기간 보강', createdAt: Date.now()
+    studentId: stu.id, date: dateVal, time: timeVal, note: '시험기간 보강', term: examMakeupTermKey(), createdAt: Date.now()
   });
   showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
   renderExamMakeupPanel();
@@ -6685,14 +6742,14 @@ function cancelExamMakeupSlot(id){
 function registerExamMakeup(){
   const stu = studentById(examMakeupOpenStudentId);
   if(!stu) return;
-  const mine = makeupSchedules.filter(m => m.studentId === stu.id && m.note === '시험기간 보강');
-  if(mine.length >= EXAM_MAKEUP_MAX){ alert('이미 4회 신청이 모두 채워졌어요.'); return; }
+  const mine = examMakeupsOf(stu.id);
+  if(mine.length >= EXAM_MAKEUP_MAX){ const tl=(EXAM_TERMS.find(t=>t.key===examMakeupTermKey())||{}).label||''; alert(`${tl} 보강 4회가 모두 채워졌어요.\n\n다른 시험 보강을 잡으시려면 위에서 시험을 바꿔주세요.`); return; }
   const slotId = document.getElementById('examMakeupSlotSelect').value;
   const slot = combinedExamSlots().find(s => s.id === slotId);
   if(!slot){ alert('시간대를 선택해 주세요.'); return; }
   if(examSlotTakenCount(slot) >= slot.capacity){ alert('이미 마감된 시간대예요.'); renderExamMakeupPanel(); return; }
   db.ref('makeupSchedules').push({
-    studentId: stu.id, date: slot.date, time: slot.time, note: '시험기간 보강', createdAt: Date.now()
+    studentId: stu.id, date: slot.date, time: slot.time, note: '시험기간 보강', term: examMakeupTermKey(), createdAt: Date.now()
   });
   showToast(`${stu.name} 학생 시험기간 보강이 등록되었습니다.`);
   renderExamMakeupPanel();
