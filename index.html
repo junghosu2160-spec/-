@@ -530,6 +530,12 @@
   .exam-mk-desc{font-size:11.5px;}
   .exam-mk-tools{display:flex;align-items:center;gap:6px;flex:1 1 auto;flex-wrap:wrap;}
   .exam-mk-tools select{font-weight:700;}
+  .emk-grades{display:inline-flex;gap:4px;flex-wrap:wrap;align-items:center;}
+  .emk-g{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:14px;cursor:pointer;user-select:none;
+    border:1.5px solid var(--color-border);background:var(--color-surface);color:var(--color-text-muted);}
+  .emk-g:hover{filter:brightness(.96);}
+  .emk-g.on{background:#161616;border-color:#161616;color:#fff;}
+  .emk-g.zero{opacity:.55;}
   .exam-mk-tools select{font-size:11.5px;padding:5px 8px;border:1px solid var(--color-border);border-radius:7px;background:var(--color-surface);}
   .exam-slot-btn{font-size:11.5px;padding:5px 10px;border:1px solid var(--color-border);border-radius:7px;
     background:var(--color-surface);color:var(--color-text-muted);cursor:pointer;font-weight:700;white-space:nowrap;}
@@ -904,7 +910,7 @@
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (q)</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (u)</div>
     </div>
   </aside>
 
@@ -1293,7 +1299,8 @@
             </div>
             <div class="exam-mk-tools" id="examMakeupTools">
               <select id="examMakeupTermFilter" onchange="setExamMakeupTerm(this.value)"></select>
-              <select id="examMakeupSchoolFilter" onchange="renderExamMakeupPanel()"></select>
+              <select id="examMakeupSchoolFilter" onchange="setExamMakeupSchool(this.value)"></select>
+              <span class="emk-grades" id="examMakeupGradeChips"></span>
               <select id="examMakeupSortMode" onchange="renderExamMakeupPanel()">
                 <option value="grade">학년순</option>
                 <option value="school">학교순</option>
@@ -3255,7 +3262,7 @@ function renderDashCalendar(){
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
         const gtxt = (p.grades && p.grades.length) ? ' ' + p.grades.join('·') : '';
-        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(periodLabelOf(p))} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
@@ -3400,7 +3407,7 @@ function haksaMatchSchool(name){
 function importHaksa2026(){
   const today = todayStr();
   const miss = new Set();
-  const plan = { periods:[], offs:[] };
+  const plan = { periods:[], offs:[], patches:[] };
   const have = {};
   students.forEach(s => { const sc=(s.school||'').trim(); if(sc && s.grade) have[sc + '|' + s.grade] = true; });
 
@@ -3412,23 +3419,31 @@ function importHaksa2026(){
       gs = p.grades.filter(g => have[sc + '|' + g]);
       if(!gs.length) return;   // 그 학년 학생이 하나도 없으면 넣지 않음
     }
-    if(schoolPeriods.some(x => (x.school||'').trim()===sc && x.type===p.type && x.startDate===p.start && x.endDate===p.end)) return;
+    const dup = schoolPeriods.find(x => (x.school||'').trim()===sc && x.type===p.type && x.startDate===p.start && x.endDate===p.end);
+    if(dup){
+      // 예전에 넣어서 학년·시험 정보가 없는 것은 채워 넣는다
+      const patch = {};
+      if(gs && !(dup.grades && dup.grades.length)) patch.grades = gs;
+      if(p.term && !dup.term) patch.term = p.term;
+      if(Object.keys(patch).length) plan.patches.push({ id: dup.id, patch });
+      return;
+    }
     const rec = { school:sc, type:p.type, startDate:p.start, endDate:p.end };
     if(gs) rec.grades = gs;
     if(p.term) rec.term = p.term;
     plan.periods.push(rec);
   });
-  // 예전 버전이 넣어둔 '시험' 일정 칩은 기간 칩과 겹치므로 지운다
-  const stale = [];
-  HAKSA_2026.exams.forEach(e => {
-    const sc = haksaMatchSchool(e.school);
-    if(!sc) return;
-    const gs = e.grades.filter(g => have[sc + '|' + g]);
-    if(!gs.length) return;
-    const title = `${sc} ${gs.join('·')} ${e.term}`;
-    events.filter(x => x.date === e.start && x.type === '시험' && x.title === title)
-      .forEach(x => stale.push(x.id));
+  // 예전 버전이 넣어둔 '시험' 일정 칩은 기간 칩과 겹치므로 지운다.
+  // 제목이 '… 2학기 중간' 처럼 시험 이름으로 끝나는 것만 고른다 (직접 적으신 과목 일정은 건드리지 않음)
+  const haksaSchools = {};
+  HAKSA_2026.periods.concat(HAKSA_2026.exams).forEach(x => {
+    const sc = haksaMatchSchool(x.school);
+    if(sc) haksaSchools[sc] = true;
   });
+  const stale = events.filter(x => x.type === '시험'
+    && EXAM_TERMS.some(t => String(x.title || '').trim().endsWith(t.label))
+    && (haksaSchools[(x.school || '').trim()] || Object.keys(haksaSchools).some(sc => String(x.title || '').indexOf(sc) === 0))
+  ).map(x => x.id);
   HAKSA_2026.offs.forEach(o => {
     const sc = haksaMatchSchool(o.school);
     if(!sc){ miss.add(o.school); return; }
@@ -3437,36 +3452,38 @@ function importHaksa2026(){
     plan.offs.push({ date:o.date, type:'기타', title, school:sc });
   });
 
-  const nP = plan.periods.length, nE = plan.offs.length, nD = stale.length;
+  const nP = plan.periods.length, nE = plan.offs.length, nD = stale.length, nU = plan.patches.length;
   const mineNames = [...new Set(students.map(x => (x.school || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
   const missMsg = miss.size
     ? `\n\n학생 명단에 없어서 건너뛰는 학교: ${[...miss].join(', ')}` +
       `\n(지금 명단의 학교 이름: ${mineNames.join(', ') || '없음'})`
     : '';
-  if(!nP && !nE && !nD){
+  if(!nP && !nE && !nD && !nU){
     alert('새로 넣을 것이 없습니다.\n\n2학기 학사일정이 이미 전부 들어가 있습니다.' + missMsg);
     return;
   }
   const msg = `2026학년도 학사일정을 넣습니다.\n\n` +
     `· 기간(시험기간·방학) ${nP}건\n· 일정(재량휴업일 등) ${nE}건\n` +
-    (nD ? `· 겹치는 시험 일정 ${nD}건 정리\n` : '') + `\n` +
+    (nD ? `· 겹치는 시험 일정 ${nD}건 정리\n` : '') +
+    (nU ? `· 기존 기간에 학년 정보 ${nU}건 채우기\n` : '') + `\n` +
     `2학기 전체를 넣습니다. 이미 있는 것은 건너뜁니다.` +
     missMsg + `\n\n넣을까요?`;
   if(!confirm(msg)) return;
 
   const now = Date.now();
   stale.forEach(id => db.ref('events/' + id).remove());
+  plan.patches.forEach(x => db.ref('schoolPeriods/' + x.id).update(x.patch));
   plan.periods.forEach(x => db.ref('schoolPeriods').push({ ...x, createdAt: now }));
   plan.offs.forEach(x => db.ref('events').push({ ...x, createdAt: now }));
-  showToast(`학사일정을 넣었습니다 — 기간 ${nP}건, 일정 ${nE}건${nD ? `, 겹친 것 ${nD}건 정리` : ''}`);
+  showToast(`학사일정을 넣었습니다 — 기간 ${nP}건, 일정 ${nE}건${nD ? `, 겹친 것 ${nD}건 정리` : ''}${nU ? `, ${nU}건 보완` : ''}`);
 }
 
 /* ===== 학교별 시험일정 체크 (학교별 · 시험별 · 1년치) ===== */
 const EXAM_TERMS = [
-  { key:'t1m', label:'1학기 중간', color:'#2E9E6C', soft:'#E4F5EC', months:[3,4,5],  pick:[3,4,5] },
-  { key:'t1f', label:'1학기 기말', color:'#3A7BD5', soft:'#E3EDFB', months:[6,7,8],  pick:[6,7,8] },
-  { key:'t2m', label:'2학기 중간', color:'#E08A2E', soft:'#FBEEDC', months:[9,10],   pick:[9,10] },
-  { key:'t2f', label:'2학기 기말', color:'#7A4FE0', soft:'#EDE7FC', months:[11,12],  pick:[11,12,1,2] },
+  { key:'t1m', label:'1학기 중간', color:'#161616', soft:'#EEF1F7', months:[3,4,5],  pick:[3,4,5] },
+  { key:'t1f', label:'1학기 기말', color:'#161616', soft:'#EEF1F7', months:[6,7,8],  pick:[6,7,8] },
+  { key:'t2m', label:'2학기 중간', color:'#161616', soft:'#EEF1F7', months:[9,10],   pick:[9,10] },
+  { key:'t2f', label:'2학기 기말', color:'#161616', soft:'#EEF1F7', months:[11,12],  pick:[11,12,1,2] },
 ];
 let examChecklist = {};       // { "2026": { t2m: { "정동고|고1": true } } }
 let examCheckSubjects = {};   // { "정동고|고2": { "미적":true, "확통":true } }
@@ -3535,6 +3552,15 @@ function ecPeriodTerm(per){
   const byMonth = EXAM_TERMS.find(t => t.months.indexOf(m) >= 0);
   return byMonth ? byMonth.key : null;
 }
+// 기간 이름 — 시험기간은 '중간고사 / 기말고사' 로 풀어서 보여준다
+function periodLabelOf(p){
+  if(String(p.type || '') !== '시험기간') return p.type;
+  const k = ecPeriodTerm(p);
+  const t = EXAM_TERMS.find(x => x.key === k);
+  if(!t) return '시험기간';
+  return t.label.indexOf('기말') >= 0 ? '기말고사' : '중간고사';
+}
+
 function examTermPeriods(school){
   const key = ecTerm();
   return schoolPeriods.filter(p => p.type === '시험기간' && (p.school || '').trim() === school
@@ -3562,8 +3588,9 @@ function renderExamChecklist(){
       const on = t.key === ecTerm();
       const full = total > 0 && done === total;
       const style = on
-        ? `background:${t.color};border-color:${t.color};color:#fff;`
-        : `background:${t.soft};border-color:${full ? t.color : 'transparent'};color:${t.color};`;
+        ? `background:#161616;border-color:#161616;color:#fff;`
+        : (full ? `background:#E4F5EC;border-color:#BFE5CE;color:#1F7A52;`
+                : `background:var(--color-surface-alt);border-color:transparent;color:var(--color-text-muted);`);
       return `<div class="ec-term" style="${style}" onclick="setExamTerm('${t.key}')">${t.label}` +
              `<span class="sub">${done} / ${total}${full ? ' ✓' : ''}</span></div>`;
     }).join('');
@@ -3721,7 +3748,7 @@ function renderBigCalendar(){
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
         const gtxt = (p.grades && p.grades.length) ? ' ' + p.grades.join('·') : '';
-        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(p.type)} ${isStart ? '시작' : '끝'}</span>`;
+        return `<span class="bc-chip clickdel" style="background:${pc}30;border-color:${pc};color:#111111;" title="눌러서 이 기간 삭제" onclick="event.stopPropagation();deletePeriodFromCal('${p.id}')">${escapeHtml(p.school)}${escapeHtml(gtxt)} ${escapeHtml(periodLabelOf(p))} ${isStart ? '시작' : '끝'}</span>`;
       }).join('');
     }
     // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
@@ -6504,8 +6531,9 @@ function renderExamMakeupTermSelect(){
     const n = makeupSchedules.filter(m => m.note === '시험기간 보강' && makeupTermOf(m) === t.key).length;
     return `<option value="${t.key}"${t.key === cur ? ' selected' : ''}>${t.label}${n ? ` (${n}건)` : ''}</option>`;
   }).join('');
-  const t = EXAM_TERMS.find(x => x.key === cur);
-  if(t){ sel.style.background = t.soft; sel.style.color = t.color; sel.style.borderColor = t.color; }
+  sel.style.background = '#161616';
+  sel.style.color = '#ffffff';
+  sel.style.borderColor = '#161616';
 }
 
 function examGroupLabel(school, grade){
@@ -6515,7 +6543,13 @@ function examGroupLabel(school, grade){
 function renderExamMakeupPickInfo(school, grade){
   const box = document.getElementById('examMakeupPickInfo');
   if(!box) return;
-  if(!school){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  if(!school && !grade){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  if(!school){
+    const n = students.filter(s => s.examMakeup && s.grade === grade).length;
+    box.style.display = 'block';
+    box.innerHTML = `<b>${escapeHtml(grade)} 전체</b> — 해당 학생 ${n}명`;
+    return;
+  }
   const t = todayStr();
   let span = null, label = '';
   if(grade){
@@ -6541,6 +6575,11 @@ function renderExamMakeupPickInfo(school, grade){
     : `<b>${escapeHtml(who)}</b> — 등록된 시험기간이 없습니다 · 해당 학생 ${n}명`;
 }
 
+let examMakeupSchool = '';
+let examMakeupGrade = '';
+function setExamMakeupSchool(v){ examMakeupSchool = v || ''; examMakeupGrade = ''; examMakeupOpenStudentId = null; renderExamMakeupPanel(); }
+function setExamMakeupGrade(v){ examMakeupGrade = v || ''; examMakeupOpenStudentId = null; renderExamMakeupPanel(); }
+
 function markExamMakeupTargets(school, grade){
   const cand = students.filter(x => (!school || (x.school||'').trim()===school) && (!grade || x.grade===grade) && !x.examMakeup);
   if(!cand.length) return;
@@ -6562,34 +6601,43 @@ function renderExamMakeupPanel(){
   const targets = students.filter(s => s.examMakeup);
   countEl.textContent = `${targets.length}명`;
 
-  // 학교 + 학년 묶음 (강동중2 · 강동중3 · 동부고1 …)
-  // 시험보강 체크가 안 된 학년도 목록에 나와야 고를 수 있으므로 전체 학생 기준으로 만든다
+  // 중·고등 학교만 (초등은 학교 시험이 없음). 시험보강 체크가 안 된 학년도 고를 수 있어야 하므로 전체 학생 기준
   const groupMap = {};
   students.forEach(s => {
     const sc = (s.school || '').trim();
     if(!sc || !s.grade) return;
+    if(ecIsElementary(sc)) return;
     if(!(s.grade.startsWith('중') || s.grade.startsWith('고'))) return;
     if(!groupMap[sc]) groupMap[sc] = [];
     if(groupMap[sc].indexOf(s.grade) < 0) groupMap[sc].push(s.grade);
   });
   const schools = Object.keys(groupMap).sort((a,b) => a.localeCompare(b, 'ko'));
-  const prevSchool = schoolSel.value;
-  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => {
-    const gs = groupMap[sc].sort((a,b) => GRADES.indexOf(a) - GRADES.indexOf(b));
-    const opts = [`<option value="${escapeHtml(sc)}|">${escapeHtml(sc)} 전체</option>`].concat(
-      gs.map(g => {
-        const n = targets.filter(x => (x.school||'').trim()===sc && x.grade===g).length;
-        return `<option value="${escapeHtml(sc)}|${escapeHtml(g)}">${escapeHtml(examGroupLabel(sc, g))}${n ? '' : ' (대상 없음)'}</option>`;
-      }));
-    return `<optgroup label="${escapeHtml(sc)}">${opts.join('')}</optgroup>`;
-  }).join('');
-  if([...schoolSel.options].some(o => o.value === prevSchool)) schoolSel.value = prevSchool;
+  if(examMakeupSchool && schools.indexOf(examMakeupSchool) < 0) { examMakeupSchool = ''; examMakeupGrade = ''; }
+  schoolSel.innerHTML = `<option value="">전체 학교</option>` +
+    schools.map(sc => `<option value="${escapeHtml(sc)}"${sc === examMakeupSchool ? ' selected' : ''}>${escapeHtml(sc)}</option>`).join('');
 
-  const parts = (schoolSel.value || '').split('|');
-  const fSchool = parts[0] || '';
-  const fGrade = parts[1] || '';
+  // 학년은 옆에 버튼으로
+  const gradeList = examMakeupSchool
+    ? groupMap[examMakeupSchool].slice()
+    : [...new Set(schools.reduce((a,sc) => a.concat(groupMap[sc]), []))];
+  gradeList.sort((a,b) => GRADES.indexOf(a) - GRADES.indexOf(b));
+  if(examMakeupGrade && gradeList.indexOf(examMakeupGrade) < 0) examMakeupGrade = '';
+  const chipBox = document.getElementById('examMakeupGradeChips');
+  if(chipBox){
+    chipBox.innerHTML = [''].concat(gradeList).map(g => {
+      const n = targets.filter(x => (!examMakeupSchool || (x.school||'').trim()===examMakeupSchool) && (!g || x.grade===g)).length;
+      const on = g === examMakeupGrade;
+      const label = g ? (examMakeupSchool ? examGroupLabel(examMakeupSchool, g) : g) : '전체';
+      return `<span class="emk-g${on ? ' on' : ''}${(g && !n) ? ' zero' : ''}" onclick="setExamMakeupGrade('${ecJs(g)}')">${escapeHtml(label)}${g && !n ? ' 0' : ''}</span>`;
+    }).join('');
+  }
+
+  const fSchool = examMakeupSchool;
+  const fGrade = examMakeupGrade;
   renderExamMakeupPickInfo(fSchool, fGrade);
-  let list = targets.filter(s => !fSchool || ((s.school || '').trim() === fSchool && (!fGrade || s.grade === fGrade)));
+  let list = targets.filter(s => !ecIsElementary((s.school || '').trim())
+    && (!fSchool || (s.school || '').trim() === fSchool)
+    && (!fGrade || s.grade === fGrade));
   list = list.sort(sortSel.value === 'school' ? compareBySchoolThenGrade : compareByGradeThenName);
 
   if(!list.length){
@@ -6678,7 +6726,11 @@ function renderExamMakeupEditPanel(){
 
     if(examMakeupTabMode === 'regular'){
       formHtml = tabsHtml + `
-        <input type="date" id="examMakeupRegularDate" onchange="onExamMakeupRegularDateChange()" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="date" id="examMakeupRegularDate" onchange="onExamMakeupRegularDateChange()" style="flex:1;min-width:0;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
+          <button type="button" class="btn btn-ghost btn-sm" style="flex:0 0 auto;white-space:nowrap;" onclick="setExamMakeupRegularDate(0)">오늘</button>
+          <button type="button" class="btn btn-ghost btn-sm" style="flex:0 0 auto;white-space:nowrap;" onclick="setExamMakeupRegularDate(1)">내일</button>
+        </div>
         <select id="examMakeupRegularTimeSelect" style="width:100%;margin-bottom:8px;padding:8px 10px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;"><option value="">날짜를 먼저 선택하세요</option></select>
         <button class="btn btn-primary btn-sm" style="width:100%;" onclick="registerExamMakeupRegular()">${mine.length + 1}회차 등록</button>`;
     }else{
@@ -6711,6 +6763,14 @@ function renderExamMakeupEditPanel(){
 }
 
 // "정규수업 시간 중에서" 탭: 날짜를 고르면 그 요일에 열리는 정규수업 시간들을 select로 보여줌 (이 학생 개인 일정이 아니라 그 날 전체 정규시간 기준)
+// 오늘 / 내일 버튼
+function setExamMakeupRegularDate(plus){
+  const el = document.getElementById('examMakeupRegularDate');
+  if(!el) return;
+  el.value = shiftDateStr(todayStr(), plus || 0);
+  onExamMakeupRegularDateChange();
+}
+
 function onExamMakeupRegularDateChange(){
   const dateVal = document.getElementById('examMakeupRegularDate').value;
   const sel = document.getElementById('examMakeupRegularTimeSelect');
