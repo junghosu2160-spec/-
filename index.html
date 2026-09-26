@@ -641,17 +641,32 @@
   .bc-chip.clickmark{cursor:pointer;padding-top:3px;padding-bottom:3px;}
   .bc-chip.clickmark:hover{outline:1.5px solid var(--color-text-muted);outline-offset:1px;}
   #examOnlyBtn.on{background:var(--color-danger);border-color:var(--color-danger);color:#fff;font-weight:800;}
-  .exam-check-item{
-    display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;
-    background:var(--color-surface-alt);margin-bottom:5px;font-size:12.5px;cursor:pointer;
-  }
-  .exam-check-item input{width:15px;height:15px;accent-color:#1A1A1A;margin:0;cursor:pointer;flex-shrink:0;}
-  .exam-check-item .nm{font-weight:700;flex:1;}
-  .exam-check-item .ct{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:10px;
-    background:var(--color-danger-soft);color:var(--color-danger);}
-  .exam-check-item .ct.zero{background:var(--color-neutral-soft);color:var(--color-text-muted);}
-  .exam-check-item.on{background:#E7F5EC;}
-  .exam-check-item.on .nm{color:#17915F;text-decoration:line-through;}
+  .ec-terms{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:11px;}
+  .ec-term{display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;border-radius:9px;
+    border:1.5px solid transparent;cursor:pointer;font-size:11.5px;font-weight:800;user-select:none;
+    text-align:center;line-height:1.3;transition:filter .12s;}
+  .ec-term:hover{filter:brightness(.96);}
+  .ec-term .sub{font-size:10px;font-weight:700;opacity:.9;}
+  .ec-reset{margin-left:auto;font-size:10.5px;color:var(--color-text-muted);background:none;border:0;
+    cursor:pointer;font-family:inherit;padding:0;text-decoration:underline;text-underline-offset:2px;}
+  .ec-reset:hover{color:var(--color-danger);}
+  .ec-school{border:1px solid var(--color-border);border-radius:10px;padding:9px 11px;margin-bottom:7px;}
+  .ec-top{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
+  .ec-name{font-size:13px;font-weight:800;}
+  .ec-date{font-size:11.5px;font-weight:700;color:var(--color-danger);background:var(--color-danger-soft);
+    padding:2px 8px;border-radius:6px;}
+  .ec-date.none{color:var(--color-text-muted);background:var(--color-surface-alt);font-weight:600;}
+  .ec-prog{margin-left:auto;font-size:11px;font-weight:800;color:var(--color-text-muted);}
+  .ec-prog.done{color:var(--color-success);}
+  .ec-items{display:flex;gap:6px;flex-wrap:wrap;}
+  .ec-it{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:5px 11px;
+    border-radius:16px;border:1.5px solid transparent;cursor:pointer;user-select:none;}
+  .ec-it:hover{filter:brightness(.97);}
+  .ec-it .mk{font-size:10.5px;}
+  .ec-it .x{font-size:10px;opacity:.45;margin-left:1px;}
+  .ec-it .x:hover{opacity:1;}
+  .ec-add{border-style:dashed;border-color:var(--color-border);background:transparent;
+    color:var(--color-text-muted);font-weight:600;}
   .exam-hint{font-size:11px;color:var(--color-text-muted);margin-top:7px;}
   .exam-hint b{color:var(--color-danger);font-weight:800;}
   .exam-grade-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
@@ -880,7 +895,7 @@
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-24 (f)</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (g)</div>
     </div>
   </aside>
 
@@ -1415,13 +1430,14 @@
           </div>
 
           <div class="card">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;">
               <h4 style="margin:0;font-size:14px;font-weight:800;">📋 학교별 시험일정 체크</h4>
-              <span class="hint" id="examCheckCount"></span>
-              <button type="button" class="btn btn-ghost btn-sm" onclick="resetExamChecklist()" style="margin-left:auto;">↺ 리셋</button>
+              <span class="hint" id="examCheckYear"></span>
+              <button type="button" class="ec-reset" onclick="resetExamChecklist()">↺ 이 시험 체크 비우기</button>
             </div>
+            <div class="ec-terms" id="examCheckTerms"></div>
             <p class="cell-muted" style="font-size:11.5px;margin:0 0 10px 0;line-height:1.6;">
-              달력을 보면서 직접 체크하세요. 달이 바뀌어도 그대로 남습니다. 옆 숫자는 등록된 시험 건수예요.
+              달력을 보면서 직접 체크하세요. 시험마다 따로 저장돼서 1년치가 그대로 남습니다.
             </p>
             <div id="examCheckList"></div>
           </div>
@@ -2023,6 +2039,10 @@ db.ref('mathholicLinks').on('value', snap => {
 db.ref('announcements').on('value', snap => {
   announcements = snapshotToArray(snap.val());
   if(currentView === 'studentapp') renderAnnounceList();
+});
+db.ref('examCheckSubjects').on('value', snap => {
+  examCheckSubjects = snap.val() || {};
+  if(currentView === 'calendar') renderExamChecklist();
 });
 db.ref('examChecklist').on('value', snap => {
   examChecklist = snap.val() || {};
@@ -3176,6 +3196,7 @@ function dashCalShiftMonth(delta){
   if(dashCalMonth > 11){ dashCalMonth = 0; dashCalYear++; }
   renderDashCalendar();
   renderBigCalendar();
+  renderExamChecklist();
 }
 
 function renderDashCalendar(){
@@ -3272,62 +3293,161 @@ function syncExamOnlyBtn(){
   b.textContent = examOnlyMode ? '📕 시험일정만 보는 중 · 해제' : '📕 시험일정만 보기';
 }
 
-/* ===== 학교별 시험일정 체크 (직접 체크 · 리셋 전까지 유지) ===== */
-let examChecklist = {};   // { "강동중2": true }
+/* ===== 학교별 시험일정 체크 (학교별 · 시험별 · 1년치) ===== */
+const EXAM_TERMS = [
+  { key:'t1m', label:'1학기 중간', color:'#2E9E6C', soft:'#E4F5EC', months:[3,4,5],  pick:[3,4,5] },
+  { key:'t1f', label:'1학기 기말', color:'#3A7BD5', soft:'#E3EDFB', months:[6,7,8],  pick:[6,7,8] },
+  { key:'t2m', label:'2학기 중간', color:'#E08A2E', soft:'#FBEEDC', months:[9,10],   pick:[9,10] },
+  { key:'t2f', label:'2학기 기말', color:'#7A4FE0', soft:'#EDE7FC', months:[11,12],  pick:[11,12,1,2] },
+];
+let examChecklist = {};       // { "2026": { t2m: { "정동고|고1": true } } }
+let examCheckSubjects = {};   // { "정동고|고2": { "미적":true, "확통":true } }
+let examTermKey = null;
 
-function examCheckLabel(school, grade){
-  const num = (grade || '').replace(/[^0-9]/g, '');
-  return (school || '').trim() + num;
+function ecSafe(str){ return String(str == null ? '' : str).replace(/[.#$\[\]\/]/g, '').trim(); }
+function ecJs(str){ return String(str == null ? '' : str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+function ecTerm(){
+  if(!examTermKey){
+    const m = new Date().getMonth() + 1;
+    const t = EXAM_TERMS.find(x => x.pick.indexOf(m) >= 0);
+    examTermKey = (t || EXAM_TERMS[0]).key;
+  }
+  return examTermKey;
 }
-function examCheckItems(){
-  const seen = {};
+function ecTermObj(){ return EXAM_TERMS.find(t => t.key === ecTerm()) || EXAM_TERMS[0]; }
+function ecYear(){ return String(dashCalYear); }
+function ecMap(term){ return ((examChecklist[ecYear()] || {})[term || ecTerm()]) || {}; }
+function setExamTerm(key){ examTermKey = key; renderExamChecklist(); }
+
+function examCheckGroups(){
+  const map = {};
   students.forEach(s => {
     const school = (s.school || '').trim();
     const g = s.grade || '';
     if(!school) return;
     if(!(g.startsWith('중') || g.startsWith('고'))) return;   // 학교 시험이 있는 중·고등만
-    const label = examCheckLabel(school, g);
-    if(!seen[label]) seen[label] = { label, school, grade: g, count: 0 };
+    if(!map[school]) map[school] = { school, grades: [] };
+    if(map[school].grades.indexOf(g) < 0) map[school].grades.push(g);
   });
-  // 등록된 시험 일정 수 세기 (달 상관없이 전체)
-  events.filter(e => e.type === '시험').forEach(e => {
-    Object.values(seen).forEach(it => {
-      const okSchool = e.school ? e.school === it.school : (e.title || '').includes(it.school);
-      const okGrade  = (e.grades && e.grades.length) ? e.grades.includes(it.grade)
-                                                     : (e.title || '').includes(it.grade);
-      if(okSchool && okGrade) it.count++;
+  const list = Object.values(map);
+  list.forEach(o => {
+    o.grades.sort((a,b) => GRADES.indexOf(a) - GRADES.indexOf(b));
+    o.items = [];
+    o.grades.forEach(g => {
+      const subs = Object.keys(examCheckSubjects[ecSafe(o.school) + '|' + g] || {});
+      if(subs.length){
+        subs.sort((a,b) => a.localeCompare(b, 'ko')).forEach(sub => {
+          o.items.push({ grade:g, sub, label:g + sub, key:ecSafe(o.school) + '|' + g + sub });
+        });
+      } else {
+        o.items.push({ grade:g, sub:'', label:g, key:ecSafe(o.school) + '|' + g });
+      }
     });
   });
-  return Object.values(seen).sort((a,b) => a.label.localeCompare(b.label, 'ko'));
+  return list.sort((a,b) => a.school.localeCompare(b.school, 'ko'));
 }
+function examTermPeriods(school){
+  const t = ecTermObj();
+  return schoolPeriods.filter(p => p.type === '시험기간' && (p.school || '').trim() === school
+      && p.startDate && p.startDate.slice(0,4) === ecYear()
+      && t.months.indexOf(Number(p.startDate.slice(5,7))) >= 0)
+    .sort((a,b) => a.startDate.localeCompare(b.startDate));
+}
+function ecMD(d){ const a = String(d || '').split('-'); return a.length === 3 ? `${Number(a[1])}/${Number(a[2])}` : ''; }
+
 function renderExamChecklist(){
   const box = document.getElementById('examCheckList');
-  const cnt = document.getElementById('examCheckCount');
   if(!box) return;
-  const items = examCheckItems();
-  if(cnt) cnt.textContent = items.length ? `${items.filter(i => examChecklist[i.label]).length} / ${items.length}` : '';
-  if(!items.length){
+  const groups = examCheckGroups();
+  const total = groups.reduce((n,g) => n + g.items.length, 0);
+  const map = ecMap();
+
+  const yearEl = document.getElementById('examCheckYear');
+  if(yearEl) yearEl.textContent = ecYear() + '년';
+
+  const tabsEl = document.getElementById('examCheckTerms');
+  if(tabsEl){
+    tabsEl.innerHTML = EXAM_TERMS.map(t => {
+      const m = ecMap(t.key);
+      const done = groups.reduce((n,g) => n + g.items.filter(it => m[it.key]).length, 0);
+      const on = t.key === ecTerm();
+      const full = total > 0 && done === total;
+      const style = on
+        ? `background:${t.color};border-color:${t.color};color:#fff;`
+        : `background:${t.soft};border-color:${full ? t.color : 'transparent'};color:${t.color};`;
+      return `<div class="ec-term" style="${style}" onclick="setExamTerm('${t.key}')">${t.label}` +
+             `<span class="sub">${done} / ${total}${full ? ' ✓' : ''}</span></div>`;
+    }).join('');
+  }
+
+  if(!groups.length){
     box.innerHTML = `<div class="cell-muted" style="font-size:12px;">중·고등 학생이 등록되면 학교별로 여기에 나옵니다.</div>`;
     return;
   }
-  box.innerHTML = items.map(it => {
-    const on = !!examChecklist[it.label];
-    return `<label class="exam-check-item ${on ? 'on' : ''}">
-      <input type="checkbox" ${on ? 'checked' : ''} onchange="toggleExamCheck('${escapeHtml(it.label)}', this.checked)">
-      <span class="nm">${escapeHtml(it.label)}</span>
-      <span class="ct ${it.count ? '' : 'zero'}">${it.count}건</span>
-    </label>`;
+
+  box.innerHTML = groups.map(g => {
+    const per = examTermPeriods(g.school);
+    const dateHtml = per.length
+      ? per.map(p => `<span class="ec-date">${ecMD(p.startDate)} – ${ecMD(p.endDate)}</span>`).join('')
+      : `<span class="ec-date none">시험기간 미등록</span>`;
+    const done = g.items.filter(it => map[it.key]).length;
+    const full = g.items.length > 0 && done === g.items.length;
+    const items = g.items.map(it => {
+      const c = GRADE_COLORS[it.grade] || { bg:'#ECECEC', text:'#666666' };
+      const on = !!map[it.key];
+      const st = on
+        ? `background:${c.bg};border-color:${c.text};color:${c.text};text-decoration:line-through;`
+        : `background:var(--color-surface);border-color:${c.bg};color:${c.text};`;
+      const x = it.sub
+        ? `<span class="x" onclick="event.stopPropagation();ecRemoveSubject('${ecJs(g.school)}','${ecJs(it.grade)}','${ecJs(it.sub)}')">✕</span>`
+        : '';
+      return `<span class="ec-it" style="${st}" onclick="toggleExamCheck('${ecJs(it.key)}')">` +
+             `<span class="mk">${on ? '✓' : '○'}</span>${escapeHtml(it.label)}${x}</span>`;
+    }).join('');
+    return `<div class="ec-school">
+      <div class="ec-top">
+        <span class="ec-name">${escapeHtml(g.school)}</span>${dateHtml}
+        <span class="ec-prog${full ? ' done' : ''}">${done} / ${g.items.length}${full ? ' ✓' : ''}</span>
+      </div>
+      <div class="ec-items">${items}
+        <span class="ec-it ec-add" onclick="ecAddSubject('${ecJs(g.school)}')">＋ 과목</span>
+      </div>
+    </div>`;
   }).join('');
 }
-function toggleExamCheck(label, on){
-  db.ref('examChecklist/' + label).set(on ? true : null);
+
+function toggleExamCheck(key){
+  const on = !!ecMap()[key];
+  db.ref(`examChecklist/${ecYear()}/${ecTerm()}/${key}`).set(on ? null : true);
+}
+function ecAddSubject(school){
+  const grades = (examCheckGroups().find(g => g.school === school) || {}).grades || [];
+  if(!grades.length) return;
+  const g = prompt(`${school} — 어느 학년을 과목별로 나눌까요?\n\n${grades.join(' / ')}`, grades[grades.length - 1]);
+  if(!g) return;
+  const grade = ecSafe(g);
+  if(grades.indexOf(grade) < 0){ alert(`${school}에 ${grade} 학생이 없습니다.\n\n${grades.join(' / ')} 중에서 적어주세요.`); return; }
+  const raw = prompt(`${school} ${grade} 과목을 적어주세요. (예: 미적)\n쉼표로 여러 개도 됩니다. (예: 미적, 확통)`);
+  if(!raw) return;
+  const subs = raw.split(',').map(x => ecSafe(x)).filter(Boolean);
+  if(!subs.length) return;
+  const upd = {};
+  subs.forEach(x => upd[x] = true);
+  db.ref('examCheckSubjects/' + ecSafe(school) + '|' + grade).update(upd);
+  showToast(`${school} ${grade} — ${subs.join(', ')} 추가`);
+}
+function ecRemoveSubject(school, grade, sub){
+  if(!confirm(`${school} ${grade}${sub} 을 지울까요?\n\n과목이 하나도 없으면 ${grade} 한 개로 돌아갑니다.`)) return;
+  db.ref('examCheckSubjects/' + ecSafe(school) + '|' + grade + '/' + ecSafe(sub)).remove();
+  EXAM_TERMS.forEach(t => db.ref(`examChecklist/${ecYear()}/${t.key}/${ecSafe(school)}|${grade}${ecSafe(sub)}`).remove());
 }
 function resetExamChecklist(){
-  const keys = Object.keys(examChecklist).filter(k => examChecklist[k]);
-  if(!keys.length){ alert('체크된 항목이 없습니다.'); return; }
-  if(!confirm(`체크 ${keys.length}개를 모두 지울까요?\n\n시험 일정 자료는 그대로 두고, 체크 표시만 비웁니다.`)) return;
-  db.ref('examChecklist').remove();
-  showToast('체크를 모두 비웠습니다.');
+  const t = ecTermObj();
+  const n = Object.keys(ecMap()).length;
+  if(!n){ alert(`${ecYear()}년 ${t.label} — 체크된 것이 없습니다.`); return; }
+  if(!confirm(`${ecYear()}년 ${t.label} 체크 ${n}개를 비울까요?\n\n다른 시험과 시험 일정 자료는 그대로 둡니다.`)) return;
+  db.ref(`examChecklist/${ecYear()}/${t.key}`).remove();
+  showToast(`${t.label} 체크를 비웠습니다.`);
 }
 
 function renderBigCalendar(){
