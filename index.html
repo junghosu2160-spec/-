@@ -667,6 +667,10 @@
   .ec-it .x:hover{opacity:1;}
   .ec-add{border-style:dashed;border-color:var(--color-border);background:transparent;
     color:var(--color-text-muted);font-weight:600;}
+  .exam-mk-pick{font-size:11.5px;color:var(--color-text-muted);margin-bottom:9px;padding:6px 10px;
+    background:var(--color-surface-alt);border-radius:8px;line-height:1.6;}
+  .exam-mk-pick b{color:var(--color-text);}
+  .exam-mk-pick .dt{color:var(--color-danger);font-weight:800;}
   .exam-hint{font-size:11px;color:var(--color-text-muted);margin-top:7px;}
   .exam-hint b{color:var(--color-danger);font-weight:800;}
   .exam-grade-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;}
@@ -895,7 +899,7 @@
     </nav>
     <div class="sidebar-footer">
       모든 데이터는 이 브라우저에<br>자동 저장됩니다.
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (g)</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-09-26 (i)</div>
     </div>
   </aside>
 
@@ -1295,6 +1299,7 @@
             </div>
           </div>
           <div id="examMakeupCardBody" style="display:block;margin-top:10px;">
+          <div id="examMakeupPickInfo" class="exam-mk-pick" style="display:none;"></div>
           <div id="examSlotPanel" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:var(--radius-md);">
             <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
               <input type="date" id="examSlotDateInput" style="flex:1;min-width:120px;padding:7px 9px;border:1px solid var(--color-border);border-radius:8px;font-size:12.5px;">
@@ -1445,7 +1450,10 @@
         </div>
 
         <div class="card section-gap">
-          <div class="card-title">학교별 방학·시험기간 <span class="hint">달력에 색으로 표시돼요</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <div class="card-title" style="margin:0;">학교별 방학·시험기간 <span class="hint">달력에 색으로 표시돼요</span></div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="importHaksa2026()" style="margin-left:auto;">📥 2026 학사일정 한 번에 넣기</button>
+          </div>
           <div class="form-row">
             <div class="field" style="flex:1.2;">
               <label>학교</label>
@@ -3221,12 +3229,23 @@ function renderDashCalendar(){
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
 
+    // 시험기간·방학은 기간 전체에 학교 색 옅은 띠 (공휴일 날은 공휴일 색이 우선)
+    const spanPeriods = schoolPeriods.filter(p => p.startDate && p.endDate
+      && p.startDate <= dateStr && dateStr <= p.endDate
+      && (!examOnlyMode || String(p.type || '').includes('시험')));
+    let bandStyle = '';
+    if(spanPeriods.length && !isHolidayDate(dateStr)){
+      const ex = spanPeriods.filter(p => String(p.type || '').includes('시험'));
+      const pick = ex[0] || spanPeriods[0];
+      const bc = getSchoolColor(pick.school);
+      bandStyle = `background:${bc}${ex.length ? '1F' : '12'};`;
+    }
     const periodMarkers = schoolPeriods.filter(p => p.startDate === dateStr || p.endDate === dateStr);
     let borderStyle = '';
     let periodLabelsHtml = '';
     if(periodMarkers.length){
       const c = getSchoolColor(periodMarkers[0].school);
-      borderStyle = `style="border:2px solid ${c};"`;
+      borderStyle = `border:2px solid ${c};`;
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
@@ -3235,7 +3254,7 @@ function renderDashCalendar(){
     }
     const hasGijakTeam = events.some(e => e.date === dateStr && e.type === '기작팀');
     if(hasGijakTeam){
-      borderStyle = `style="border:2.5px solid #B4308F;"`;
+      borderStyle = `border:2.5px solid #B4308F;`;
     }
 
     const chips = dayEvents.map(e => `<span class="bc-chip clickmark ${e.type}${e.done ? ' done' : ''}" title="${e.done ? '눌러서 줄 긋기 해제' : '눌러서 끝난 일정으로 줄 긋기'}" onclick="event.stopPropagation();toggleEventDone('${e.id}', ${e.done ? 'false' : 'true'})">${escapeHtml(e.title)}</span>`).join('');
@@ -3252,7 +3271,7 @@ function renderDashCalendar(){
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
-    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
+    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${(bandStyle + borderStyle) ? `style="${bandStyle}${borderStyle}"` : ''} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -3291,6 +3310,141 @@ function syncExamOnlyBtn(){
   if(!b) return;
   b.classList.toggle('on', examOnlyMode);
   b.textContent = examOnlyMode ? '📕 시험일정만 보는 중 · 해제' : '📕 시험일정만 보기';
+}
+
+/* ===== 2026 학사일정 한 번에 넣기 ===== */
+const HAKSA_2026 = {
+  periods: [
+    {"school": "강동중", "type": "시험기간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "동촌중학교", "type": "시험기간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "안심중", "type": "시험기간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "정동고", "type": "시험기간", "start": "2026-09-28", "end": "2026-10-01"},
+    {"school": "강동고", "type": "시험기간", "start": "2026-09-29", "end": "2026-10-02"},
+    {"school": "새론중", "type": "시험기간", "start": "2026-09-29", "end": "2026-09-30"},
+    {"school": "동부고", "type": "시험기간", "start": "2026-10-01", "end": "2026-10-07"},
+    {"school": "강동중", "type": "시험기간", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "동촌중학교", "type": "시험기간", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "안심중", "type": "시험기간", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "새론중", "type": "시험기간", "start": "2026-10-30", "end": "2026-11-03"},
+    {"school": "강동중", "type": "시험기간", "start": "2026-12-02", "end": "2026-12-04"},
+    {"school": "강동고", "type": "시험기간", "start": "2026-12-07", "end": "2026-12-11"},
+    {"school": "동촌중학교", "type": "시험기간", "start": "2026-12-07", "end": "2026-12-09"},
+    {"school": "정동고", "type": "시험기간", "start": "2026-12-07", "end": "2026-12-10"},
+    {"school": "새론중", "type": "시험기간", "start": "2026-12-08", "end": "2026-12-10"},
+    {"school": "안심중", "type": "시험기간", "start": "2026-12-08", "end": "2026-12-10"},
+    {"school": "동부고", "type": "시험기간", "start": "2026-12-10", "end": "2026-12-15"},
+    {"school": "강동초", "type": "방학", "start": "2026-12-24", "end": "2027-01-22"},
+    {"school": "동호초", "type": "방학", "start": "2026-12-24", "end": "2027-01-25"},
+    {"school": "새론초", "type": "방학", "start": "2026-12-24", "end": "2027-01-22"},
+    {"school": "정동고", "type": "방학", "start": "2026-12-24", "end": "2027-02-01"},
+    {"school": "강동중", "type": "방학", "start": "2026-12-29", "end": "2027-02-01"},
+    {"school": "동부고", "type": "방학", "start": "2026-12-29", "end": "2027-01-25"},
+    {"school": "강동고", "type": "방학", "start": "2026-12-30", "end": "2027-02-03"},
+    {"school": "동촌중학교", "type": "방학", "start": "2026-12-30", "end": "2027-02-01"},
+    {"school": "송정초", "type": "방학", "start": "2026-12-30", "end": "2027-01-25"},
+  ],
+  exams: [
+    {"school": "강동중", "grades": ["중1", "중2", "중3"], "term": "2학기 중간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "동촌중학교", "grades": ["중1", "중2", "중3"], "term": "2학기 중간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "안심중", "grades": ["중1", "중2", "중3"], "term": "2학기 중간", "start": "2026-09-21", "end": "2026-09-22"},
+    {"school": "정동고", "grades": ["고1", "고2"], "term": "2학기 중간", "start": "2026-09-28", "end": "2026-10-01"},
+    {"school": "정동고", "grades": ["고3"], "term": "2학기 기말", "start": "2026-09-28", "end": "2026-10-01"},
+    {"school": "강동고", "grades": ["고1", "고2"], "term": "2학기 중간", "start": "2026-09-29", "end": "2026-10-02"},
+    {"school": "강동고", "grades": ["고3"], "term": "2학기 기말", "start": "2026-09-29", "end": "2026-10-02"},
+    {"school": "새론중", "grades": ["중1", "중2", "중3"], "term": "2학기 중간", "start": "2026-09-29", "end": "2026-09-30"},
+    {"school": "동부고", "grades": ["고1", "고2"], "term": "2학기 중간", "start": "2026-10-01", "end": "2026-10-07"},
+    {"school": "동부고", "grades": ["고3"], "term": "2학기 기말", "start": "2026-10-01", "end": "2026-10-02"},
+    {"school": "강동중", "grades": ["중3"], "term": "2학기 기말", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "동촌중학교", "grades": ["중3"], "term": "2학기 기말", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "안심중", "grades": ["중3"], "term": "2학기 기말", "start": "2026-10-27", "end": "2026-10-29"},
+    {"school": "새론중", "grades": ["중3"], "term": "2학기 기말", "start": "2026-10-30", "end": "2026-11-03"},
+    {"school": "강동중", "grades": ["중1", "중2"], "term": "2학기 기말", "start": "2026-12-02", "end": "2026-12-04"},
+    {"school": "강동고", "grades": ["고1", "고2"], "term": "2학기 기말", "start": "2026-12-07", "end": "2026-12-11"},
+    {"school": "동촌중학교", "grades": ["중1", "중2"], "term": "2학기 기말", "start": "2026-12-07", "end": "2026-12-09"},
+    {"school": "정동고", "grades": ["고1", "고2"], "term": "2학기 기말", "start": "2026-12-07", "end": "2026-12-10"},
+    {"school": "새론중", "grades": ["중1", "중2"], "term": "2학기 기말", "start": "2026-12-08", "end": "2026-12-10"},
+    {"school": "안심중", "grades": ["중1", "중2"], "term": "2학기 기말", "start": "2026-12-08", "end": "2026-12-10"},
+    {"school": "동부고", "grades": ["고1", "고2"], "term": "2학기 기말", "start": "2026-12-10", "end": "2026-12-15"},
+  ],
+  offs: [
+    {"school": "강동초", "date": "2026-10-02", "label": "재량휴업일"},
+    {"school": "송정초", "date": "2026-10-02", "label": "재량휴업일"},
+    {"school": "동부고", "date": "2026-10-08", "label": "재량휴업일"},
+    {"school": "강동고", "date": "2026-11-19", "label": "재량휴업일"},
+    {"school": "강동중", "date": "2026-11-19", "label": "재량휴업일"},
+    {"school": "동부고", "date": "2026-11-19", "label": "재량휴업일"},
+    {"school": "정동고", "date": "2026-11-19", "label": "재량휴업일"},
+    {"school": "새론중", "date": "2027-01-05", "label": "겨울방학 시작(종업)"},
+    {"school": "안심중", "date": "2027-01-05", "label": "겨울방학 시작(종업)"},
+  ],
+};
+function haksaNorm(name){
+  // 대구동호초등학교 · 동호초등학교 · 동호초 → 모두 '동호초' 으로 맞춤
+  return String(name || '').replace(/\s/g, '')
+    .replace(/^대구/, '')
+    .replace(/등학교$/, '')   // 초등학교→초, 고등학교→고
+    .replace(/학교$/, '');    // 중학교→중
+}
+function haksaMatchSchool(name){
+  const mine = [...new Set(students.map(s => (s.school || '').trim()).filter(Boolean))];
+  if(mine.indexOf(name) >= 0) return name;
+  const n = haksaNorm(name);
+  return mine.find(sc => haksaNorm(sc) === n) || null;
+}
+function importHaksa2026(){
+  const today = todayStr();
+  const miss = new Set();
+  const plan = { periods:[], exams:[], offs:[] };
+  const have = {};
+  students.forEach(s => { const sc=(s.school||'').trim(); if(sc && s.grade) have[sc + '|' + s.grade] = true; });
+
+  HAKSA_2026.periods.forEach(p => {
+    if(p.end < today) return;
+    const sc = haksaMatchSchool(p.school);
+    if(!sc){ miss.add(p.school); return; }
+    if(schoolPeriods.some(x => (x.school||'').trim()===sc && x.type===p.type && x.startDate===p.start && x.endDate===p.end)) return;
+    plan.periods.push({ school:sc, type:p.type, startDate:p.start, endDate:p.end });
+  });
+  HAKSA_2026.exams.forEach(e => {
+    if(e.end < today) return;
+    const sc = haksaMatchSchool(e.school);
+    if(!sc){ miss.add(e.school); return; }
+    const gs = e.grades.filter(g => have[sc + '|' + g]);
+    if(!gs.length) return;
+    const title = `${sc} ${gs.join('·')} ${e.term}`;
+    if(events.some(x => x.date===e.start && x.type==='시험' && x.title===title)) return;
+    plan.exams.push({ date:e.start, type:'시험', title, school:sc, grades:gs, subject:'' });
+  });
+  HAKSA_2026.offs.forEach(o => {
+    if(o.date < today) return;
+    const sc = haksaMatchSchool(o.school);
+    if(!sc){ miss.add(o.school); return; }
+    const title = `${sc} ${o.label}`;
+    if(events.some(x => x.date===o.date && x.title===title)) return;
+    plan.offs.push({ date:o.date, type:'기타', title, school:sc });
+  });
+
+  const nP = plan.periods.length, nE = plan.exams.length + plan.offs.length;
+  const mineNames = [...new Set(students.map(x => (x.school || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+  const missMsg = miss.size
+    ? `\n\n학생 명단에 없어서 건너뛰는 학교: ${[...miss].join(', ')}` +
+      `\n(지금 명단의 학교 이름: ${mineNames.join(', ') || '없음'})`
+    : '';
+  if(!nP && !nE){
+    alert('새로 넣을 것이 없습니다.\n\n남은 학사일정이 이미 전부 들어가 있습니다.' + missMsg);
+    return;
+  }
+  const msg = `2026학년도 학사일정을 넣습니다.\n\n` +
+    `· 기간(시험기간·방학) ${nP}건\n· 일정(시험·재량휴업일) ${nE}건\n\n` +
+    `오늘(${today}) 이후 것만 넣고, 이미 있는 것은 건너뜁니다.` +
+    missMsg + `\n\n넣을까요?`;
+  if(!confirm(msg)) return;
+
+  const now = Date.now();
+  plan.periods.forEach(x => db.ref('schoolPeriods').push({ ...x, createdAt: now }));
+  plan.exams.forEach(x => db.ref('events').push({ ...x, createdAt: now }));
+  plan.offs.forEach(x => db.ref('events').push({ ...x, createdAt: now }));
+  showToast(`학사일정을 넣었습니다 — 기간 ${nP}건, 일정 ${nE}건`);
 }
 
 /* ===== 학교별 시험일정 체크 (학교별 · 시험별 · 1년치) ===== */
@@ -3476,6 +3630,17 @@ function renderBigCalendar(){
     if(dateStr === today) cls += ' today';
     if(dateStr === selectedEventDate) cls += ' selected';
 
+    // 시험기간·방학은 기간 전체에 학교 색 옅은 띠 (공휴일 날은 공휴일 색이 우선)
+    const spanPeriods = schoolPeriods.filter(p => p.startDate && p.endDate
+      && p.startDate <= dateStr && dateStr <= p.endDate
+      && (!examOnlyMode || String(p.type || '').includes('시험')));
+    let bandStyle = '';
+    if(spanPeriods.length && !isHolidayDate(dateStr)){
+      const ex = spanPeriods.filter(p => String(p.type || '').includes('시험'));
+      const pick = ex[0] || spanPeriods[0];
+      const bc = getSchoolColor(pick.school);
+      bandStyle = `background:${bc}${ex.length ? '1F' : '12'};`;
+    }
     // 방학·시험기간은 시작일/종료일에만 그 학교 색으로 강조 표시 (중간 날짜는 깨끗하게 유지)
     const periodMarkers = schoolPeriods.filter(p => (p.startDate === dateStr || p.endDate === dateStr)
       && (!examOnlyMode || String(p.type || '').includes('시험')));
@@ -3483,7 +3648,7 @@ function renderBigCalendar(){
     let periodLabelsHtml = '';
     if(periodMarkers.length){
       const c = getSchoolColor(periodMarkers[0].school);
-      borderStyle = `style="border:2px solid ${c};"`;
+      borderStyle = `border:2px solid ${c};`;
       periodLabelsHtml = periodMarkers.map(p => {
         const pc = getSchoolColor(p.school);
         const isStart = p.startDate === dateStr;
@@ -3493,7 +3658,7 @@ function renderBigCalendar(){
     // 기작팀 일정이 있는 날은 마젠타색 굵은 테두리로 강조 (방학·시험기간 테두리보다 우선)
     const hasGijakTeam = !examOnlyMode && events.some(e => e.date === dateStr && e.type === '기작팀');
     if(hasGijakTeam){
-      borderStyle = `style="border:2.5px solid #B4308F;"`;
+      borderStyle = `border:2.5px solid #B4308F;`;
     }
 
     const chips = dayEvents.map(e => `<span class="bc-chip clickmark ${e.type}${e.done ? ' done' : ''}" title="${e.done ? '눌러서 줄 긋기 해제' : '눌러서 끝난 일정으로 줄 긋기'}" onclick="event.stopPropagation();toggleEventDone('${e.id}', ${e.done ? 'false' : 'true'})">${escapeHtml(e.title)}</span>`).join('');
@@ -3510,7 +3675,7 @@ function renderBigCalendar(){
         (() => { const p = teacherPastel(t.color); return `<span class="bc-teacher-name" style="background:${p.bg};color:${p.text};" title="${escapeHtml(t.name)}">${escapeHtml(t.name)}</span>`; })()
       ).join('') + `<span class="bc-teacher-name" style="background:var(--color-surface-alt);color:var(--color-text-muted);" title="${workingTeachers.slice(3).map(t=>escapeHtml(t.name)).join(', ')}">외 ${restCount}명</span>`;
     }
-    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${borderStyle} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
+    cells += `<div class="bigcal-cell${cls}${holidayClass(dateStr)}" ${(bandStyle + borderStyle) ? `style="${bandStyle}${borderStyle}"` : ''} onclick="selectEventDate('${dateStr}')"><div class="bc-dateline"><span class="bc-num">${d}</span>${holidayTagHtml(dateStr)}${teacherNamesHtml}</div>${periodLabelsHtml}${chips}</div>`;
   }
 
   grid.innerHTML = cells;
@@ -4056,7 +4221,7 @@ function renderEventTypeLegend(){
 const SCHOOL_COLOR_PALETTES = {
   '초등': ['#2E9E6C','#52C77A','#8FD8A8','#3DBFA0','#6FCF97','#46B88C'],
   '중등': ['#378ADD','#5B9BD5','#6FB3F5','#4A90D9','#3E7FC4','#4FA8E0'],
-  '고등': ['#D4537E','#A566C9','#C77DBD','#B0729E','#CB6DA0','#9B59B6'],
+  '고등': ['#7A4FE0','#5B63D3','#9B5BC9','#6A5ACD','#8E6BD8','#4F5BB8'],
   '기타': ['#888780','#6B6B68','#5F5E5A'],
 };
 
@@ -6238,6 +6403,39 @@ function deleteExamSlot(id){
   db.ref('examSlotOptions/' + id).remove();
 }
 
+function examGroupLabel(school, grade){
+  const num = String(grade || '').replace(/[^0-9]/g, '');
+  return num ? (school + num) : (school + ' ' + grade);
+}
+function renderExamMakeupPickInfo(school, grade){
+  const box = document.getElementById('examMakeupPickInfo');
+  if(!box) return;
+  if(!school){ box.style.display = 'none'; box.innerHTML = ''; return; }
+  const t = todayStr();
+  let span = null, label = '';
+  if(grade){
+    const ev = events.filter(e => e.type === '시험' && (e.school || '') === school
+        && (e.grades || []).indexOf(grade) >= 0 && e.date >= t)
+      .sort((a,b) => a.date.localeCompare(b.date));
+    if(ev.length){
+      label = ev[0].title || '';
+      span = schoolPeriods.find(p => p.type === '시험기간' && (p.school || '').trim() === school
+        && p.startDate <= ev[0].date && ev[0].date <= p.endDate) || { startDate: ev[0].date, endDate: ev[0].date };
+    }
+  }
+  if(!span){
+    const per = schoolPeriods.filter(p => p.type === '시험기간' && (p.school || '').trim() === school && p.endDate >= t)
+      .sort((a,b) => a.startDate.localeCompare(b.startDate));
+    if(per.length){ span = per[0]; label = label || (school + ' 시험기간'); }
+  }
+  const who = grade ? examGroupLabel(school, grade) : (school + ' 전체');
+  const n = students.filter(s => s.examMakeup && (s.school || '').trim() === school && (!grade || s.grade === grade)).length;
+  box.style.display = 'block';
+  box.innerHTML = span
+    ? `<b>${escapeHtml(who)}</b> — 시험 <span class="dt">${fmtDateKR2(span.startDate)} ~ ${fmtDateKR2(span.endDate)}</span> · 해당 학생 ${n}명`
+    : `<b>${escapeHtml(who)}</b> — 등록된 시험기간이 없습니다 · 해당 학생 ${n}명`;
+}
+
 function renderExamMakeupPanel(){
   const grid = document.getElementById('examMakeupGrid');
   const countEl = document.getElementById('examMakeupCount');
@@ -6249,13 +6447,29 @@ function renderExamMakeupPanel(){
   const targets = students.filter(s => s.examMakeup);
   countEl.textContent = `${targets.length}명`;
 
-  const schools = [...new Set(targets.map(s => (s.school || '').trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b, 'ko'));
+  // 학교 + 학년 묶음 (강동중2 · 강동중3 · 동부고1 …) — 학생 명단에서 자동
+  const groupMap = {};
+  targets.forEach(s => {
+    const sc = (s.school || '').trim();
+    if(!sc) return;
+    if(!groupMap[sc]) groupMap[sc] = [];
+    if(s.grade && groupMap[sc].indexOf(s.grade) < 0) groupMap[sc].push(s.grade);
+  });
+  const schools = Object.keys(groupMap).sort((a,b) => a.localeCompare(b, 'ko'));
   const prevSchool = schoolSel.value;
-  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('');
-  if(schools.includes(prevSchool)) schoolSel.value = prevSchool;
+  schoolSel.innerHTML = `<option value="">전체 학교</option>` + schools.map(sc => {
+    const gs = groupMap[sc].sort((a,b) => GRADES.indexOf(a) - GRADES.indexOf(b));
+    const opts = [`<option value="${escapeHtml(sc)}|">${escapeHtml(sc)} 전체</option>`].concat(
+      gs.map(g => `<option value="${escapeHtml(sc)}|${escapeHtml(g)}">${escapeHtml(examGroupLabel(sc, g))}</option>`));
+    return `<optgroup label="${escapeHtml(sc)}">${opts.join('')}</optgroup>`;
+  }).join('');
+  if([...schoolSel.options].some(o => o.value === prevSchool)) schoolSel.value = prevSchool;
 
-  const schoolFilter = schoolSel.value;
-  let list = targets.filter(s => !schoolFilter || (s.school || '').trim() === schoolFilter);
+  const parts = (schoolSel.value || '').split('|');
+  const fSchool = parts[0] || '';
+  const fGrade = parts[1] || '';
+  renderExamMakeupPickInfo(fSchool, fGrade);
+  let list = targets.filter(s => !fSchool || ((s.school || '').trim() === fSchool && (!fGrade || s.grade === fGrade)));
   list = list.sort(sortSel.value === 'school' ? compareBySchoolThenGrade : compareByGradeThenName);
 
   if(!list.length){
