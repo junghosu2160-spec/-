@@ -299,6 +299,7 @@
 
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyBE1kB8VFewPMwH2NXYV_G5iWDok7ynx3g",
@@ -432,6 +433,7 @@ function holidayNameOf(dateStr){
 }
 
 let absenceRequests = [];
+let slotTaken = {}; // {보강시간대ID: {신청ID:true}} - 마감 여부 계산용
 let studentGoal = { weeklyGoal: 5 };
 let scores = [];
 let subjectNamesData = { names: [] };
@@ -473,20 +475,50 @@ function mondayOfWeek(d){
   return date;
 }
 
-/* ===== 로그인 (자동로그인 포함) ===== */
-function tryLogin(){
+/* ===== 보안 로그인 =====
+   화면은 예전과 같아요(자녀 이름 + 연락처 뒷자리 4자리).
+   뒤에서는 학생 목록 전체를 내려받지 않고, "이름+뒷자리"를 알아볼 수 없게 바꾼 값으로
+   내 번호만 찾아서 내 자료만 받아와요. */
+const LOGIN_KIND = 's';
+const SAVED_KEY = 'studentPageAuth';
+let _authPromise = null;
+function whenAuth(){
+  if(!_authPromise) _authPromise = new Promise(res => {
+    const off = firebase.auth().onAuthStateChanged(u => {
+      off();
+      if(u) return res(u);
+      firebase.auth().signInAnonymously().then(c => res(c.user)).catch(() => res(null));
+    });
+  });
+  return _authPromise;
+}
+function digits4(p){ return String(p || '').replace(/[^0-9]/g, '').slice(-4); }
+async function loginHashOf(kind, name, last4){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(kind + '|' + String(name).trim() + '|' + last4));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function claimStudent(name, last4){
+  const u = await whenAuth();
+  if(!u) throw new Error('auth');
+  const h = await loginHashOf(LOGIN_KIND, name, last4);
+  const sid = (await db.ref('loginIndex/' + h).once('value')).val();
+  if(!sid) return null;
+  if(u.isAnonymous) await db.ref('sessions/' + u.uid).set({ sid, h, at: Date.now() });
+  const s = (await db.ref('students/' + sid).once('value')).val();
+  return s ? Object.assign({ id: sid }, s) : null;
+}
+
+async function tryLogin(){
   const name = document.getElementById('loginName').value.trim();
-  const phone = document.getElementById('loginPhone').value.trim();
+  const phone = digits4(document.getElementById('loginPhone').value);
   const errEl = document.getElementById('loginError');
   if(!name || phone.length < 4){
     errEl.textContent = '이름과 연락처 뒷자리 4자리를 모두 입력해주세요.';
     errEl.style.display = 'block';
     return;
   }
-  db.ref('students').once('value').then(snap => {
-    const all = snapshotToArray(snap.val());
-    const match = all.find(s => (s.name || '').trim() === name &&
-      (s.phone ? normalizePhone(s.phone) === phone : phone === '0000'));
+  try{
+    const match = await claimStudent(name, phone);
     if(!match){
       errEl.textContent = '이름 또는 연락처가 일치하지 않아요. 다시 확인해주세요.';
       errEl.style.display = 'block';
@@ -494,25 +526,27 @@ function tryLogin(){
     }
     errEl.style.display = 'none';
     currentStudent = match;
-    localStorage.setItem('studentPageAuth', JSON.stringify({ id: match.id, name: match.name, phone: phone }));
+    localStorage.setItem(SAVED_KEY, JSON.stringify({ id: match.id, name: match.name, phone: phone }));
     startApp();
-  });
+  }catch(e){
+    errEl.textContent = '연결이 잠시 불안정해요. 잠시 후 다시 시도해주세요.';
+    errEl.style.display = 'block';
+  }
 }
 
 function logout(){
-  localStorage.removeItem('studentPageAuth');
-  currentStudent = null;
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('loginName').value = '';
-  document.getElementById('loginPhone').value = '';
+  localStorage.removeItem(SAVED_KEY);
+  const u = firebase.auth().currentUser;
+  if(u && u.isAnonymous) db.ref('sessions/' + u.uid).remove().catch(()=>{});
+  location.reload();
 }
 
-function tryAutoLogin(){
-  // 원장님 관리자 화면에서 iframe으로 열 때: ?admin=학생ID 로 로그인 없이 바로 진입
+async function tryAutoLogin(){
+  const u = await whenAuth();
+  // 원장님 관리자 화면 안에서 열 때(?admin=학생ID): 원장님 계정으로 로그인된 경우에만 바로 보여줘요
   const params = new URLSearchParams(window.location.search);
   const adminStudentId = params.get('admin');
-  if(adminStudentId){
+  if(adminStudentId && u && !u.isAnonymous){
     db.ref('students/' + adminStudentId).once('value').then(snap => {
       const s = snap.val();
       if(s){
@@ -524,18 +558,13 @@ function tryAutoLogin(){
     return;
   }
 
-  const saved = localStorage.getItem('studentPageAuth');
+  const saved = localStorage.getItem(SAVED_KEY);
   if(!saved) return;
   try{
-    const auth = JSON.parse(saved);
-    db.ref('students/' + auth.id).once('value').then(snap => {
-      const s = snap.val();
-      if(s && (s.name || '').trim() === auth.name &&
-        (s.phone ? normalizePhone(s.phone) === auth.phone : auth.phone === '0000')){
-        currentStudent = Object.assign({ id: auth.id }, s);
-        startApp();
-      }
-    });
+    const a = JSON.parse(saved);
+    const s = await claimStudent(a.name, a.phone);
+    if(s){ currentStudent = s; startApp(); }
+    else localStorage.removeItem(SAVED_KEY);
   }catch(e){}
 }
 
@@ -593,7 +622,13 @@ function attachListeners(){
     if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
     if(typeof renderExamMakeupCard === 'function') renderExamMakeupCard();
   });
-  db.ref('absenceRequests').on('value', snap => {
+  db.ref('slotTaken').on('value', snap => {
+    slotTaken = snap.val() || {};
+    renderAttCalendar();
+    if(selectedAbsenceDate){ renderMakeupCal(); if(selectedMakeupDate) selectMakeupDate(selectedMakeupDate); }
+    if(typeof renderExamMakeupCard === 'function') renderExamMakeupCard();
+  });
+  db.ref('absenceRequests').orderByChild('studentId').equalTo(currentStudent.id).on('value', snap => {
     absenceRequests = snapshotToArray(snap.val());
     renderRequestHistory();
     renderAttCalendar();
@@ -715,7 +750,13 @@ function closeAbsencePanel(){
 }
 
 function slotBookedCount(slotId){
-  return absenceRequests.filter(r => r.makeupSlotId === slotId && r.status !== 'rejected').length;
+  // 다른 학생 신청은 이름·사유 없이 개수(slotTaken)로만 받아와요. 내 신청은 바로 반영.
+  const ids = new Set(Object.keys(slotTaken[slotId] || {}));
+  absenceRequests.forEach(r => {
+    if(r.makeupSlotId !== slotId) return;
+    if(r.status === 'rejected') ids.delete(r.id); else ids.add(r.id);
+  });
+  return ids.size;
 }
 
 function shiftMakeupCalMonth(delta){
@@ -824,7 +865,10 @@ function submitAbsence(){
   const needsApproval = monthlyConfirmedCount() >= MONTHLY_FREE_LIMIT;
   const slotLabel = formatDateWithWeekday(slot.date) + ' · ' + slot.time;
 
-  db.ref('absenceRequests').push({
+  const reqKey = db.ref('absenceRequests').push().key;
+  db.ref().update({
+    ['slotTaken/' + slotId + '/' + reqKey]: true,
+    ['absenceRequests/' + reqKey]: {
     studentId: currentStudent.id,
     studentName: currentStudent.name,
     absenceDate: selectedAbsenceDate,
@@ -833,7 +877,7 @@ function submitAbsence(){
     makeupSlotLabel: slotLabel,
     status: needsApproval ? 'pending' : 'confirmed',
     createdAt: new Date().toISOString()
-  });
+  }});
 
   showBanner(
     needsApproval
