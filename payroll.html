@@ -273,7 +273,7 @@ async function initDb(){
   firebase.auth().onAuthStateChanged(u=>{
     if(!u||u.isAnonymous){blocker(`<h2>로그인이 필요해요</h2><p class="sub">학원관리 프로그램에서 원장님 계정으로 로그인한 뒤 열어주세요.</p><p><a class="btn" href="index.html" target="_top">학원관리 프로그램으로 가기</a></p>`);return}
     db=firebase.database();$('#dbState').textContent='자동 저장 중';
-    let denied=false;const fail=()=>{if(denied)return;denied=true;blocker('<h2>이 계정은 급여장부를 볼 수 없어요</h2><p class="sub">급여장부는 원장님 계정으로만 열 수 있어요.</p>')};
+    let denied=false;const fail=()=>{if(denied)return;denied=true;blocker('<h2>이 계정은 급여장부를 볼 수 없어요</h2><p class="sub">급여장부는 원장님 계정으로만 열 수 있어요.</p><p class="sub">지금 로그인한 계정: <b>'+(u.email||'')+'</b><br>계정 번호: <b style="user-select:all">'+u.uid+'</b></p>')};
     const sub=(col,key)=>db.ref('payroll/'+col).on('value',snap=>{let o=snap.val()||{};if(key==='work')o=normWork(o);R[key]=o;dbReady=true;if(!X)render()},fail);
     sub('teachers','teachers');sub('work','work');sub('settlements','settle');sub('expenses','exp');sub('payments','pay');
     db.ref('payroll/config').on('value',snap=>{const c=snap.val()||{};R.fixed=c.fixed||{items:[]};R.settings={...empty().settings,...(c.settings||{})};R.pin=c.pin||null;pinGate();if(!X)render()},fail);
