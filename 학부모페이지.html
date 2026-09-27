@@ -89,6 +89,8 @@
   .cal-day.upcoming:active{opacity:0.6;}
   .cal-day.holiday{background:#FCEFEF; box-shadow:0 0 0 1.5px #E4AEB3 inset; color:#AE5560; font-weight:800;
     flex-direction:column; gap:0; line-height:1.15;}
+  .cal-day.hol-rec{flex-direction:column; gap:0; line-height:1.15;}
+  .cal-day.hol-rec .hol-nm{font-size:8px; font-weight:800; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
   .cal-day.holiday .hol-nm{font-size:8px; font-weight:800; max-width:100%; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap;}
 
@@ -563,6 +565,11 @@ function renderAttCalendar(){
     }else if(isClassDay && dateStr >= today){
       cls += ' upcoming';
       onclick = ` onclick="openAbsencePanel('${dateStr}')"`;
+    }
+    if(holName && (rec || cls.includes(' extra'))){
+      // 공휴일이어도 등원·결석·보강 기록이 있으면 그 색으로 보여주고 공휴일 이름은 작게 표시
+      html += `<div class="${cls.replace(' upcoming','').replace(' today-lock','')} hol-rec" title="${holName.replace(/"/g,'&quot;')}"><span>${d}</span><span class="hol-nm">${holName.replace(/</g,'&lt;')}</span></div>`;
+      continue;
     }
     if(holName){
       html += `<div class="cal-day holiday" title="${holName.replace(/"/g,'&quot;')}"><span>${d}</span><span class="hol-nm">${holName.replace(/</g,'&lt;')}</span></div>`;
