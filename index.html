@@ -945,6 +945,35 @@
     #view-monthly .mc-foot .btn{flex:1 1 auto;min-width:120px;padding:12px 10px;font-size:14px;}
     #view-monthly .mc-lock{flex-basis:100%;}
   }
+
+  /* 한 달 멘트 · 저절로 불러온 출결/성적 */
+  .mc-auto{border:1px solid var(--color-border);border-radius:12px;background:#FCFCFE;padding:12px 13px;margin-bottom:10px;}
+  .mc-auto-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;margin-bottom:4px;flex-wrap:wrap;}
+  .mc-auto-h .auto{font-size:10.5px;font-weight:800;background:var(--color-neutral-soft);
+    color:var(--color-text-muted);border-radius:99px;padding:2px 8px;}
+  .mc-base{font-size:11.5px;color:var(--color-text-muted);font-weight:700;margin-bottom:9px;
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .mc-base input{width:52px;text-align:center;font:inherit;font-size:13px;font-weight:800;
+    border:1px solid var(--color-border);border-radius:7px;padding:4px 5px;}
+  .mc-nums{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px;}
+  .mc-num{display:flex;flex-direction:column;align-items:center;gap:1px;min-width:62px;
+    border:1px solid var(--color-border);border-radius:10px;padding:7px 9px;background:var(--color-surface);}
+  .mc-num b{font-size:17px;font-variant-numeric:tabular-nums;}
+  .mc-num span{font-size:10.5px;color:var(--color-text-muted);font-weight:700;}
+  .mc-num.base{background:var(--color-surface-alt);}
+  .mc-num.ok b{color:var(--color-success);} .mc-num.late b{color:var(--color-warning);}
+  .mc-num.bad b{color:var(--color-danger);} .mc-num.mk b{color:#4338ca;}
+  .mc-sw{display:flex;align-items:center;gap:9px;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .mc-sw input{width:19px;height:19px;}
+  .mc-pv{margin-top:8px;font-size:12.5px;line-height:1.8;background:var(--color-surface);
+    border:1px dashed var(--color-border);border-radius:9px;padding:9px 11px;}
+  .sc-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--color-border);
+    border-radius:10px;background:var(--color-surface);margin-bottom:5px;font-size:12.5px;}
+  .sc-row .sub{font-weight:800;min-width:56px;}
+  .sc-row .pt{font-weight:800;font-variant-numeric:tabular-nums;}
+  .sc-row .up{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--color-success);}
+  .sc-row .dn{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--color-danger);}
+  .sc-row .fl{margin-left:auto;font-size:11.5px;font-weight:800;color:var(--color-text-muted);}
 </style>
 </head>
 <body>
@@ -9544,6 +9573,10 @@ function mcMake(stu, picks, memo){
   }
   else if(bad.length) parts.push(sub + ' 이번 달 수업을 이렇게 지냈습니다.');
   if(memo && memo.trim()) parts.push(memo.trim().replace(/[.]*$/,'.'));
+  /* 저절로 불러온 출결·성적 */
+  var _rec = mcRec(stu.id) || {};
+  if(_rec.noAtt !== true){ var _a = mcAttLine(stu.id); if(_a) parts.push(_a); }
+  if(_rec.noScore !== true){ var _s = mcScoreLine(stu.id); if(_s) parts.push(_s); }
   if(bad.length){
     const b = mcWeave(bad);
     b[0] = '다만 ' + b[0];
@@ -9552,7 +9585,7 @@ function mcMake(stu, picks, memo){
   }else if(good.length){
     parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
   }
-  return parts.join(' ');
+  return mcMonthize(parts.join(' '));
 }
 
 /* ---- 편집 상태 ---- */
@@ -9778,10 +9811,10 @@ function renderMonthlyPane(){
 
   pane.innerHTML = note +
     `<div class="mc-pane-h">${gradeBadge(stu.grade)}<span class="mc-pane-nm">${escapeHtml(stu.name)}</span>` +
-      `<span class="mc-pane-sub">${escapeHtml(stu.school || '')} ${mcAttTxt(stu.id)}</span>` +
+      `<span class="mc-pane-sub">${escapeHtml(stu.school || '')}</span>` +
       (r.kind === 'owner' && rec && rec.by !== MC_UID_OWNER
         ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="mcSendBack()">선생님께 다시 보내기</button>` : '') +
-    `</div>` + chips +
+    `</div>` + mcAutoHtml(stu, locked) + chips +
     `<div class="mc-sec"><div class="mc-sec-t">따로 적을 말 <span class="mc-opt">선택</span></div>` +
       `<textarea id="mcMemo" rows="2" ${locked?'disabled':''} placeholder="이 학생만의 이야기를 한 줄 적어 주세요" ` +
       `oninput="mcMemoChange(this.value)">${escapeHtml(mcDraft.memo)}</textarea></div>` +
@@ -9797,6 +9830,179 @@ function mcAttTxt(sid){
   const ok = rows.filter(a => a.status === 'present' || a.status === '출석').length;
   const no = rows.filter(a => a.status === 'absent' || a.status === '결석').length;
   return '· 이번 달 ' + ok + '회 출석' + (no ? ' · 결석 ' + no : '');
+}
+
+
+/* =========================================================
+   한 달 멘트 · 출결/성적 저절로 불러오기
+========================================================= */
+/* 한글 셈숫자 — 「여덟 번」처럼 쓰는 말 */
+const MC_KNUM = ['','한','두','세','네','다섯','여섯','일곱','여덟','아홉','열',
+  '열한','열두','열세','열네','열다섯','열여섯','열일곱','열여덟','열아홉','스무',
+  '스물한','스물두','스물세','스물네','스물다섯','스물여섯','스물일곱','스물여덟','스물아홉','서른'];
+function mcCnt(n){ n = Number(n) || 0; return MC_KNUM[n] || String(n); }
+/* 받침을 보고 조사를 고른다 — 「영어는」 「수학은」 */
+function mcJosa(w, withJong, noJong){
+  var t = String(w || ''), c = t.charCodeAt(t.length - 1);
+  var has = (c >= 0xAC00 && c <= 0xD7A3) ? ((c - 0xAC00) % 28) !== 0 : true;
+  return t + (has ? withJong : noJong);
+}
+function mcMon(){ return mcM + '월'; }
+
+function mcCatOf(grade){
+  if(typeof gradeCategoryOf === 'function') return gradeCategoryOf(grade);
+  var g = String(grade || '');
+  return g.indexOf('초') === 0 ? '초등' : g.indexOf('중') === 0 ? '중등' : g.indexOf('고') === 0 ? '고등' : '기타';
+}
+/* 이 학생의 한 달 기준 횟수 — 중·고등 8회, 초등은 등원 요일 × 4 */
+function mcBaseAuto(stu){
+  if(!stu) return 8;
+  if(mcCatOf(stu.grade) !== '초등') return 8;
+  var d = WEEKDAYS.filter(function(w){ return stu.schedule && stu.schedule[w]; }).length;
+  return d ? d * 4 : 8;
+}
+function mcBaseWhy(stu){
+  if(!stu) return '';
+  if(mcCatOf(stu.grade) !== '초등') return '중·고등 기본';
+  var d = WEEKDAYS.filter(function(w){ return stu.schedule && stu.schedule[w]; }).length;
+  return d ? ('주 ' + d + '회 × 4주') : '요일이 정해지지 않음';
+}
+function mcBaseOf(sid){
+  var r = mcRec(sid), stu = (typeof mcStu === 'function' && mcPick === sid) ? mcStu() : mcFindStu(sid);
+  var v = r && r.base;
+  return (v === undefined || v === null || v === '') ? mcBaseAuto(stu) : (Number(v) || 0);
+}
+function mcFindStu(sid){ return students.find(function(s){ return s.id === sid; }); }
+function mcSetBase(sid, v){
+  var t = String(v == null ? '' : v).trim();
+  db.ref('monthComments/' + mcKey() + '/' + mcPickSafe(sid) + '/base').set(t === '' ? null : (Number(t) || 0));
+}
+function mcPickSafe(sid){ return sid || mcPick; }
+
+/* 이번 달 출결 숫자 */
+function mcAttStat(sid){
+  var pre = mcKey();
+  var rows = (typeof attendance !== 'undefined' ? attendance : [])
+    .filter(function(a){ return a.studentId === sid && String(a.date || '').slice(0,7) === pre; });
+  var present = rows.filter(function(a){ return a.status === '출석'; }).length;
+  var late    = rows.filter(function(a){ return a.status === '지각'; }).length;
+  var absent  = rows.filter(function(a){ return a.status === '결석'; }).length;
+  var mk = 0;
+  if(typeof makeupSchedules !== 'undefined' && makeupSchedules)
+    mk = makeupSchedules.filter(function(m){ return m.studentId === sid && String(m.date || '').slice(0,7) === pre; }).length;
+  return { present: present + late, late: late, absent: absent, makeup: mk,
+           base: mcBaseOf(sid), any: rows.length > 0 };
+}
+/* 출결 문장 */
+function mcAttLine(sid){
+  var a = mcAttStat(sid);
+  if(!a.any) return '';
+  var out = [], M = mcMon(), came = a.present, base = a.base;
+  if(!came)
+    out.push(M + '은 ' + mcCnt(base) + ' 번 수업이 있었는데 한 번도 나오지 못했습니다.');
+  else if(came > base)
+    out.push(M + '은 ' + mcCnt(base) + ' 번이 기준인데 보강까지 더해 ' + mcCnt(came) + ' 번 수업했습니다.');
+  else if(came === base && !a.absent)
+    out.push(M + '은 ' + mcCnt(base) + ' 번 수업 가운데 ' + mcCnt(came) + ' 번 모두 나와 주었습니다.');
+  else
+    out.push(M + '은 ' + mcCnt(base) + ' 번 수업 가운데 ' + mcCnt(came) + ' 번 나왔습니다.');
+  if(a.absent && came < base){
+    var left = a.absent - a.makeup;
+    if(a.makeup >= a.absent) out.push('빠진 ' + mcCnt(a.absent) + ' 번은 ' + (a.absent > 1 ? '모두 ' : '') + '보강으로 채웠습니다.');
+    else if(a.makeup > 0) out.push('빠진 ' + mcCnt(a.absent) + ' 번 가운데 ' + mcCnt(a.makeup) +
+      ' 번은 보강으로 채웠고, ' + mcCnt(left) + ' 번은 아직 남아 있습니다.');
+    else out.push('빠진 ' + mcCnt(a.absent) + ' 번은 아직 보강으로 채우지 못했습니다.');
+  }
+  if(a.late) out.push('늦게 온 날도 ' + mcCnt(a.late) + ' 번 있었습니다.');
+  return out.join(' ');
+}
+
+/* 성적 — 가장 최근 시험의 과목들 (중·고등만 쓰임) */
+function mcScoreStat(sid){
+  if(typeof scores === 'undefined' || !scores) return null;
+  var ord = function(e){ return (typeof EXAM_PERIODS !== 'undefined' ? EXAM_PERIODS : []).indexOf(e); };
+  var mine = scores.filter(function(x){ return x.studentId === sid; });
+  if(!mine.length) return null;
+  var lastExam = mine.slice().sort(function(a,b){ return ord(b.examName) - ord(a.examName); })[0].examName;
+  var rows = mine.filter(function(x){ return x.examName === lastExam; })
+    .map(function(x){
+      var prev = mine.filter(function(y){ return y.subject === x.subject && ord(y.examName) < ord(lastExam); })
+        .sort(function(a,b){ return ord(b.examName) - ord(a.examName); })[0];
+      return { subject: x.subject, score: Number(x.score) || 0,
+               diff: prev ? (Number(x.score) - Number(prev.score)) : null };
+    });
+  return rows.length ? { exam: lastExam, rows: rows } : null;
+}
+function mcScoreLine(sid){
+  var s = mcScoreStat(sid);
+  if(!s) return '';
+  var parts = s.rows.map(function(r, i){
+    var head = (i === 0) ? (s.exam + '에서 ' + r.subject + ' ' + r.score + '점')
+                         : (mcJosa(r.subject, '은', '는') + ' ' + r.score + '점');
+    var tail = (i === 0) ? '지난 시험보다 ' : '';
+    if(r.diff === null) return head + '을 받았습니다.';
+    if(r.diff === 0)    return head + '으로 ' + (i === 0 ? '지난 시험과 같았습니다.' : '지난번과 같았습니다.');
+    if(r.diff > 0)      return head + '으로 ' + tail + r.diff + '점 올랐습니다.';
+    return head + '으로 ' + tail + Math.abs(r.diff) + '점 내려갔습니다.';
+  });
+  return parts.join(' ');
+}
+
+/* 「이번 달」을 「9월」로 바꿔 준다 */
+function mcMonthize(t){
+  var M = mcMon();
+  return String(t || '')
+    .replace(/이번 달도/g, M + '에도')
+    .replace(/이번 달에는/g, M + '에는')
+    .replace(/이번 달에/g, M + '에')
+    .replace(/이번 달은/g, M + '은')
+    .replace(/이번 달 /g, M + '에 ')
+    .replace(/이번 달/g, M);
+}
+
+/* 자동 상자 그리기 */
+function mcAutoHtml(stu, locked){
+  var sid = stu.id, rec = mcRec(sid) || {};
+  var a = mcAttStat(sid), sc = mcScoreStat(sid);
+  var offA = rec.noAtt === true, offS = rec.noScore === true;
+  var h = '';
+  if(a.any){
+    var manual = rec.base !== undefined && rec.base !== null && rec.base !== '';
+    h += '<div class="mc-auto"><div class="mc-auto-h">📋 ' + mcMon() + ' 출결 <span class="auto">저절로 불러옴</span></div>' +
+      '<div class="mc-base">기준 <input type="number" min="0" step="1" value="' + a.base + '" ' + (locked ? 'disabled ' : '') +
+        'onchange="mcSetBase(\'' + sid + '\',this.value)"> 회 · ' + escapeHtml(mcBaseWhy(stu)) +
+        (manual ? ' <b style="color:#4338ca">직접 고침</b>' : '') + '</div>' +
+      '<div class="mc-nums">' +
+        '<div class="mc-num base"><b>' + a.base + '</b><span>기준</span></div>' +
+        '<div class="mc-num ok"><b>' + a.present + '</b><span>출석</span></div>' +
+        '<div class="mc-num late"><b>' + a.late + '</b><span>지각</span></div>' +
+        '<div class="mc-num bad"><b>' + a.absent + '</b><span>결석</span></div>' +
+        (a.makeup ? '<div class="mc-num mk"><b>' + a.makeup + '</b><span>보강함</span></div>' : '') +
+      '</div>' +
+      '<label class="mc-sw"><input type="checkbox"' + (offA ? '' : ' checked') + (locked ? ' disabled' : '') +
+        ' onchange="mcToggleAuto(\'att\',this.checked)"> 이 내용을 멘트에 넣기</label>' +
+      '<div class="mc-pv">' + escapeHtml(mcAttLine(sid)) + '</div></div>';
+  }
+  if(sc){
+    h += '<div class="mc-auto"><div class="mc-auto-h">📝 성적 <span class="auto">' + escapeHtml(sc.exam) + '</span></div>';
+    sc.rows.forEach(function(r){
+      var tag = r.diff === null ? '<span class="fl">지난 기록 없음</span>'
+        : r.diff > 0 ? '<span class="up">▲ +' + r.diff + '점</span>'
+        : r.diff < 0 ? '<span class="dn">▼ −' + Math.abs(r.diff) + '점</span>'
+        : '<span class="fl">지난 시험과 같음</span>';
+      h += '<div class="sc-row"><span class="sub">' + escapeHtml(r.subject) + '</span>' +
+        '<span class="pt">' + r.score + '점</span>' + tag + '</div>';
+    });
+    h += '<label class="mc-sw"><input type="checkbox"' + (offS ? '' : ' checked') + (locked ? ' disabled' : '') +
+      ' onchange="mcToggleAuto(\'score\',this.checked)"> 이 내용을 멘트에 넣기</label>' +
+      '<div class="mc-pv">' + escapeHtml(mcScoreLine(sid)) + '</div></div>';
+  }
+  return h;
+}
+function mcToggleAuto(kind, on){
+  if(!mcPick) return;
+  db.ref('monthComments/' + mcKey() + '/' + mcPick + '/' + (kind === 'att' ? 'noAtt' : 'noScore')).set(on ? null : true);
+  setTimeout(function(){ mcRemake(); if(typeof renderMcPane === 'function') renderMcPane(); else renderMonthlyPane(); }, 250);
 }
 
 </script>
