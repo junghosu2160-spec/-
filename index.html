@@ -9575,7 +9575,8 @@ function mcMake(stu, picks, memo){
   if(memo && memo.trim()) parts.push(memo.trim().replace(/[.]*$/,'.'));
   /* 저절로 불러온 출결·성적 */
   var _rec = mcRec(stu.id) || {};
-  if(_rec.noAtt !== true){ var _a = mcAttLine(stu.id); if(_a) parts.push(_a); }
+  /* 중·고등은 맨 앞 청구 머리말에 이미 들어가므로 여기서는 넣지 않는다 */
+  if(mcCatOf(stu.grade) === '초등' && _rec.noAtt !== true){ var _a = mcAttLine(stu.id); if(_a) parts.push(_a); }
   if(_rec.noScore !== true){ var _s = mcScoreLine(stu.id); if(_s) parts.push(_s); }
   if(bad.length){
     const b = mcWeave(bad);
@@ -9585,7 +9586,7 @@ function mcMake(stu, picks, memo){
   }else if(good.length){
     parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
   }
-  return mcMonthize(parts.join(' '));
+  return mcMonthize(mcLeadLines(stu).concat(parts).join(' '));
 }
 
 /* ---- 편집 상태 ---- */
@@ -9958,6 +9959,40 @@ function mcMonthize(t){
     .replace(/이번 달은/g, M + '은')
     .replace(/이번 달 /g, M + '에 ')
     .replace(/이번 달/g, M);
+}
+
+
+/* ---- 중·고등 청구 머리말 ---- */
+function mcBillMonth(){ return mcM === 12 ? 1 : mcM + 1; }
+function mcWeekCnt(stu){
+  return WEEKDAYS.filter(function(w){ return stu && stu.schedule && stu.schedule[w]; }).length;
+}
+/* 출결 문장 — 청구 머리말용 (숫자로 씁니다) */
+function mcAttLineNum(sid){
+  var a = mcAttStat(sid);
+  if(!a.any) return '';
+  var out = [], M = mcM + '월', came = a.present, base = a.base;
+  if(!came) out.push(M + '은 ' + base + '회 수업이 있었는데 한 번도 나오지 못했습니다.');
+  else if(came > base) out.push(M + '은 ' + base + '회 수업 중 보강까지 더해 ' + came + '회 수업했습니다.');
+  else if(came === base && !a.absent) out.push(M + '은 ' + base + '회 수업을 모두 채웠습니다.');
+  else out.push(M + '은 ' + base + '회 수업 중 ' + came + '회 수업했습니다.');
+  if(a.absent && came < base){
+    var left = a.absent - a.makeup;
+    if(a.makeup >= a.absent) out.push('빠진 ' + a.absent + '회는 ' + (a.absent > 1 ? '모두 ' : '') + '보강으로 채웠습니다.');
+    else if(a.makeup > 0) out.push('빠진 ' + a.absent + '회 중 ' + a.makeup + '회는 보강으로 채웠고, ' + left + '회는 아직 남아 있습니다.');
+    else out.push('빠진 ' + a.absent + '회는 아직 보강으로 채우지 못했습니다.');
+  }
+  if(a.late) out.push('늦게 온 날도 ' + a.late + '회 있었습니다.');
+  return out.join(' ');
+}
+/* 중·고등이면 앞에 붙는 세 문장 */
+function mcLeadLines(stu){
+  if(mcCatOf(stu.grade) === '초등') return [];
+  var rec = mcRec(stu.id) || {}, base = mcBaseOf(stu.id), wk = mcWeekCnt(stu);
+  var lead = ['안녕하세요 ' + mcBillMonth() + '월 수업료 청구드립니다.'];
+  lead.push((wk ? '주' + wk + '회 ' : '') + '월 ' + base + '회 기준 수업료입니다.');
+  if(rec.noAtt !== true){ var al = mcAttLineNum(stu.id); if(al) lead.push(al); }
+  return lead;
 }
 
 /* 자동 상자 그리기 */
