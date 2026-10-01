@@ -1292,7 +1292,7 @@ function mcStudents(){
 const MC_GRADES = ['초1','초2','초3','초4','초5','초6'];
 function mcGradeIdx(g){ const i = MC_GRADES.indexOf(g); return i < 0 ? 99 : i; }
 function mcRec(sid){ return (mcData[mcKey()] || {})[sid] || null; }
-function mcState(sid){ const r = mcRec(sid); return (r && r.state) || 'none'; }
+function mcState(sid){ const r = mcRec(sid); return mcWritten(r) ? r.state : 'none'; }
 function mcBadgeColor(grade){
   const C = { '초1':['#DFF7E9','#1F7A55'],'초2':['#C3EFD7','#1B6B4A'],'초3':['#DFF7E9','#1F7A55'],
               '초4':['#C3EFD7','#1B6B4A'],'초5':['#A3E5C0','#145C3D'],'초6':['#82D9A8','#0F4A2E'] };
@@ -1422,6 +1422,11 @@ function mcSetFilter(f){ mcFilter = f; renderMc(); }
 function mcSelect(sid){ mcPick = sid; mcLoadDraft(sid); if(!mcDraft.text) mcRemake(); renderMc();
   const p = document.getElementById('mcPaneCard'); if(p && p.scrollIntoView) p.scrollIntoView({behavior:'smooth', block:'start'}); }
 function mcFold(c){ mcOpenCat[c] = !mcOpenCat[c]; renderMcPane(); }
+
+function mcWritten(rec){
+  return !!(rec && rec.state && ((rec.picks && rec.picks.length) || (rec.text && rec.text.trim())));
+}
+
 function mcDateTxt(ts){ if(!ts) return ''; const d = new Date(ts); return (d.getMonth()+1)+'/'+d.getDate(); }
 
 function renderMc(){
@@ -1447,7 +1452,7 @@ function renderMc(){
     const badge = st === 'done' ? '<span class="mc-st ok">✓ 끝</span>'
       : st === 'sent' ? '<span class="mc-st wr">보냄</span>'
       : st === 'draft' ? '<span class="mc-st dr">임시</span>' : '<span class="mc-st no">아직</span>';
-    const by = c ? `<div class="mc-by">${st === 'done' ? '원장님 확인 끝' : mcDateTxt(c.at) + ' 내가 씀'}</div>` : '';
+    const by = mcWritten(c) ? `<div class="mc-by">${st === 'done' ? '원장님 확인 끝' : mcDateTxt(c.at) + ' 내가 씀'}</div>` : '';
     h += `<div class="mc-row ${mcPick===s.id?'on':''}" onclick="mcSelect('${s.id}')">` +
       mcGradeChip(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}</div>`;
   });

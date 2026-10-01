@@ -9511,7 +9511,7 @@ function mcStudents(){
 const MC_GRADES = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3','N수/기타'];
 function mcGradeIdx(g){ const i = MC_GRADES.indexOf(g); return i < 0 ? 99 : i; }
 function mcRec(sid){ return (mcData[mcKey()] || {})[sid] || null; }
-function mcState(sid){ const r = mcRec(sid); return (r && r.state) || 'none'; }
+function mcState(sid){ const r = mcRec(sid); return mcWritten(r) ? r.state : 'none'; }
 
 /* ---- 문장 만들기 ---- */
 function mcGivenName(full){
@@ -9669,7 +9669,7 @@ function mcSelect(sid){
   mcPick = sid; mcLoadDraft(sid);
   var r = mcRole(), rec = mcRec(sid);
   /* 선생님이 쓴 것을 원장님이 처음 열면 — 출결·성적을 붙여 다시 만든다 */
-  var fresh = r && r.kind === 'owner' && rec && rec.by !== MC_UID_OWNER && !rec.ownerAt;
+  var fresh = r && r.kind === 'owner' && mcByTeacher(rec) && !rec.ownerAt;
   if(!mcDraft.text || fresh) mcRemake();
   renderMonthly();
 }
@@ -9724,7 +9724,7 @@ function renderMonthly(){
       : st === 'sent' ? '<span class="mc-st wr">' + (r.kind==='owner' ? '확인 전' : '보냄') + '</span>'
       : st === 'draft' ? '<span class="mc-st dr">임시</span>'
       : '<span class="mc-st no">아직</span>';
-    const by = c ? `<div class="mc-by">${escapeHtml(c.byName || mcWhoName(c.by))} · ${mcDateTxt(c.at)}${c.ownerAt && st==='done' ? ' · 원장님 확인' : ''}</div>` : '';
+    const by = mcWritten(c) ? `<div class="mc-by">${escapeHtml(c.byName || mcWhoName(c.by))} · ${mcDateTxt(c.at)}${c.ownerAt && st==='done' ? ' · 원장님 확인' : ''}</div>` : '';
     h += `<div class="mc-row ${mcPick===s.id?'on':''}" onclick="mcSelect('${s.id}')">` +
       gradeBadge(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}</div>`;
   });
@@ -9732,6 +9732,13 @@ function renderMonthly(){
   document.getElementById('mcList').innerHTML = h;
   renderMonthlyPane();
 }
+
+/* 스위치만 껐다 켠 빈 기록은 「쓴 멘트」가 아니다 */
+function mcWritten(rec){
+  return !!(rec && rec.state && ((rec.picks && rec.picks.length) || (rec.text && rec.text.trim())));
+}
+function mcByTeacher(rec){ return mcWritten(rec) && rec.by && rec.by !== MC_UID_OWNER; }
+
 function mcDateTxt(ts){
   if(!ts) return '';
   const d = new Date(ts);
@@ -9750,8 +9757,8 @@ function renderMonthlyPane(){
   const locked = r.kind === 'teacher' && st === 'done';
 
   let note = '';
-  if(r.kind === 'owner' && rec && rec.by !== MC_UID_OWNER)
-    note = `<div class="mc-note">✍️ <b>${escapeHtml(rec.byName || '선생님')}</b>이 ${mcDateTxt(rec.at).replace('/','월 ')}일에 쓴 멘트입니다. 출결은 제가 붙여 두었습니다 — 보시고 고친 뒤 복사해 보내세요.</div>`;
+  if(r.kind === 'owner' && mcByTeacher(rec))
+    note = `<div class="mc-note">✍️ <b>${escapeHtml(rec.byName || '선생님')}</b>이 ${mcDateTxt(rec.at).replace('/','월 ')}일에 골라 둔 것입니다. 여기서 바로 고치시면 됩니다.</div>`;
   else if(r.kind === 'teacher' && locked)
     note = `<div class="mc-note ok">원장님이 확인을 끝낸 멘트입니다. 더 고칠 수 없습니다.</div>`;
   else if(r.kind === 'teacher')
@@ -9791,7 +9798,7 @@ function renderMonthlyPane(){
         `<button type="button" class="btn btn-primary" onclick="mcSave('done')">✓ 확인 끝냄</button>` +
         `<button type="button" class="btn btn-ghost" onclick="mcSave('sent')">저장만</button>` +
         `<button type="button" class="btn btn-ghost" style="color:var(--color-danger)" onclick="mcClear()">지우기</button>` +
-        `<span class="mc-lock">확인을 끝내면 선생님 화면에서 「원장님 확인 끝」으로 바뀝니다</span>`
+        `<span class="mc-lock">확인 끝냄 = 이 학생 끝. 「✓ 끝」으로 바뀝니다</span>`
       : `<button type="button" class="btn btn-primary" onclick="mcSave('sent')">원장님께 보내기</button>` +
         `<button type="button" class="btn btn-ghost" onclick="mcSave('draft')">임시 저장</button>` +
         `<button type="button" class="btn btn-ghost" onclick="mcRebuild()">다시 만들기</button>` +
@@ -9800,8 +9807,7 @@ function renderMonthlyPane(){
   pane.innerHTML = note +
     `<div class="mc-pane-h">${gradeBadge(stu.grade)}<span class="mc-pane-nm">${escapeHtml(stu.name)}</span>` +
       `<span class="mc-pane-sub">${escapeHtml(stu.school || '')}</span>` +
-      (r.kind === 'owner' && rec && rec.by !== MC_UID_OWNER
-        ? `<button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="mcSendBack()">선생님께 다시 보내기</button>` : '') +
+
     `</div>` + mcAutoHtml(stu, locked) + chips +
     `<div class="mc-sec"><div class="mc-sec-t">따로 적을 말 <span class="mc-opt">선택</span></div>` +
       `<textarea id="mcMemo" rows="2" ${locked?'disabled':''} placeholder="이 학생만의 이야기를 한 줄 적어 주세요" ` +
