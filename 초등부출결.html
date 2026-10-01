@@ -1259,7 +1259,9 @@ const MC_CHIPS_MID = {
    한 달 멘트 (초등부 선생님용) — 원장님 프로그램과 같은 자료를 씁니다
 ========================================================= */
 const MC_UID_OWNER = 'bzMJzZzEjyNvPx3PgnqirbtI5Y13';
-let mcY = new Date().getFullYear(), mcM = new Date().getMonth() + 1;
+/* 멘트는 다음 달에 보내므로 들어오면 지난달이 열린다 */
+let mcY = new Date().getFullYear(), mcM = new Date().getMonth();
+if(mcM < 1){ mcM = 12; mcY--; }
 let mcFilter = 'all', mcPick = null;
 let mcData = {}, mcChips = {}, mcDraft = null, mcOpenCat = {};
 let mcTab = 'att';

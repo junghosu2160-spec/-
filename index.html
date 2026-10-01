@@ -9463,7 +9463,9 @@ function mcWhoName(uid){
   return (t && t.name) || '선생님';
 }
 
-let mcY = new Date().getFullYear(), mcM = new Date().getMonth() + 1;
+/* 멘트는 다음 달에 보내므로 들어오면 지난달이 열린다 */
+let mcY = new Date().getFullYear(), mcM = new Date().getMonth();
+if(mcM < 1){ mcM = 12; mcY--; }
 let mcCat = '전체';            // 전체 | 초등 | 중등 | 고등
 let mcFilter = 'all';          // all | todo | teacher
 let mcPick = null;             // 고른 학생 id
@@ -10006,6 +10008,12 @@ function mcAutoHtml(stu, locked){
   var a = mcAttStat(sid), sc = mcScoreStat(sid);
   var offA = rec.noAtt === true, offS = rec.noScore === true;
   var h = '';
+  if(!a.any){
+    h += '<div class="mc-auto" style="border-color:#fde68a;background:#fffbeb">' +
+      '<div class="mc-auto-h" style="color:#92400e">📋 ' + mcM + '월 출결 기록이 없습니다</div>' +
+      '<div class="hint">그 달에 찍힌 출결이 없어서 출석 문장이 들어가지 않습니다. ' +
+      '위쪽 <b>‹</b> 를 눌러 지난달로 가 보세요.</div></div>';
+  }
   if(a.any){
     var manual = stu.monthBase !== undefined && stu.monthBase !== null && stu.monthBase !== '';
     h += '<div class="mc-auto"><div class="mc-auto-h">📋 ' + mcMon() + ' 출결 <span class="auto">저절로 불러옴</span></div>' +
