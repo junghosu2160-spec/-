@@ -1311,36 +1311,100 @@ function mcSubject(name){
   const jong = (code >= 0xAC00 && code <= 0xD7A3) ? ((code-0xAC00)%28) !== 0 : false;
   return n + (jong ? '이는' : '는');
 }
-function mcWeave(list, head){
-  const out = []; let buf = [];
-  list.forEach((x,i) => {
-    const last = i === list.length-1;
-    if(!last && x.j && buf.length < 1){ buf.push(x.j); return; }
-    let sent = x.s;
-    if(buf.length){ sent = buf.join(', ') + ', ' + sent; buf = []; }
-    out.push(sent);
+/* ---- 같은 얘기 솎아내기 · 분류끼리 묶기 ---- */
+const MC_LIVE_CATS = ['태도','이해','숙제','시험','태세','친구','가정'];
+const MC_CAT_ORDER = ['태도','이해','숙제','시험','태세','친구','가정'];
+const MC_DUP_KEYS = [
+  ['계산 실수로','실수로 점수를 잃','아는 문제를 시험에서 놓칠','아는 문제를 실수로 놓쳤'],
+  ['암산으로만 풀어서','과정을 덜 씁'],
+  ['끝까지 읽지 않고','조건을 하나씩 놓칠'],
+  ['도형 단원을 조금 어려워','도형 증명에서 막힙'],
+  ['숙제를 가끔 빠뜨리고','숙제를 거르는 날','숙제를 절반만','숙제를 일부만','숙제가 있었는지 잊고'],
+  ['채점만 하고'],
+  ['급하게 해 온 티','급하게 한 티'],
+  ['함수·그래프 단원을 어려워'],
+  ['시간 계산을 아직 어려워'],
+  ['답에 단위를 자주 빠뜨'],
+  ['핸드폰에 손이','핸드폰을 자주 봅'],
+  ['피곤해서 졸 때','늦게 자서 수업 때 피곤'],
+  ['뒤쪽 문제를 시간이 모자라','뒤쪽 문제를 못 풀고'],
+  ['시험지만 받으면 조금 긴장','평소 실력만큼 못 내는'],
+  ['옆 친구와 장난치는','친한 친구 옆이면 이야기가 길어','옆자리와 이야기가 길어','이야기가 길어져 옆 친구가'],
+  ['뒤쪽 시간에 집중이 흐트러','앉아 있는 시간이 아직 짧은','다른 생각에 빠져'],
+  ['모르는 것을 그냥 넘기는','물어보기를 부끄러워'],
+  ['시키지 않아도 스스로 앉아','스스로 하는 힘이 붙었','시키지 않아도 다음 진도를','혼자 힘으로 풀어 온 티'],
+  ['기복 없이 꾸준한 점수','기복 없이 꾸준히 합'],
+  ['전보다 실수가 눈에 띄게 줄었','아는 문제를 놓치는 일이 줄었'],
+  ['틀린 문제를 그냥 넘기지 않','틀린 문제를 다시 풀어서 가져','틀린 문제를 스스로 고쳐 옵','틀린 문제를 집에서 다시 풀어'],
+  ['계산이 꼼꼼하고 정확','계산이 빠르면서도 정확','머릿속 계산이 빠릅'],
+  ['수업 시간에 집중을 참 잘','수업 내내 흐트러짐 없이','앉아서 집중하는 시간이'],
+  ['지난번보다 점수가 올랐','지난 시험보다 점수가 올랐','등급이 한 단계 올랐','목표한 점수에 도달'],
+  ['모르는 것이 있으면 바로바로 물어','막히면 바로 손을 듭','막히는 지점을 정확히 짚어'],
+  ['숙제를 한 번도 빠뜨리지 않','숙제를 한 번도 거르지 않','숙제를 늘 제 날짜에','숙제 기한을 정확히'],
+  ['시킨 것보다 더 풀어','정해준 것보다 더 풀어'],
+  ['모르는 문제에 표시해'],
+  ['집에서도 꾸준히 봐 주시는','집에서 챙겨 주시는 것이'],
+  ['궁금한 것을 적어 보내','궁금한 점을 보내 주셔서']
+];
+function mcSameTopic(a, b){
+  if(a === b) return true;
+  for(var i = 0; i < MC_DUP_KEYS.length; i++){
+    var g = MC_DUP_KEYS[i], ha = false, hb = false;
+    for(var k = 0; k < g.length; k++){
+      if(a.indexOf(g[k]) >= 0) ha = true;
+      if(b.indexOf(g[k]) >= 0) hb = true;
+    }
+    if(ha && hb) return true;
+  }
+  return false;
+}
+function mcTrim(list){
+  var out = [];
+  (list || []).forEach(function(x){
+    var s = String((x && x.s) || '').trim();
+    if(!s) return;
+    for(var i = 0; i < out.length; i++){ if(mcSameTopic(String(out[i].s), s)) return; }
+    out.push(x);
   });
-  if(buf.length) out.push(buf.join(', ').replace(/고$/,'습니다').replace(/아$/,'습니다'));
-  const fin = out.map(t => /[.!?]$/.test(t) ? t : t + '.');
+  return out;
+}
+function mcJoinForm(x){
+  if(x.j) return x.j;
+  return String(x.s).replace(/합니다$/, '하고').replace(/습니다$/, '고').replace(/있습니다$/, '있고');
+}
+function mcWeave(list, head){
+  var live = mcTrim((list || []).filter(function(x){ return x && MC_LIVE_CATS.indexOf(x.c) >= 0; }));
+  var by = {};
+  live.forEach(function(x){ (by[x.c] = by[x.c] || []).push(x); });
+  var sents = [];
+  MC_CAT_ORDER.forEach(function(c){
+    var g = by[c]; if(!g || !g.length) return;
+    for(var p = 0; p < g.length; p += 2){
+      var use = g.slice(p, p + 2);
+      if(use.length === 1){ sents.push(String(use[0].s)); continue; }
+      sents.push(mcJoinForm(use[0]) + ', ' + String(use[1].s));
+    }
+  });
+  var fin = sents.map(function(t){ return /[.!?]$/.test(t) ? t : t + '.'; });
   if(head && fin.length) fin[0] = head + ' ' + fin[0];
   return fin;
 }
 function mcMake(stu, picks, memo){
   const good = picks.filter(p => p.t === 'g'), bad = picks.filter(p => p.t === 'b');
   const sub = mcSubject(stu.name);
+  const g = mcWeave(good), b = mcWeave(bad);
   let parts = [];
-  if(good.length){
-    const g = mcWeave(good);
+  if(g.length){
     g[0] = (/이번 달|이달|한 달/.test(g[0]) ? sub : sub + ' 이번 달') + ' ' + g[0];
     parts = parts.concat(g);
-  } else if(bad.length) parts.push(sub + ' 이번 달 수업을 이렇게 지냈습니다.');
+  } else if(b.length) parts.push(sub + ' 이번 달 수업을 이렇게 지냈습니다.');
   if(memo && memo.trim()) parts.push(memo.trim().replace(/[.]*$/,'.'));
   /* 출결·성적은 원장님 관리 페이지에서 붙습니다 */
-  if(bad.length){
-    const b = mcWeave(bad); b[0] = '다만 ' + b[0];
+  if(b.length){
+    b[0] = '다만 ' + b[0];
     parts = parts.concat(b);
     parts.push('그 부분만 저희가 한 번씩 더 짚어 주고 있으니 너무 걱정하지 않으셔도 됩니다.');
-  } else if(good.length) parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
+  } else if(g.length) parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
   return mcMonthize(parts.join(' '));
 }
 
