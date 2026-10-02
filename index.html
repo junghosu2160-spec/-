@@ -10043,10 +10043,11 @@ function mcAttLineNum(sid){
 function mcLeadLines(stu){
   var rec = mcRec(stu.id) || {}, base = mcBaseOf(stu.id), wk = mcWeekCnt(stu);
   var lead = ['안녕하세요. ' + mcBillMonth() + '월 수업료 청구드립니다.'];
-  var notice = mcNoticeOf();
-  if(notice) lead.push(notice.replace(/[.]*$/, '.'));
   lead.push((wk ? '주' + wk + '회 ' : '') + '총 ' + base + '회 수업료입니다.');
   if(rec.noAtt !== true){ var al = mcAttLineNum(stu.id); if(al) lead.push(al); }
+  /* 모두에게 보낼 안내는 출석 뒤에 */
+  var notice = mcNoticeOf();
+  if(notice) lead.push(notice.replace(/[.]*$/, '.'));
   return lead;
 }
 
