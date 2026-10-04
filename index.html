@@ -891,6 +891,10 @@
   .mc-nm{font-size:13px;font-weight:700;min-width:0;}
   .mc-by{font-size:10.5px;color:var(--color-text-muted);font-weight:600;margin-top:1px;}
   .mc-st{margin-left:auto;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .mc-cp{flex:0 0 auto;border:1px solid var(--color-border);background:var(--color-surface);border-radius:7px;
+    padding:4px 9px;font-size:10.5px;font-weight:700;color:var(--color-text);cursor:pointer;white-space:nowrap;}
+  .mc-cp:hover{background:var(--color-primary-soft);border-color:var(--color-accent-dark);}
+  .mc-cp.done{background:var(--color-success-soft);border-color:#b6e3cb;color:var(--color-success);}
   .mc-st.no{background:var(--color-neutral-soft);color:var(--color-text-muted);}
   .mc-st.dr{background:var(--color-neutral-soft);color:var(--color-text);}
   .mc-st.wr{background:var(--color-warning-soft);color:var(--color-warning);}
@@ -1043,7 +1047,7 @@
     </nav>
     <div class="sidebar-footer">
       <span id="deltaWho"></span> · <a href="#" onclick="deltaLogout();return false" style="color:inherit">로그아웃</a>
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-02 (v) · 한 달 멘트</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (v) · 한 달 멘트</div>
     </div>
   </aside>
 
@@ -9717,6 +9721,16 @@ function mcCopy(){
   navigator.clipboard.writeText(t).then(()=> showToast('복사했습니다. 카카오톡에 붙여넣으세요.'))
     .catch(()=> showToast('복사에 실패했습니다.'));
 }
+/* 명단에서 바로 복사 — 학생을 열지 않아도 됩니다 */
+function mcCopyRow(ev, sid){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  var rec = mcRec(sid) || {}, t = String(rec.text || '').trim();
+  var stu = mcFindStu(sid), nm = stu ? stu.name : '';
+  if(!t){ showToast('아직 만들어진 멘트가 없습니다. 학생을 눌러 확인해 주세요.'); return; }
+  navigator.clipboard.writeText(t)
+    .then(function(){ showToast(nm + ' 멘트를 복사했습니다. 결제선생에 붙여넣으세요.'); })
+    .catch(function(){ showToast('복사에 실패했습니다.'); });
+}
 /* 내 멘트 추가 */
 function mcAddChip(c, t){
   const stu = studentById(mcPick); if(!stu) return;
@@ -9799,13 +9813,16 @@ function renderMonthly(){
   /* 명단 */
   const todo = all.filter(s => mcState(s.id) === 'none' || mcState(s.id) === 'draft');
   const fromT = all.filter(s => { const c = mcRec(s.id); return c && c.by !== MC_UID_OWNER && c.state === 'sent'; });
+  const done = all.filter(s => mcState(s.id) === 'done');
   let list = all;
   if(mcFilter === 'todo') list = todo;
   if(mcFilter === 'teacher') list = fromT;
+  if(mcFilter === 'done') list = done;
 
   const fbtn = (k, label) => `<button type="button" class="btn btn-sm ${mcFilter===k?'btn-primary':'btn-ghost'}" onclick="mcSetFilter('${k}')">${label}</button>`;
   let h = `<div class="mc-filters">${fbtn('all','전체 '+all.length)}${fbtn('todo','아직 '+todo.length)}` +
-          (r.kind === 'owner' ? fbtn('teacher','선생님이 쓴 것 '+fromT.length) : '') + `</div><div class="mc-list">`;
+          (r.kind === 'owner' ? fbtn('teacher','선생님이 쓴 것 '+fromT.length) : '') +
+          fbtn('done','✓ 끝 '+done.length) + `</div><div class="mc-list">`;
   if(!list.length) h += '<div class="mc-empty">해당하는 학생이 없습니다.</div>';
   list.forEach(s => {
     const c = mcRec(s.id), st = mcState(s.id);
@@ -9814,8 +9831,10 @@ function renderMonthly(){
       : st === 'draft' ? '<span class="mc-st dr">임시</span>'
       : '<span class="mc-st no">아직</span>';
     const by = mcWritten(c) ? `<div class="mc-by">${escapeHtml(c.byName || mcWhoName(c.by))} · ${mcDateTxt(c.at)}${c.ownerAt && st==='done' ? ' · 원장님 확인' : ''}</div>` : '';
+    const cp = (r.kind === 'owner' && mcWritten(c) && c.text && c.text.trim())
+      ? `<button type="button" class="mc-cp ${st==='done'?'done':''}" onclick="mcCopyRow(event,'${s.id}')">\uD83D\uDCCB 복사</button>` : '';
     h += `<div class="mc-row ${mcPick===s.id?'on':''}" onclick="mcSelect('${s.id}')">` +
-      gradeBadge(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}</div>`;
+      gradeBadge(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}${cp}</div>`;
   });
   h += '</div>';
   document.getElementById('mcList').innerHTML = h;
