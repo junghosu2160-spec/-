@@ -1550,7 +1550,16 @@ function renderMc(){
     h += `<div class="mc-row ${mcPick===s.id?'on':''}" onclick="mcSelect('${s.id}')">` +
       mcGradeChip(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}</div>`;
   });
-  document.getElementById('mcList').innerHTML = h + '</div>';
+  /* 다시 그려도 보던 자리를 지킨다 — 결제·저장을 눌러도 명단이 위로 튀지 않게 */
+  const _box = document.getElementById('mcList');
+  const _was = _box.querySelector('.mc-list');
+  const _top = _was ? _was.scrollTop : 0;
+  const _win = window.scrollY;
+  _box.innerHTML = h + '</div>';
+  const _now = _box.querySelector('.mc-list');
+  if(_now && _top) _now.scrollTop = _top;
+  if(_win) window.scrollTo(0, _win);
+
   renderMcPane();
 }
 

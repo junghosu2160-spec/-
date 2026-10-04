@@ -882,8 +882,13 @@
   .mc-bar{height:7px;border-radius:99px;background:var(--color-neutral-soft);overflow:hidden;flex:1;min-width:90px;}
   .mc-bar i{display:block;height:100%;background:var(--color-success);transition:width .25s;}
   .mc-split{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:14px;align-items:start;}
-  .mc-grade{border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;
-    padding:5px 10px;font-size:12px;font-weight:700;color:var(--color-text);cursor:pointer;}
+  .mc-gr{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;
+    margin-top:2px;padding-top:10px;border-top:1px solid var(--color-border);}
+  .mc-g{font:inherit;font-size:12.5px;font-weight:800;border:1.5px solid transparent;
+    border-radius:999px;padding:5px 13px;cursor:pointer;line-height:1.3;}
+  .mc-g i{font-style:normal;font-weight:700;opacity:.72;margin-left:4px;}
+  .mc-g.all{background:var(--color-surface);border-color:var(--color-border);color:var(--color-text-muted);}
+  .mc-g.on{outline:2.5px solid var(--color-text);outline-offset:1px;}
   .mc-filters{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
   .mc-list{max-height:620px;overflow:auto;border:1px solid var(--color-border);border-radius:12px;}
   .mc-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--color-border);cursor:pointer;}
@@ -1049,7 +1054,7 @@
     </nav>
     <div class="sidebar-footer">
       <span id="deltaWho"></span> · <a href="#" onclick="deltaLogout();return false" style="color:inherit">로그아웃</a>
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (2) · 한 달 멘트</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (3) · 한 달 멘트</div>
     </div>
   </aside>
 
@@ -9856,9 +9861,13 @@ function renderMonthly(){
   mcSeedChips(); mcSyncChips();
 
   const pool = mcStudents();
-  const gOpts = MC_GRADES.filter(g => pool.some(s => s.grade === g));
+  /* 초등은 학년을 나누지 않고 한 묶음, 중·고등은 학년별로 */
+  const gKeyOf = x => gradeCategoryOf(x.grade) === '초등' ? '초등' : x.grade;
+  let gOpts = ['초등'].concat(MC_GRADES.filter(g => gradeCategoryOf(g) !== '초등'))
+                      .filter(g => pool.some(x => gKeyOf(x) === g));
+  if(gOpts.length < 2) gOpts = [];                     /* 한 종류뿐이면 칩이 필요 없다 */
   if(mcGrade !== '전체' && gOpts.indexOf(mcGrade) < 0) mcGrade = '전체';
-  const all = mcGrade === '전체' ? pool : pool.filter(s => s.grade === mcGrade);
+  const all = mcGrade === '전체' ? pool : pool.filter(x => gKeyOf(x) === mcGrade);
   const wrote = all.filter(s => mcState(s.id) !== 'none').length;
   const pct = all.length ? Math.round(wrote / all.length * 100) : 0;
 
@@ -9880,10 +9889,14 @@ function renderMonthly(){
     `<span class="mc-mon">${mcY}년 ${mcM}월</span>` +
     `<button type="button" class="btn btn-ghost btn-sm" onclick="mcGoMonth(1)">›</button>` +
     `<span class="mc-seg">${catBtns}</span>` +
-    `<select class="mc-grade" onchange="mcSetGrade(this.value)">` +
-      `<option value="전체"${mcGrade==='전체'?' selected':''}>학년 전체 ${pool.length}</option>` +
-      gOpts.map(g => `<option value="${g}"${mcGrade===g?' selected':''}>${g} ${pool.filter(x=>x.grade===g).length}</option>`).join('') +
-    `</select>` +
+    (gOpts.length ? `<span class="mc-gr">` +
+      `<button type="button" class="mc-g all ${mcGrade==='전체'?'on':''}" onclick="mcSetGrade('전체')">학년 전체 ${pool.length}</button>` +
+      gOpts.map(g => {
+        const c = g === '초등' ? { bg:'#A3E5C0', text:'#145C3D' } : (GRADE_COLORS[g] || { bg:'#ECECEC', text:'#666666' });
+        const n = pool.filter(x => gKeyOf(x) === g).length;
+        return `<button type="button" class="mc-g ${mcGrade===g?'on':''}" style="background:${c.bg};color:${c.text};" ` +
+               `onclick="mcSetGrade('${g}')">${escapeHtml(g)}<i>${n}</i></button>`;
+      }).join('') + `</span>` : '') +
     `<span class="mc-prog"><span class="mc-prog-t">작성 <b>${wrote}</b> / ${all.length}</span>` +
       `<span class="mc-bar"><i style="width:${pct}%"></i></span></span>`;
 
@@ -9914,7 +9927,16 @@ function renderMonthly(){
       gradeBadge(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}${cp}</div>`;
   });
   h += '</div>';
-  document.getElementById('mcList').innerHTML = h;
+  /* 다시 그려도 보던 자리를 지킨다 — 결제·저장을 눌러도 명단이 위로 튀지 않게 */
+  const _box = document.getElementById('mcList');
+  const _was = _box.querySelector('.mc-list');
+  const _top = _was ? _was.scrollTop : 0;
+  const _win = window.scrollY;
+  _box.innerHTML = h;
+  const _now = _box.querySelector('.mc-list');
+  if(_now && _top) _now.scrollTop = _top;
+  if(_win) window.scrollTo(0, _win);
+
   renderMonthlyPane();
 }
 
