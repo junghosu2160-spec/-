@@ -942,6 +942,7 @@
   .mc-sec{margin-top:13px;}
   .mc-sec-t{font-size:12px;font-weight:800;color:var(--color-text-muted);margin-bottom:6px;}
   .mc-opt{font-size:10px;background:var(--color-neutral-soft);color:var(--color-text-muted);border-radius:99px;padding:1px 7px;margin-left:5px;}
+  #mcHandTag.hand{background:var(--color-warning-soft);color:var(--color-warning);font-weight:800;}
   #view-monthly textarea{width:100%;font:inherit;font-size:13.5px;line-height:1.8;border:1px solid var(--color-border);
     border-radius:10px;padding:10px;resize:vertical;background:var(--color-surface);color:var(--color-text);box-sizing:border-box;}
   .mc-foot{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;align-items:center;}
@@ -1061,7 +1062,7 @@
     </nav>
     <div class="sidebar-footer">
       <span id="deltaWho"></span> · <a href="#" onclick="deltaLogout();return false" style="color:inherit">로그아웃</a>
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (7) · 한 달 멘트</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (9) · 한 달 멘트</div>
     </div>
   </aside>
 
@@ -9502,7 +9503,7 @@ function mcWhoName(uid){
 let mcY = new Date().getFullYear(), mcM = new Date().getMonth();
 if(mcM < 1){ mcM = 12; mcY--; }
 let mcCat = '전체';            // 전체 | 초등 | 중등 | 고등
-let mcFilter = 'all';          // all | todo | teacher | done
+let mcFilter = 'all';          // all | todo | done
 let mcGrade = '전체';          // 학년 고르개
 let mcPick = null;             // 고른 학생 id
 let mcData = {};               // monthComments/{YYYY-MM}
@@ -9749,28 +9750,32 @@ function mcHeadOf(sub, first){
 }
 function mcMake(stu, picks, memo){
   const good = picks.filter(p => p.t === 'g');
-  const bad  = picks.filter(p => p.t === 'b');
+  const bad  = picks.filter(p => p.t === 'b' && mcCatKey(p.c) !== '가정');
+  const home = picks.filter(p => p.t === 'b' && mcCatKey(p.c) === '가정');
   const sub  = mcSubject(stu.name);
   const g = mcWeave(good);
   const b = mcWeave(bad);
+  const hm = mcWeave(home);
   let parts = [];
   if(g.length){
     g[0] = mcHeadOf(sub, g[0]) + ' ' + g[0];
     parts = parts.concat(g);
   }
-  else if(b.length) parts.push(sub + ' 이렇게 지냈습니다.');
   if(memo && memo.trim()) parts.push(memo.trim().replace(/[.]*$/,'.'));
   /* 저절로 불러온 출결·성적 */
   var _rec = mcRec(stu.id) || {};
   /* 출결은 맨 앞 청구 머리말에 들어갑니다 */
   if(_rec.noScore !== true){ var _s = mcScoreLine(stu.id); if(_s) parts.push(_s); }
   if(b.length){
-    b[0] = '다만 ' + b[0];
+    /* 앞에 좋은 말이 있을 때만 「다만」을 붙입니다 */
+    b[0] = (g.length ? '다만 ' : sub + ' ') + b[0];
     parts = parts.concat(b);
     parts.push('조금 더 꼼꼼히 풀 수 있게 한 번씩 더 짚어 주고 있으니 너무 걱정하지 않으셔도 됩니다.');
   }else if(g.length){
     parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
   }
+  /* 가정에서 도와주실 것은 맨 뒤에 */
+  if(hm.length) parts = parts.concat(hm);
   var outro = mcOutroOf();
   if(outro) parts.push(outro);
   return mcMonthize(mcLeadLines(stu).concat(parts).join(' '));
@@ -9798,6 +9803,7 @@ function mcToggle(c, t, i){
     if(!row) return;
     mcDraft.picks.push({ c, t, i, s: row[1], j: row[2] || '' });
   }
+  if(mcDraft.hand) showToast('손으로 고친 멘트라 그대로 둡니다 — 새로 만들려면 「다시 만들기」를 눌러 주세요.');
   mcRemake();
   renderMonthlyPane();
 }
@@ -9811,7 +9817,10 @@ function mcRemake(force){
 }
 function renderMcHandTag(){
   var el = document.getElementById('mcHandTag');
-  if(el) el.textContent = mcDraft && mcDraft.hand ? '손으로 고침 · 그대로 둡니다' : '고칠 수 있음';
+  if(!el) return;
+  var on = !!(mcDraft && mcDraft.hand);
+  el.textContent = on ? '손으로 고침 · 칩을 눌러도 안 바뀝니다' : '고칠 수 있음';
+  el.classList.toggle('hand', on);
 }
 function mcRebuild(){ mcDraft.hand = false; mcRemake(true); renderMonthlyPane(); showToast('문장을 다시 만들었습니다.'); }
 
@@ -9957,17 +9966,15 @@ function renderMonthly(){
       `<span class="mc-bar"><i style="width:${pct}%"></i></span></span>`;
 
   /* 명단 */
-  const todo = all.filter(s => mcState(s.id) === 'none' || mcState(s.id) === 'draft');
-  const fromT = all.filter(s => { const c = mcRec(s.id); return c && c.by !== MC_UID_OWNER && c.state === 'sent'; });
+  /* 끝낸 것 말고는 모두 「아직」 — 전체 = 아직 + 끝 이 되게 */
   const done = all.filter(s => mcState(s.id) === 'done');
+  const todo = all.filter(s => mcState(s.id) !== 'done');
   let list = all;
   if(mcFilter === 'todo') list = todo;
-  if(mcFilter === 'teacher') list = fromT;
   if(mcFilter === 'done') list = done;
 
   const fbtn = (k, label) => `<button type="button" class="btn btn-sm ${mcFilter===k?'btn-primary':'btn-ghost'}" onclick="mcSetFilter('${k}')">${label}</button>`;
   let h = `<div class="mc-filters">${fbtn('all','전체 '+all.length)}${fbtn('todo','아직 '+todo.length)}` +
-          (r.kind === 'owner' ? fbtn('teacher','선생님이 쓴 것 '+fromT.length) : '') +
           fbtn('done','✓ 끝 '+done.length) + `</div><div class="mc-list">`;
   if(!list.length) h += '<div class="mc-empty">해당하는 학생이 없습니다.</div>';
   list.forEach(s => {
@@ -10110,7 +10117,7 @@ function renderMonthlyPane(){
     `<div class="mc-sec"><div class="mc-sec-t">따로 적을 말 <span class="mc-opt">선택</span></div>` +
       `<textarea id="mcMemo" rows="2" ${locked?'disabled':''} placeholder="이 학생만의 이야기를 한 줄 적어 주세요" ` +
       `oninput="mcMemoChange(this.value)">${escapeHtml(mcDraft.memo)}</textarea></div>` +
-    `<div class="mc-sec"><div class="mc-sec-t">만들어진 멘트 <span class="mc-opt" id="mcHandTag">${mcDraft.hand ? '손으로 고침 · 그대로 둡니다' : '고칠 수 있음'}</span></div>` +
+    `<div class="mc-sec"><div class="mc-sec-t">만들어진 멘트 <span class="mc-opt${mcDraft.hand ? ' hand' : ''}" id="mcHandTag">${mcDraft.hand ? '손으로 고침 · 칩을 눌러도 안 바뀝니다' : '고칠 수 있음'}</span></div>` +
       `<textarea id="mcOut" rows="6" ${locked?'disabled':''} oninput="mcTextChange(this.value)">${escapeHtml(mcDraft.text)}</textarea>` +
       `<div class="mc-foot">${foot}</div></div>`;
 }
