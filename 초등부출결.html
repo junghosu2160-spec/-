@@ -1375,6 +1375,12 @@ function mcTrim(list){
   });
   return out;
 }
+/* 학생 이야기가 아니라 「안내」인 칩 — 머리말 쪽에 들어갑니다 */
+const MC_LEAD_CHIPS = ['시험대비 보강이 진행중'];
+function mcIsLeadChip(p){
+  var s = String((p && p.s) || '');
+  return MC_LEAD_CHIPS.some(function(k){ return s.indexOf(k) >= 0; });
+}
 /* 분류마다 앞에 붙는 이음말 — 문장이 뚝뚝 끊기지 않게 [잘한 점, 더 봐줄 점] */
 const MC_BRIDGE = { 시험:['시험에서도','시험에서는'], 가정:['집에서는','집에서는'] };
 function mcWeave(list, head){
@@ -1392,7 +1398,13 @@ function mcWeave(list, head){
         var li = -1;
         for(var i = 0; i < q.length; i++){ if(q[i].j){ li = i; break; } }
         if(li < 0){ s = String(q.shift().s); }                 /* 이어쓸 말이 없으면 따로 한 문장 */
-        else { var lead = q.splice(li,1)[0], tail = q.shift(); s = lead.j + ', ' + String(tail.s); }
+        else {
+          var lead = q.splice(li,1)[0], tail = q.shift();
+          var j = lead.j;
+          /* 더 봐줄 점을 이을 때는 「~있거나」로 — 「~날이 있어, …」보다 자연스럽습니다 */
+          if(tone === 1) j = j.replace(/있(어|고)$/, '있거나');
+          s = j + ', ' + String(tail.s);
+        }
       }
       var br = MC_BRIDGE[c];
       if(br && !first && firstOfCat){
@@ -1423,6 +1435,13 @@ function mcPolite(raw){
   return { s: head + String.fromCharCode(b + 17) + '니다', j: head + bare + '고' };
 }
 function mcMake(stu, picks, memo){
+  const _said = String(memo || '');
+  picks = (picks || []).filter(function(p){
+    var s = String(p.s || '').replace(/[.]*$/, '').trim();
+    return !(s && _said.indexOf(s) >= 0);
+  });
+  const lead2 = picks.filter(mcIsLeadChip).map(p => String(p.s).replace(/[.]*$/, '.'));
+  picks = picks.filter(p => !mcIsLeadChip(p));
   const good = picks.filter(p => p.t === 'g');
   const bad  = picks.filter(p => p.t === 'b' && mcCatKey(p.c) !== '가정');
   const home = picks.filter(p => p.t === 'b' && mcCatKey(p.c) === '가정');
@@ -1441,7 +1460,7 @@ function mcMake(stu, picks, memo){
     parts.push('조금 더 꼼꼼히 풀 수 있게 한 번씩 더 짚어 주고 있으니 너무 걱정하지 않으셔도 됩니다.');
   } else if(g.length) parts.push('다음 달에도 지금처럼만 해 주면 좋겠습니다.');
   if(hm.length) parts = parts.concat(hm);
-  return mcMonthize(parts.join(' '));
+  return mcMonthize(lead2.concat(parts).join(' '));
 }
 
 /* ---- 편집 ---- */
@@ -1453,13 +1472,30 @@ function mcHas(c,t,i){ return mcDraft.picks.some(p => p.c===c && p.t===t && p.i=
 function mcToggle(c,t,i){
   const stu = mcStu(); if(!stu) return;
   const k = mcDraft.picks.findIndex(p => p.c===c && p.t===t && p.i===i);
-  if(k >= 0) mcDraft.picks.splice(k,1);
+  let added = null, removed = null;
+  if(k >= 0){ removed = mcDraft.picks[k]; mcDraft.picks.splice(k,1); }
   else {
     const row = ((mcSet()[c]||{})[t]||[])[i]; if(!row) return;
-    mcDraft.picks.push({ c, t, i, s: row[1], j: row[2] || '' });
+    added = { c, t, i, s: row[1], j: row[2] || '' };
+    mcDraft.picks.push(added);
   }
-  if(mcDraft.hand) mcToast('손으로 고친 멘트라 그대로 둡니다 — 「다시 만들기」를 눌러 주세요.');
-  mcRemake(); renderMcPane();
+  if(mcDraft.hand) mcHandPatch(added, removed);
+  else mcRemake();
+  renderMcPane();
+}
+function mcEsc(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function mcHandPatch(added, removed){
+  var txt = String(mcDraft.text || '');
+  if(removed){
+    var re = new RegExp('\\s*' + mcEsc(String(removed.s||'').replace(/[.]*$/, '')) + '[.]?', '');
+    if(re.test(txt)){ txt = txt.replace(re, ''); mcToast('멘트에서 뺐습니다.'); }
+    else mcToast('그 문장은 멘트에 없어 그대로 두었습니다.');
+  }
+  if(added){
+    txt = txt.replace(/\s*$/, '') + ' ' + String(added.s||'').replace(/[.]*$/, '') + '.';
+    mcToast('멘트에 더했습니다.');
+  }
+  mcDraft.text = txt.replace(/\s{2,}/g, ' ').trim();
 }
 function mcStu(){ return students.find(s => s.id === mcPick); }
 function mcRemake(force){ const s = mcStu(); if(s && !(mcDraft.hand && !force)) mcDraft.text = mcMake(s, mcDraft.picks, mcDraft.memo); }
@@ -1630,7 +1666,7 @@ function renderMcPane(){
     `<div class="mc-sec"><div class="mc-sec-t">따로 적을 말 <span class="mc-opt">선택</span></div>` +
       `<textarea id="mcMemo" ${locked?'disabled':''} placeholder="원장님께만 전할 말도 여기에 적어 주세요" ` +
       `oninput="mcMemoChange(this.value)">${escapeHtml(mcDraft.memo)}</textarea></div>` +
-    `<div class="mc-sec"><div class="mc-sec-t">만들어진 멘트 <span class="mc-opt" id="mcHandTag">${mcDraft.hand ? '손으로 고침 · 칩을 눌러도 안 바뀝니다' : '여기서 바로 고치세요'}</span></div>` +
+    `<div class="mc-sec"><div class="mc-sec-t">만들어진 멘트 <span class="mc-opt" id="mcHandTag">${mcDraft.hand ? '손으로 고침 · 칩은 끝에 더해집니다' : '여기서 바로 고치세요'}</span></div>` +
       `<textarea id="mcOut" class="mc-big" ${locked?'disabled':''} oninput="mcTextChange(this.value)">${escapeHtml(mcDraft.text)}</textarea>` +
       `<div class="mc-foot">${foot}</div></div>`;
 }
