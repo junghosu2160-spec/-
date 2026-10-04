@@ -882,6 +882,8 @@
   .mc-bar{height:7px;border-radius:99px;background:var(--color-neutral-soft);overflow:hidden;flex:1;min-width:90px;}
   .mc-bar i{display:block;height:100%;background:var(--color-success);transition:width .25s;}
   .mc-split{display:grid;grid-template-columns:minmax(0,290px) minmax(0,1fr);gap:14px;align-items:start;}
+  .mc-grade{border:1px solid var(--color-border);background:var(--color-surface);border-radius:999px;
+    padding:5px 10px;font-size:12px;font-weight:700;color:var(--color-text);cursor:pointer;}
   .mc-filters{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;}
   .mc-list{max-height:620px;overflow:auto;border:1px solid var(--color-border);border-radius:12px;}
   .mc-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--color-border);cursor:pointer;}
@@ -894,7 +896,7 @@
   .mc-cp{flex:0 0 auto;border:1px solid var(--color-border);background:var(--color-surface);border-radius:7px;
     padding:4px 9px;font-size:10.5px;font-weight:700;color:var(--color-text);cursor:pointer;white-space:nowrap;}
   .mc-cp:hover{background:var(--color-primary-soft);border-color:var(--color-accent-dark);}
-  .mc-cp.done{background:var(--color-success-soft);border-color:#b6e3cb;color:var(--color-success);}
+  .mc-cp.paid{background:var(--color-success);border-color:var(--color-success);color:#fff;}
   .mc-st.no{background:var(--color-neutral-soft);color:var(--color-text-muted);}
   .mc-st.dr{background:var(--color-neutral-soft);color:var(--color-text);}
   .mc-st.wr{background:var(--color-warning-soft);color:var(--color-warning);}
@@ -1047,7 +1049,7 @@
     </nav>
     <div class="sidebar-footer">
       <span id="deltaWho"></span> · <a href="#" onclick="deltaLogout();return false" style="color:inherit">로그아웃</a>
-      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (v) · 한 달 멘트</div>
+      <div id="appVersionTag" style="margin-top:8px;font-size:10.5px;opacity:.75;letter-spacing:.2px;">버전 2026-10-04 (2) · 한 달 멘트</div>
     </div>
   </aside>
 
@@ -9287,6 +9289,7 @@ const MC_CHIPS_ELEM = {
   ['빨리 받아들임','새로 배우는 내용을 빨리 받아들입니다','새 내용을 빨리 받아들이고'],
   ['계산 정확','계산이 꼼꼼하고 정확합니다','계산이 정확하고'],
   ['원리 이해','외우지 않고 원리를 이해하려 합니다','원리를 이해하려 하고'],
+  ['어려워도 잘 따라옴','어려워하면서도 잘 따라오고 있습니다','어려워하면서도 잘 따라오고'],
   ['도형에 강함','도형 문제를 특히 잘 봅니다','도형을 특히 잘 보고'],
   ['문장제에 강함','문장으로 된 문제도 차근차근 읽고 풉니다','문장제를 차근차근 읽고 풀어 주고'],
   ['설명할 줄 앎','푼 방법을 말로 설명할 줄 압니다','푼 방법을 설명할 줄 알고'],
@@ -9311,7 +9314,7 @@ const MC_CHIPS_ELEM = {
   ['금방 잊어버림','배운 것을 며칠 지나면 잊어버립니다','배운 것을 금방 잊어버려'],
   ['긴 문제를 피함','문제가 길면 먼저 넘어갑니다','문제가 길면 넘어가려 해']]},
  숙제:{t:'숙제',g:[
-  ['빠짐없이 해 옴','숙제를 한 번도 빠뜨리지 않았습니다','숙제를 빠짐없이 해 오고'],
+  ['빠짐없이 해 옴','숙제를 빠짐없이 해 옵니다','숙제를 빠짐없이 해 오고'],
   ['글씨 또박또박','숙제 글씨가 또박또박합니다','숙제를 또박또박 써 오고'],
   ['틀린 것 고쳐 옴','틀린 문제를 스스로 고쳐 옵니다','틀린 문제를 스스로 고쳐 오고'],
   ['더 풀어 옴','시킨 것보다 더 풀어 올 때가 있습니다','시킨 것보다 더 해 올 때도 있고'],
@@ -9327,6 +9330,7 @@ const MC_CHIPS_ELEM = {
   ['글씨가 흐림','숙제 글씨를 알아보기 어려울 때가 있습니다','숙제 글씨를 알아보기 어려울 때가 있어']]},
  시험:{t:'단원평가 · 시험',g:[
   ['점수 올랐음','지난번보다 점수가 올랐습니다','점수가 지난번보다 올랐고'],
+  ['시험대비 보강 중','시험대비 보강이 진행중이고, 4~5회 정도 보강이 잡혀 있습니다','시험대비 보강이 진행중이고'],
   ['꾸준함','기복 없이 꾸준한 점수를 냅니다','기복 없이 꾸준하고'],
   ['시간 안에 다 품','시간 안에 끝까지 다 풉니다','시간 안에 끝까지 풀어 내고'],
   ['검토함','다 풀고 나서 한 번 더 봅니다','다 풀고 검토까지 하고'],
@@ -9412,7 +9416,7 @@ const MC_CHIPS_MID = {
   ['조건을 놓침','문제 조건을 하나씩 놓칠 때가 있습니다','문제 조건을 놓칠 때가 있어'],
   ['개념을 외우려 함','이해하기보다 외우려 합니다','이해보다 외우려 하는 편이라']]},
  숙제:{t:'숙제',g:[
-  ['빠짐없이 해 옴','숙제를 한 번도 거르지 않았습니다','숙제를 빠짐없이 해 오고'],
+  ['빠짐없이 해 옴','숙제를 빠짐없이 해 옵니다','숙제를 빠짐없이 해 오고'],
   ['오답까지 정리','틀린 문제를 다시 풀어서 가져옵니다','오답까지 정리해 오고'],
   ['질문 표시','모르는 문제에 표시해 와서 바로 물어봅니다','모르는 문제를 표시해 와 물어보고'],
   ['분량 이상','정해준 것보다 더 풀어 옵니다','정해 준 것보다 더 해 오고'],
@@ -9426,6 +9430,7 @@ const MC_CHIPS_MID = {
   ['급하게 해 옴','급하게 한 티가 나는 날이 있습니다','급하게 해 온 날이 있어']]},
  시험:{t:'시험 · 내신',g:[
   ['성적 올랐음','지난 시험보다 점수가 올랐습니다','지난 시험보다 점수가 올랐고'],
+  ['시험대비 보강 중','시험대비 보강이 진행중이고, 4~5회 정도 보강이 잡혀 있습니다','시험대비 보강이 진행중이고'],
   ['목표 달성','목표한 점수에 도달했습니다','목표한 점수에 도달했고'],
   ['시험 준비 성실','시험 기간에 빠지지 않고 나와 준비했습니다','시험 준비를 성실히 했고'],
   ['실수 줄었음','아는 문제를 놓치는 일이 줄었습니다','실수가 많이 줄었고'],
@@ -9491,7 +9496,8 @@ function mcWhoName(uid){
 let mcY = new Date().getFullYear(), mcM = new Date().getMonth();
 if(mcM < 1){ mcM = 12; mcY--; }
 let mcCat = '전체';            // 전체 | 초등 | 중등 | 고등
-let mcFilter = 'all';          // all | todo | teacher
+let mcFilter = 'all';          // all | todo | teacher | done
+let mcGrade = '전체';          // 학년 고르개
 let mcPick = null;             // 고른 학생 id
 let mcData = {};               // monthComments/{YYYY-MM}
 let mcChips = {};              // { 초등:{...}, 중고등:{...} }
@@ -9515,6 +9521,37 @@ db.ref('commentChips').on('value', snap => {
   };
   if(currentView === 'monthly') renderMonthly();
 });
+/* 새 문구·고친 문구를 한 번만 올려 보낸다 (원장님 계정에서) */
+const MC_CHIP_VER = 2;
+let mcChipSynced = false;
+function mcSyncChips(){
+  const r = mcRole(); if(!r || r.kind !== 'owner') return;
+  if(mcChipSynced || !mcChips || !mcChips['초등']) return;
+  mcChipSynced = true;
+  db.ref('commentChips/_v').once('value').then(function(sn){
+    if((sn.val() || 0) >= MC_CHIP_VER) return;
+    ['초등','중고등'].forEach(function(lv){
+      var set = mcChips[lv] || {};
+      /* 숙제 문구 다듬기 */
+      var hw = ((set['숙제'] || {}).g || []).slice();
+      var i = hw.findIndex(function(x){ return x && x[0] === '빠짐없이 해 옴'; });
+      if(i >= 0 && hw[i][1] !== '숙제를 빠짐없이 해 옵니다'){
+        hw[i] = ['빠짐없이 해 옴','숙제를 빠짐없이 해 옵니다','숙제를 빠짐없이 해 오고'];
+        db.ref('commentChips/' + lv + '/숙제/g').set(hw);
+      }
+      /* 새로 넣는 칩 */
+      [['이해','g',['어려워도 잘 따라옴','어려워하면서도 잘 따라오고 있습니다','어려워하면서도 잘 따라오고']],
+       ['시험','g',['시험대비 보강 중','시험대비 보강이 진행중이고, 4~5회 정도 보강이 잡혀 있습니다','시험대비 보강이 진행중이고']]
+      ].forEach(function(a){
+        var arr = (((set[a[0]] || {})[a[1]]) || []).slice();
+        if(arr.some(function(x){ return x && x[0] === a[2][0]; })) return;
+        arr.push(a[2]);
+        db.ref('commentChips/' + lv + '/' + a[0] + '/' + a[1]).set(arr);
+      });
+    });
+    db.ref('commentChips/_v').set(MC_CHIP_VER);
+  }).catch(function(){});
+}
 /* 처음 한 번만 기본 문구를 올려 둔다 (원장님 계정에서) */
 function mcSeedChips(){
   const r = mcRole(); if(!r || r.kind !== 'owner') return;
@@ -9578,7 +9615,7 @@ const MC_DUP_KEYS = [
   ['수업 시간에 집중을 참 잘','수업 내내 흐트러짐 없이','앉아서 집중하는 시간이'],
   ['지난번보다 점수가 올랐','지난 시험보다 점수가 올랐','등급이 한 단계 올랐','목표한 점수에 도달'],
   ['모르는 것이 있으면 바로바로 물어','막히면 바로 손을 듭','막히는 지점을 정확히 짚어'],
-  ['숙제를 한 번도 빠뜨리지 않','숙제를 한 번도 거르지 않','숙제를 늘 제 날짜에','숙제 기한을 정확히'],
+  ['숙제를 한 번도 빠뜨리지 않','숙제를 한 번도 거르지 않','숙제를 빠짐없이 해 옵','숙제를 늘 제 날짜에','숙제 기한을 정확히'],
   ['시킨 것보다 더 풀어','정해준 것보다 더 풀어'],
   ['모르는 문제에 표시해'],
   ['집에서도 꾸준히 봐 주시는','집에서 챙겨 주시는 것이'],
@@ -9606,26 +9643,58 @@ function mcTrim(list){
   });
   return out;
 }
-function mcJoinForm(x){
-  if(x.j) return x.j;
-  return String(x.s).replace(/합니다$/, '하고').replace(/습니다$/, '고').replace(/있습니다$/, '있고');
-}
+/* 분류마다 앞에 붙는 이음말 — 문장이 뚝뚝 끊기지 않게 [잘한 점, 더 봐줄 점] */
+const MC_BRIDGE = { 시험:['시험에서도','시험에서는'], 친구:['친구들에게는','친구들과는'],
+                    가정:['집에서는','집에서는'], 태세:['공부 습관도','공부 습관은'] };
 function mcWeave(list, head){
   var live = mcTrim((list || []).filter(function(x){ return x && MC_LIVE_CATS.indexOf(x.c) >= 0; }));
   var by = {};
   live.forEach(function(x){ (by[x.c] = by[x.c] || []).push(x); });
-  var sents = [];
+  var tone = (live[0] && live[0].t === 'b') ? 1 : 0;
+  var sents = [], first = true;
   MC_CAT_ORDER.forEach(function(c){
-    var g = by[c]; if(!g || !g.length) return;
-    for(var p = 0; p < g.length; p += 2){
-      var use = g.slice(p, p + 2);
-      if(use.length === 1){ sents.push(String(use[0].s)); continue; }
-      sents.push(mcJoinForm(use[0]) + ', ' + String(use[1].s));
+    var q = (by[c] || []).slice(), firstOfCat = true;
+    while(q.length){
+      var s;
+      if(q.length === 1){ s = String(q[0].s); q = []; }
+      else {
+        var li = -1;
+        for(var i = 0; i < q.length; i++){ if(q[i].j){ li = i; break; } }
+        if(li < 0){ s = String(q.shift().s); }                 /* 이어쓸 말이 없으면 따로 한 문장 */
+        else { var lead = q.splice(li,1)[0], tail = q.shift(); s = lead.j + ', ' + String(tail.s); }
+      }
+      var br = MC_BRIDGE[c];
+      if(br && !first && firstOfCat){
+        var w = br[tone], k = w.replace(/(에서도|에서는|에게는|과는|도$|은$|는$)/, '');
+        if(s.indexOf(k) < 0) s = w + ' ' + s;                  /* 같은 말이 이미 있으면 안 붙인다 */
+      }
+      sents.push(s); first = false; firstOfCat = false;
     }
   });
   var fin = sents.map(function(t){ return /[.!?]$/.test(t) ? t : t + '.'; });
   if(head && fin.length) fin[0] = head + ' ' + fin[0];
   return fin;
+}
+/* 「~음 / ~함」 메모체를 「~습니다」로 바꾸고 이어쓰기도 만든다 */
+function mcPolite(raw){
+  var s = String(raw || '').trim().replace(/[.\s]+$/, '');
+  if(!s) return null;
+  if(/(습니다|ㅂ니다|입니다|세요|어요|아요|해요)$/.test(s)) return null;
+  var L = s.charCodeAt(s.length - 1);
+  if(L < 0xAC00 || L > 0xD7A3) return null;
+  if((L - 0xAC00) % 28 !== 16) return null;                    /* 받침이 ㅁ 일 때만 손댄다 */
+  var head = s.slice(0, -1), bare = String.fromCharCode(L - 16);
+  if(bare === '\uC73C'){                                       /* 「음」 — 앞 글자에 붙인다 */
+    if(!head) return null;
+    return { s: head + '습니다', j: head + '고' };
+  }
+  var b = bare.charCodeAt(0);
+  return { s: head + String.fromCharCode(b + 17) + '니다', j: head + bare + '고' };
+}
+function mcHeadOf(sub, first){
+  if(/이번 달|이달|한 달|평소/.test(first)) return sub;          /* 문장에 이미 들어 있으면 그대로 */
+  if(/(았|었|였)습니다[.]?$/.test(first)) return sub;            /* 과거형엔 「평소에」를 안 붙인다 */
+  return sub + ' 평소에';
 }
 function mcMake(stu, picks, memo){
   const good = picks.filter(p => p.t === 'g');
@@ -9635,8 +9704,7 @@ function mcMake(stu, picks, memo){
   const b = mcWeave(bad);
   let parts = [];
   if(g.length){
-    /* 문장에 이미 「이번 달」이 있으면 머리말에 또 붙이지 않는다 */
-    g[0] = sub + ' ' + (/이번 달|이달|한 달|평소/.test(g[0]) ? '' : '평소에 ') + g[0];
+    g[0] = mcHeadOf(sub, g[0]) + ' ' + g[0];
     parts = parts.concat(g);
   }
   else if(b.length) parts.push(sub + ' 이렇게 지냈습니다.');
@@ -9721,15 +9789,13 @@ function mcCopy(){
   navigator.clipboard.writeText(t).then(()=> showToast('복사했습니다. 카카오톡에 붙여넣으세요.'))
     .catch(()=> showToast('복사에 실패했습니다.'));
 }
-/* 명단에서 바로 복사 — 학생을 열지 않아도 됩니다 */
-function mcCopyRow(ev, sid){
+/* 결제선생으로 보냈는지 표시 — 학생을 열지 않아도 됩니다 */
+function mcPaidRow(ev, sid){
   if(ev){ ev.stopPropagation(); ev.preventDefault(); }
-  var rec = mcRec(sid) || {}, t = String(rec.text || '').trim();
+  var rec = mcRec(sid) || {}, on = !rec.paid;
   var stu = mcFindStu(sid), nm = stu ? stu.name : '';
-  if(!t){ showToast('아직 만들어진 멘트가 없습니다. 학생을 눌러 확인해 주세요.'); return; }
-  navigator.clipboard.writeText(t)
-    .then(function(){ showToast(nm + ' 멘트를 복사했습니다. 결제선생에 붙여넣으세요.'); })
-    .catch(function(){ showToast('복사에 실패했습니다.'); });
+  db.ref('monthComments/' + mcKey() + '/' + sid + '/paid').set(on ? true : null);
+  showToast(nm + (on ? ' 결제선생 발송으로 표시했습니다.' : ' 발송 표시를 지웠습니다.'));
 }
 /* 내 멘트 추가 */
 function mcAddChip(c, t){
@@ -9737,10 +9803,13 @@ function mcAddChip(c, t){
   const lv = mcLevelOf(stu.grade);
   const short = prompt('칩에 보일 짧은 말 (예: 질문을 많이 합니다)');
   if(!short || !short.trim()) return;
-  const sent = prompt('학부모께 나갈 문장\n(비워 두면 짧은 말을 그대로 씁니다)', short.trim()) || short.trim();
-  const join = prompt('앞뒤로 이어 쓸 때의 말 — “~하고” 처럼\n(비워 두면 이어 쓰지 않습니다)', '') || '';
+  let sent = (prompt('학부모께 나갈 문장 — 「~습니다」로 끝나게 적어 주세요\n(비워 두면 짧은 말을 그대로 씁니다)', short.trim()) || short.trim()).trim();
+  let join = '';
+  const fix = mcPolite(sent);
+  if(fix && confirm('「' + sent + '」\n\n이렇게 바꿀까요?\n\n「' + fix.s + '」')){ sent = fix.s; join = fix.j; }
+  if(!join) join = (prompt('앞뒤로 이어 쓸 때의 말 — “~하고” 처럼\n(비워 두면 이어 쓰지 않습니다)', '') || '').trim();
   const arr = ((mcChips[lv] || {})[c] || {})[t] || [];
-  arr.push([short.trim(), sent.trim(), join.trim()]);
+  arr.push([short.trim(), sent, join]);
   db.ref('commentChips/' + lv + '/' + c + '/' + t).set(arr);
   showToast('내 멘트를 넣었습니다.');
 }
@@ -9764,6 +9833,7 @@ function mcGoMonth(d){
 }
 function mcSetCat(c){ mcCat = c; mcPick = null; mcDraft = null; renderMonthly(); }
 function mcSetFilter(f){ mcFilter = f; renderMonthly(); }
+function mcSetGrade(g){ mcGrade = g; mcPick = null; mcDraft = null; renderMonthly(); }
 function mcSelect(sid){
   mcPick = sid; mcLoadDraft(sid);
   var r = mcRole(), rec = mcRec(sid);
@@ -9783,9 +9853,12 @@ function renderMonthly(){
   const head = document.getElementById('mcHead');
   if(!r){ head.innerHTML = '<div class="hint">로그인 뒤에 쓸 수 있습니다.</div>';
     document.getElementById('mcList').innerHTML = ''; document.getElementById('mcPane').innerHTML = ''; return; }
-  mcSeedChips();
+  mcSeedChips(); mcSyncChips();
 
-  const all = mcStudents();
+  const pool = mcStudents();
+  const gOpts = MC_GRADES.filter(g => pool.some(s => s.grade === g));
+  if(mcGrade !== '전체' && gOpts.indexOf(mcGrade) < 0) mcGrade = '전체';
+  const all = mcGrade === '전체' ? pool : pool.filter(s => s.grade === mcGrade);
   const wrote = all.filter(s => mcState(s.id) !== 'none').length;
   const pct = all.length ? Math.round(wrote / all.length * 100) : 0;
 
@@ -9807,6 +9880,10 @@ function renderMonthly(){
     `<span class="mc-mon">${mcY}년 ${mcM}월</span>` +
     `<button type="button" class="btn btn-ghost btn-sm" onclick="mcGoMonth(1)">›</button>` +
     `<span class="mc-seg">${catBtns}</span>` +
+    `<select class="mc-grade" onchange="mcSetGrade(this.value)">` +
+      `<option value="전체"${mcGrade==='전체'?' selected':''}>학년 전체 ${pool.length}</option>` +
+      gOpts.map(g => `<option value="${g}"${mcGrade===g?' selected':''}>${g} ${pool.filter(x=>x.grade===g).length}</option>`).join('') +
+    `</select>` +
     `<span class="mc-prog"><span class="mc-prog-t">작성 <b>${wrote}</b> / ${all.length}</span>` +
       `<span class="mc-bar"><i style="width:${pct}%"></i></span></span>`;
 
@@ -9831,8 +9908,8 @@ function renderMonthly(){
       : st === 'draft' ? '<span class="mc-st dr">임시</span>'
       : '<span class="mc-st no">아직</span>';
     const by = mcWritten(c) ? `<div class="mc-by">${escapeHtml(c.byName || mcWhoName(c.by))} · ${mcDateTxt(c.at)}${c.ownerAt && st==='done' ? ' · 원장님 확인' : ''}</div>` : '';
-    const cp = (r.kind === 'owner' && mcWritten(c) && c.text && c.text.trim())
-      ? `<button type="button" class="mc-cp ${st==='done'?'done':''}" onclick="mcCopyRow(event,'${s.id}')">\uD83D\uDCCB 복사</button>` : '';
+    const cp = (r.kind === 'owner' && mcWritten(c))
+      ? `<button type="button" class="mc-cp ${c.paid?'paid':''}" onclick="mcPaidRow(event,'${s.id}')">${c.paid?'\u2713 결제':'결제'}</button>` : '';
     h += `<div class="mc-row ${mcPick===s.id?'on':''}" onclick="mcSelect('${s.id}')">` +
       gradeBadge(s.grade) + `<span class="mc-nm">${escapeHtml(s.name)}${by}</span>${badge}${cp}</div>`;
   });
@@ -9901,7 +9978,7 @@ function renderMonthlyPane(){
     note = `<div class="mc-note ok">칩을 골라 주시면 문장이 저절로 만들어집니다. 다 쓰시면 <b>원장님께 보내기</b>를 눌러 주세요.</div>`;
 
   const set = mcSetOf(stu.grade);
-  const keys = Object.keys(set);
+  const keys = Object.keys(set).filter(function(c){ return MC_LIVE_CATS.indexOf(c) >= 0; });
   let chips = '';
   keys.forEach((c, n) => {
     const box = set[c];
